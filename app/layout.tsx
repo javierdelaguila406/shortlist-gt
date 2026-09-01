@@ -16,7 +16,6 @@ export const metadata: Metadata = {
   title: "SHORTLIST.GT - Recruitment Platform",
   description: "Smart recruitment platform powered by AI",
   viewport: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
-  charset: "utf-8",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
