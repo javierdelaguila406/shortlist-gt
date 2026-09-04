@@ -146,7 +146,7 @@ export default function ReclutadorDashboard() {
                     </div>
 
                     <div className="md:col-span-3 flex gap-2 justify-end">
-                      <Button size="sm" variant="outline" className="gap-2">
+                      <Button size="sm" variant="ghost" className="gap-2 text-zinc-400 hover:text-white">
                         <Eye className="w-4 h-4" />
                         <span className="hidden sm:inline">Ver</span>
                       </Button>
