@@ -18,6 +18,7 @@ export default function PostularPage() {
     salario: '',
   });
   const [cvFile, setCvFile] = useState<File | null>(null);
+  const [consentimiento, setConsentimiento] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -47,6 +48,10 @@ export default function PostularPage() {
     e.preventDefault();
     if (!cvFile) {
       alert('Por favor, sube tu CV en PDF');
+      return;
+    }
+    if (!consentimiento) {
+      alert('Debes aceptar la Política de Privacidad y los términos para continuar');
       return;
     }
 
@@ -237,9 +242,33 @@ export default function PostularPage() {
                 </div>
               </div>
 
+              {/* Consentimiento */}
+              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentimiento}
+                    onChange={(e) => setConsentimiento(e.target.checked)}
+                    className="w-5 h-5 rounded border-zinc-600 text-emerald-500 focus:ring-emerald-500 mt-0.5"
+                  />
+                  <span className="text-sm text-zinc-300">
+                    He leído y acepto la{' '}
+                    <a href="/privacidad" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline">
+                      Política de Privacidad
+                    </a>{' '}
+                    y los{' '}
+                    <a href="/terminos" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline">
+                      Términos de Servicio
+                    </a>
+                    . Autorizo el contacto vía WhatsApp y el procesamiento de mi CV mediante Inteligencia Artificial para esta vacante.
+                  </span>
+                </label>
+              </div>
+
               {/* Submit Button */}
               <Button
                 type="submit"
+                disabled={!consentimiento}
                 isLoading={isLoading}
                 className="w-full mt-8"
                 size="lg"
