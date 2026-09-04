@@ -3,7 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageCircle, Eye, Star } from 'lucide-react';
+import { MessageCircle, Eye, Star, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Candidato {
   id: string;
@@ -20,8 +22,24 @@ interface Candidato {
 export default function ReclutadorDashboard() {
   const [candidatos, setCandidatos] = useState<Candidato[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
+    // Verificar autenticación
+    const token = typeof window !== 'undefined' ? localStorage.getItem('reclutador_token') : null;
+    const email = typeof window !== 'undefined' ? localStorage.getItem('reclutador_email') : null;
+
+    if (!token || !email) {
+      router.push('/dashboard/login');
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setUserEmail(email);
+
+    // Cargar candidatos
     setTimeout(() => {
       setCandidatos([
         {
@@ -49,7 +67,7 @@ export default function ReclutadorDashboard() {
       ]);
       setIsLoading(false);
     }, 500);
-  }, []);
+  }, [router]);
 
   const sortedCandidatos = [...candidatos].sort((a, b) => {
     const scoreA = a.score_total || a.score_cv || 0;
@@ -82,12 +100,33 @@ export default function ReclutadorDashboard() {
     alert(response.ok ? `✅ ${data.message}` : `❌ Error: ${data.message}`);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('reclutador_token');
+    localStorage.removeItem('reclutador_email');
+    router.push('/dashboard/login');
+  };
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">Dashboard Reclutador</h1>
-          <p className="text-zinc-400">Gestiona candidatos y envía evaluaciones</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">Dashboard Reclutador</h1>
+            <p className="text-zinc-400">Gestiona candidatos y envía evaluaciones</p>
+            {userEmail && <p className="text-sm text-zinc-500 mt-2">Logueado como: <span className="text-emerald-400">{userEmail}</span></p>}
+          </div>
+          <Button
+            variant="ghost"
+            className="text-zinc-400 hover:text-white gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </Button>
         </div>
 
         <Card className="bg-emerald-950/30 border-emerald-800/50 mb-8">
