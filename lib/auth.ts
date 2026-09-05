@@ -16,16 +16,9 @@ export async function signUp(email: string, password: string, nombre: string) {
 
     if (authError) throw authError;
 
-    if (authData.user) {
-      const { error: userError } = await supabase.from('usuarios').insert({
-        id: authData.user.id,
-        email,
-        nombre,
-        rol: 'reclutador',
-      });
-
-      if (userError) throw userError;
-    }
+    // TODO: Insert into usuarios table when table is created
+    // For now, just create the auth user
+    // User data can be stored in auth.user.user_metadata
 
     return { success: true, user: authData.user };
   } catch (error) {
