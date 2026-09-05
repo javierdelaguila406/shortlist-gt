@@ -80,13 +80,9 @@ export function Footer() {
         </div>
 
         {/* Data Processing Notice */}
-        <div className="mt-8 pt-8 border-t border-zinc-800/30 bg-zinc-900/30 rounded-lg p-4">
-          <p className="text-xs text-zinc-400 text-center">
-            ⚠️ <strong>Transparencia de Datos:</strong> Esta plataforma procesa tus datos personales y CV mediante
-            Inteligencia Artificial (OpenAI GPT-4o-mini) para propósitos de reclutamiento.
-            Lee nuestra <Link href="/privacidad" className="text-emerald-400 hover:text-emerald-300 underline">
-              Política de Privacidad
-            </Link> para más detalles sobre protección de datos y tu derecho al olvido.
+        <div className="mt-2 pt-2 border-t border-zinc-800/20">
+          <p className="text-[0.65rem] text-zinc-600 text-center">
+            ⚠️ Usamos IA para analizar CVs. <Link href="/privacidad" className="text-emerald-500 hover:text-emerald-400 underline">Política de Privacidad</Link>
           </p>
         </div>
       </div>
