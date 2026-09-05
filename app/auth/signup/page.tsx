@@ -43,11 +43,27 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      await signUp(formData.email, formData.password, formData.nombre);
-      setSuccess(true);
-      setTimeout(() => {
-        router.push('/auth/login');
-      }, 2000);
+      const result = await signUp(formData.email, formData.password, formData.nombre);
+
+      // Intentar login automático después del signup
+      if (result.success) {
+        setSuccess(true);
+        setTimeout(async () => {
+          try {
+            await fetch('/api/auth/signin', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: formData.email,
+                password: formData.password,
+              }),
+            });
+            router.push('/dashboard/reclutador');
+          } catch {
+            router.push('/auth/login');
+          }
+        }, 1500);
+      }
     } catch (err: any) {
       const errorMsg = err.message || 'Error al registrar. Intenta de nuevo.';
 
