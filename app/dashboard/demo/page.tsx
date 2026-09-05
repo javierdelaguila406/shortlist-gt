@@ -4,8 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockCandidates, mockVacante, mockDashboardData } from '@/lib/mock-data';
-import { ArrowLeft, Star, TrendingUp, Users } from 'lucide-react';
+import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -23,24 +23,57 @@ interface Candidate {
 
 export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
+
+  const selectedVacante = mockVacantes.find(v => v.id === selectedVacanteId) || mockVacantes[0];
+  const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
+
+  const stats = {
+    total: filteredCandidates.length,
+    precalificados: filteredCandidates.filter(c => c.estado === 'precalificado').length,
+    en_evaluacion: filteredCandidates.filter(c => c.estado === 'evaluacion').length,
+    promedio: Math.round(filteredCandidates.reduce((sum, c) => sum + c.score_ia, 0) / filteredCandidates.length || 0),
+  };
 
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
       <div className="border-b border-zinc-800/40 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white">
-              SHORTLIST<span className="text-emerald-500">.GT</span>
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1">Demo: {mockVacante.titulo}</p>
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold text-white">
+                SHORTLIST<span className="text-emerald-500">.GT</span>
+              </h1>
+              <p className="text-sm text-zinc-400 mt-1">Dashboard Reclutador</p>
+            </div>
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Volver
+              </Button>
+            </Link>
           </div>
-          <Link href="/">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Volver
-            </Button>
-          </Link>
+
+          {/* Vacancy Selector */}
+          <div className="flex items-center gap-3">
+            <Briefcase className="w-4 h-4 text-zinc-400" />
+            <select
+              value={selectedVacanteId}
+              onChange={(e) => {
+                setSelectedVacanteId(e.target.value);
+                setSelectedCandidate(null);
+              }}
+              className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500"
+            >
+              {mockVacantes.map(vacante => (
+                <option key={vacante.id} value={vacante.id}>
+                  {vacante.titulo}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-zinc-500 ml-2">({filteredCandidates.length} candidatos)</span>
+          </div>
         </div>
       </div>
 
@@ -56,8 +89,8 @@ export default function DemoDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{mockDashboardData.estadisticas.total_candidatos}</p>
-              <p className="text-sm text-zinc-500 mt-1">Recibidos</p>
+              <p className="text-3xl font-bold text-white">{stats.total}</p>
+              <p className="text-sm text-zinc-500 mt-1">Para {selectedVacante.titulo}</p>
             </CardContent>
           </Card>
 
@@ -69,7 +102,7 @@ export default function DemoDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{mockDashboardData.estadisticas.precalificados}</p>
+              <p className="text-3xl font-bold text-white">{stats.precalificados}</p>
               <p className="text-sm text-zinc-500 mt-1">Score 80+</p>
             </CardContent>
           </Card>
@@ -82,7 +115,7 @@ export default function DemoDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{mockDashboardData.estadisticas.en_evaluacion}</p>
+              <p className="text-3xl font-bold text-white">{stats.en_evaluacion}</p>
               <p className="text-sm text-zinc-500 mt-1">En proceso</p>
             </CardContent>
           </Card>
@@ -95,7 +128,7 @@ export default function DemoDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-white">{mockDashboardData.estadisticas.promedio_score}</p>
+              <p className="text-3xl font-bold text-white">{stats.promedio}</p>
               <p className="text-sm text-zinc-500 mt-1">De 100</p>
             </CardContent>
           </Card>
@@ -111,7 +144,10 @@ export default function DemoDashboard() {
                 <CardDescription>Clasificados por Score IA y Fit Cultural</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {mockCandidates.map((candidate) => (
+                {filteredCandidates.length === 0 ? (
+                  <p className="text-zinc-400 text-sm">No hay candidatos para esta plaza</p>
+                ) : (
+                  filteredCandidates.map((candidate) => (
                   <div
                     key={candidate.id}
                     onClick={() => setSelectedCandidate(candidate)}
@@ -161,7 +197,8 @@ export default function DemoDashboard() {
                       )}
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
