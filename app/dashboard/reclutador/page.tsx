@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
 import { ExportReportModal } from '@/components/ExportReportModal';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X } from 'lucide-react';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, LinkIcon } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -27,6 +27,7 @@ interface Vacante {
   titulo: string;
   descripcion?: string;
   departamento?: string;
+  linkedinLink?: string;
 }
 
 export default function DemoDashboard() {
@@ -34,7 +35,7 @@ export default function DemoDashboard() {
   const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
   const [showCreateVacante, setShowCreateVacante] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
-  const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '' });
+  const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
   const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
 
   const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
@@ -50,15 +51,17 @@ export default function DemoDashboard() {
   const handleCreateVacante = () => {
     if (!newVacante.titulo.trim()) return;
     const newId = `vacante-${Date.now()}`;
+    const sharingLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/postular/${newId}`;
     setVacantes([...vacantes, {
       id: newId,
       titulo: newVacante.titulo,
       descripcion: newVacante.descripcion,
-      departamento: newVacante.departamento
+      departamento: newVacante.departamento,
+      linkedinLink: sharingLink
     }]);
     setSelectedVacanteId(newId);
     setShowCreateVacante(false);
-    setNewVacante({ titulo: '', descripcion: '', departamento: '' });
+    setNewVacante({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
   };
 
   return (
@@ -358,6 +361,18 @@ export default function DemoDashboard() {
                   onChange={(e) => setNewVacante({ ...newVacante, departamento: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Link LinkedIn (Opcional)</label>
+                <input
+                  type="url"
+                  placeholder="Ej: https://linkedin.com/jobs/view/123456"
+                  value={newVacante.linkedinLink}
+                  onChange={(e) => setNewVacante({ ...newVacante, linkedinLink: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs"
+                />
+                <p className="text-xs text-zinc-400 mt-1">Link de la vacante en LinkedIn para compartir</p>
               </div>
 
               <div className="flex gap-2 pt-4">
