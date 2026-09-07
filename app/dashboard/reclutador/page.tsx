@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
 import { ExportReportModal } from '@/components/ExportReportModal';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, LinkIcon } from 'lucide-react';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -28,6 +28,7 @@ interface Vacante {
   descripcion?: string;
   departamento?: string;
   linkedinLink?: string;
+  aplicarLink?: string;
 }
 
 export default function DemoDashboard() {
@@ -39,6 +40,19 @@ export default function DemoDashboard() {
   const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
   const [showLinkedinLink, setShowLinkedinLink] = useState(false);
   const [linkedinData, setLinkedinData] = useState<any>(null);
+
+  useEffect(() => {
+    const savedVacantes = localStorage.getItem('vacantes');
+    if (savedVacantes) {
+      setVacantes(JSON.parse(savedVacantes));
+    } else {
+      setVacantes(mockVacantes as Vacante[]);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('vacantes', JSON.stringify(vacantes));
+  }, [vacantes]);
 
   const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
   const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
@@ -75,7 +89,8 @@ export default function DemoDashboard() {
         titulo: newVacante.titulo,
         descripcion: newVacante.descripcion,
         departamento: newVacante.departamento,
-        linkedinLink: data.linkedinShareUrl || aplicarLink
+        linkedinLink: data.linkedinShareUrl,
+        aplicarLink: aplicarLink
       }]);
 
       setLinkedinData(data);
@@ -127,6 +142,23 @@ export default function DemoDashboard() {
               ))}
             </select>
             <span className="text-xs text-zinc-500">({filteredCandidates.length} candidatos)</span>
+
+            {selectedVacante?.aplicarLink && (
+              <button
+                onClick={() => {
+                  setLinkedinData({
+                    aplicarLink: selectedVacante.aplicarLink,
+                    linkedInText: `Vacante: ${selectedVacante.titulo}\n\n${selectedVacante.descripcion || 'Únete a nuestro equipo'}`,
+                    linkedinShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(selectedVacante.aplicarLink || '')}`,
+                  });
+                  setShowLinkedinLink(true);
+                }}
+                className="ml-auto bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+              >
+                <Link2 className="w-4 h-4" />
+                Ver Link
+              </button>
+            )}
 
             {/* Action Buttons */}
             <div className="ml-auto flex gap-2">
