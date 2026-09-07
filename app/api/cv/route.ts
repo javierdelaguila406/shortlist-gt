@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     const validation = cvAnalysisSchema.safeParse(body);
     if (!validation.success) {
       return NextResponse.json(
-        { error: 'Validación fallida', details: validation.error.errors },
+        { error: 'Validación fallida', details: validation.error.issues },
         { status: 400 }
       );
     }

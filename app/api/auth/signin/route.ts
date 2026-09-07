@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validación fallida',
-          details: validation.error.errors.map(e => e.message),
+          details: validation.error.issues.map((e: any) => e.message),
         },
         { status: 400 }
       );
