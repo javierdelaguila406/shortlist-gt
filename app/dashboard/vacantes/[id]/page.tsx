@@ -1,3 +1,4 @@
+import { ExportReportModal } from '@/app/components/ExportReportModal';
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -47,6 +48,7 @@ export default function VacantePage() {
   const [vacante, setVacante] = useState<Vacante | null>(null);
   const [candidatos, setCandidatos] = useState<Candidato[]>([]);
   const [selectedCandidato, setSelectedCandidato] = useState<Candidato | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
