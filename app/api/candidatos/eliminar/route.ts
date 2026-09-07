@@ -4,9 +4,40 @@ import { NextRequest, NextResponse } from 'next/server';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// Verificar autenticación del usuario
+async function verifyAuth(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authenticated: false, userId: null };
+  }
+
+  const token = authHeader.slice(7);
+  const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '');
+
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) {
+      return { authenticated: false, userId: null };
+    }
+    return { authenticated: true, userId: data.user.id };
+  } catch {
+    return { authenticated: false, userId: null };
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
-    const { id, telefono, verificacion_token } = await request.json();
+    // REQUERIDO: Autenticación
+    const auth = await verifyAuth(request);
+    if (!auth.authenticated) {
+      return NextResponse.json(
+        { error: 'No autorizado' },
+        { status: 401 }
+      );
+    }
+
+    const { id, telefono } = await request.json();
 
     if (!id && !telefono) {
       return NextResponse.json(
@@ -126,9 +157,16 @@ export async function DELETE(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error en eliminación de datos:', error);
+    // Log interno - NUNCA expongas errores al cliente
+    console.error('[SECURITY] Error en eliminación de datos:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+      ipAddress: request.headers.get('x-forwarded-for'),
+    });
+
     return NextResponse.json(
-      { error: 'Error al procesar solicitud de eliminación' },
+      { error: 'Ocurrió un error al procesar la solicitud' },
       { status: 500 }
     );
   }

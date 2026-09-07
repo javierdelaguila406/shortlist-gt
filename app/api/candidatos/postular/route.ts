@@ -1,10 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { rateLimit } from '@/lib/rate-limit';
+import { candidatoPostulacionSchema, pdfFileSchema } from '@/lib/validations';
 import * as fs from 'fs';
 import * as path from 'path';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: máx 5 postulaciones por IP cada 15 minutos
+    const ipAddress = request.headers.get('x-forwarded-for') ||
+                      request.headers.get('x-real-ip') ||
+                      '127.0.0.1';
+    const rateLimitResult = rateLimit(`postular:${ipAddress}`, 5, 900000); // 15 min
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        {
+          error: 'Demasiadas solicitudes. Intenta más tarde.',
+          success: false
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 900),
+          }
+        }
+      );
+    }
+
     const formData = await request.formData();
     const nombre = formData.get('nombre') as string;
     const email = formData.get('email') as string;
@@ -14,10 +37,42 @@ export async function POST(request: NextRequest) {
     const slug = formData.get('slug') as string;
     const cvFile = formData.get('cv') as File;
 
-    // Validate required fields
-    if (!nombre || !telefono || !slug || !cvFile) {
+    // Validar con Zod
+    const validationResult = candidatoPostulacionSchema.safeParse({
+      nombre,
+      email,
+      telefono,
+      disponibilidad,
+      salario,
+      slug,
+    });
+
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos', success: false },
+        {
+          error: 'Validación fallida',
+          details: validationResult.error.errors.map(e => e.message),
+          success: false
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validar archivo PDF
+    if (!cvFile) {
+      return NextResponse.json(
+        { error: 'Archivo CV es requerido', success: false },
+        { status: 400 }
+      );
+    }
+
+    const fileValidation = pdfFileSchema.safeParse(cvFile);
+    if (!fileValidation.success) {
+      return NextResponse.json(
+        {
+          error: 'Archivo inválido. Solo PDF, máximo 5MB.',
+          success: false
+        },
         { status: 400 }
       );
     }
@@ -141,17 +196,20 @@ Description: ${vacanteDetails?.descripcion || 'No description provided'}
       { status: 201 }
     );
   } catch (error) {
-    console.error('Error in postular endpoint:', error);
-    // Even on catastrophic error, return success to avoid losing candidate
+    // Log interno - NUNCA expongas errores al cliente
+    console.error('[SECURITY] Error in postular endpoint:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Devolver error genérico al cliente
     return NextResponse.json(
       {
-        success: true,
-        candidatoId: `error-${Date.now()}`,
-        message: '✅ ¡Tu postulación fue recibida! Te contactaremos en breve.',
-        mode: 'emergency-fallback',
-        error: process.env.NODE_ENV === 'development' ? String(error) : undefined,
+        success: false,
+        error: 'Ocurrió un error al procesar tu postulación. Por favor intenta más tarde.',
       },
-      { status: 201 }
+      { status: 500 }
     );
   }
 }
