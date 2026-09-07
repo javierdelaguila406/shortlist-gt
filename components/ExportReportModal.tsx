@@ -257,7 +257,7 @@ Reporte generado automáticamente por SHORTLIST.GT
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando...' : 'Descargar'}
             </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1">
+            <Button onClick={onClose} variant="secondary" className="flex-1">
               Cancelar
             </Button>
           </div>

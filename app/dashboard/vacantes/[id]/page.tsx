@@ -1,7 +1,7 @@
-import { ExportReportModal } from '@/app/components/ExportReportModal';
 'use client';
 
 import { useState, useEffect } from 'react';
+import { ExportReportModal } from '@/components/ExportReportModal';
 import { useParams } from 'next/navigation';
 import {
   Users,
