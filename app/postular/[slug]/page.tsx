@@ -5,28 +5,22 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockVacantes } from '@/lib/mock-data';
-import { ArrowLeft, Upload, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface FormData {
   nombre: string;
-  email: string;
   telefono: string;
-  experiencia: string;
-  habilidades: string;
   cv: File | null;
-  carta_presentacion: string;
+  consentimiento: boolean;
 }
 
 export default function PostularPage({ params }: { params: { slug: string } }) {
   const vacante = mockVacantes.find(v => v.id === params.slug);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
-    email: '',
     telefono: '',
-    experiencia: '',
-    habilidades: '',
     cv: null,
-    carta_presentacion: '',
+    consentimiento: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -35,12 +29,9 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
   if (!vacante) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
+        <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-zinc-400">Vacante no encontrada</p>
-            <Link href="/" className="mt-4 inline-block">
-              <Button>Volver al inicio</Button>
-            </Link>
           </CardContent>
         </Card>
       </div>
@@ -48,13 +39,21 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      setFormData(prev => ({ ...prev, [name]: (e.target as HTMLInputElement).checked }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('CV debe ser menor a 5MB');
+        return;
+      }
       setFormData(prev => ({ ...prev, cv: file }));
       setCvFileName(file.name);
     }
@@ -62,16 +61,18 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
+    if (!formData.nombre || !formData.telefono || !formData.cv || !formData.consentimiento) {
+      alert('Completa todos los campos y acepta el consentimiento');
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
-      formDataToSend.append('email', formData.email);
       formDataToSend.append('telefono', formData.telefono);
-      formDataToSend.append('experiencia', formData.experiencia);
-      formDataToSend.append('habilidades', formData.habilidades);
-      formDataToSend.append('carta_presentacion', formData.carta_presentacion);
+      formDataToSend.append('consentimiento', 'true');
       formDataToSend.append('vacante_id', params.slug);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
@@ -82,7 +83,6 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
 
       if (response.ok) {
         setSubmitted(true);
-        setTimeout(() => { window.location.href = '/'; }, 2000);
       }
     } finally {
       setIsSubmitting(false);
@@ -96,7 +96,10 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
           <CardContent className="pt-12 pb-12 text-center">
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">¡Solicitud Enviada!</h2>
-            <p className="text-zinc-400">Redirigiendo...</p>
+            <p className="text-zinc-400 mb-6">Tu CV fue compartido con Forniture City</p>
+            <Link href="/">
+              <Button>Volver</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
@@ -113,22 +116,60 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
         <Card className="bg-zinc-900 border-zinc-800 mb-8">
           <CardHeader>
             <CardTitle className="text-2xl">SHORTLIST<span className="text-emerald-500">.GT</span></CardTitle>
-            <CardDescription>Postúlate a: {vacante.titulo}</CardDescription>
+            <CardDescription>Vacante: {vacante.titulo}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <input type="text" name="nombre" placeholder="Nombre" value={formData.nombre} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
-              <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
-              <input type="tel" name="telefono" placeholder="Teléfono" value={formData.telefono} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
-              <input type="text" name="experiencia" placeholder="Años de experiencia" value={formData.experiencia} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" />
-              <textarea name="habilidades" placeholder="Habilidades" value={formData.habilidades} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white h-24 resize-none" />
-              <textarea name="carta_presentacion" placeholder="Carta de presentación" value={formData.carta_presentacion} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white h-24 resize-none" />
-              <label className="block">
-                <span className="text-white text-sm mb-2 block">Currículum (PDF/DOC)</span>
-                <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
-                {cvFileName && <p className="text-xs text-emerald-400 mt-1">{cvFileName}</p>}
-              </label>
-              <Button type="submit" disabled={isSubmitting} className="w-full">
+            <p className="text-zinc-300 text-sm">{vacante.descripcion}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-zinc-900 border-zinc-800">
+          <CardHeader>
+            <CardTitle>Formulario de Aplicación</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>
+                <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Teléfono *</label>
+                <input type="tel" name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx 5MB</label>
+                <label className="flex flex-col items-center justify-center px-4 py-6 rounded-lg border-2 border-dashed border-zinc-700 hover:border-emerald-500 cursor-pointer transition-colors">
+                  <input type="file" onChange={handleFileChange} accept=".pdf" className="hidden" required />
+                  <Upload className="w-8 h-8 text-zinc-400 mb-2" />
+                  <p className="text-sm text-white">{cvFileName || 'Selecciona tu CV (PDF)'}</p>
+                </label>
+              </div>
+
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        name="consentimiento" 
+                        checked={formData.consentimiento} 
+                        onChange={handleInputChange} 
+                        className="mt-1 w-4 h-4"
+                        required
+                      />
+                      <span className="text-sm text-zinc-300">
+                        Autorizo compartir mi nombre, teléfono y CV con <strong>Forniture City</strong> para evaluar mi candidatura a esta posición.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <Button type="submit" disabled={isSubmitting || !formData.consentimiento} className="w-full bg-emerald-600 hover:bg-emerald-700 py-2">
                 {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
               </Button>
             </form>
