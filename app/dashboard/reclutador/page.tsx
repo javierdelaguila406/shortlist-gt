@@ -104,7 +104,7 @@ export default function DemoDashboard() {
             <div className="ml-auto flex gap-2">
               <Button
                 size="sm"
-                variant="outline"
+                variant="secondary"
                 onClick={() => setShowCreateVacante(true)}
                 className="gap-2"
               >
@@ -368,7 +368,7 @@ export default function DemoDashboard() {
                 >
                   Crear Vacante
                 </Button>
-                <Button onClick={() => setShowCreateVacante(false)} variant="outline" className="flex-1">
+                <Button onClick={() => setShowCreateVacante(false)} variant="secondary" className="flex-1">
                   Cancelar
                 </Button>
               </div>
