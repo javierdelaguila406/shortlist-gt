@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 import { supabase } from '@/lib/supabase';
+import { cvAnalysisSchema } from '@/lib/validations';
+import { rateLimit } from '@/lib/rate-limit';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -10,21 +12,36 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { cvText, jobDescription, candidatoId, cvPath } = await request.json();
+    // Rate limiting: máx 20 análisis por IP cada 10 minutos
+    const ipAddress = request.headers.get('x-forwarded-for') ||
+                      request.headers.get('x-real-ip') ||
+                      '127.0.0.1';
+    const rateLimitResult = rateLimit(`cv-analysis:${ipAddress}`, 20, 600000); // 10 min
 
-    if (!cvText && !cvPath) {
+    if (!rateLimitResult.success) {
       return NextResponse.json(
-        { error: 'CV text or CV path is required' },
+        { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 600),
+          }
+        }
+      );
+    }
+
+    const body = await request.json();
+
+    // Validar con Zod
+    const validation = cvAnalysisSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validación fallida', details: validation.error.errors },
         { status: 400 }
       );
     }
 
-    if (!jobDescription) {
-      return NextResponse.json(
-        { error: 'Job description is required' },
-        { status: 400 }
-      );
-    }
+    const { cvText, jobDescription, candidatoId, cvPath } = validation.data;
 
     let textToAnalyze = cvText;
 
@@ -157,12 +174,15 @@ Provide a detailed analysis of how well this candidate matches the job requireme
       { status: 200 }
     );
   } catch (error) {
-    console.error('Error processing CV:', error);
+    // Log interno - NUNCA expongas errores al cliente
+    console.error('[SECURITY] Error processing CV:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
     return NextResponse.json(
-      {
-        error: 'Error processing CV',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Ocurrió un error al analizar el CV. Por favor intenta más tarde.' },
       { status: 500 }
     );
   }
