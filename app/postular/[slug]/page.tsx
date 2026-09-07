@@ -1,279 +1,135 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Upload, Phone } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { mockVacantes } from '@/lib/mock-data';
+import { ArrowLeft, Upload, CheckCircle } from 'lucide-react';
 
-export default function PostularPage() {
-  const params = useParams();
-  const slug = params.slug as string;
+interface FormData {
+  nombre: string;
+  email: string;
+  telefono: string;
+  experiencia: string;
+  habilidades: string;
+  cv: File | null;
+  carta_presentacion: string;
+}
 
-  const [formData, setFormData] = useState({
+export default function PostularPage({ params }: { params: { slug: string } }) {
+  const vacante = mockVacantes.find(v => v.id === params.slug);
+  const [formData, setFormData] = useState<FormData>({
     nombre: '',
     email: '',
     telefono: '',
-    disponibilidad: '',
-    salario: '',
+    experiencia: '',
+    habilidades: '',
+    cv: null,
+    carta_presentacion: '',
   });
-  const [cvFile, setCvFile] = useState<File | null>(null);
-  const [consentimiento, setConsentimiento] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [cvFileName, setCvFileName] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  if (!vacante) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6 text-center">
+            <p className="text-zinc-400">Vacante no encontrada</p>
+            <Link href="/" className="mt-4 inline-block">
+              <Button>Volver al inicio</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file?.type === 'application/pdf') {
-      setCvFile(file);
-    } else {
-      alert('Por favor, sube un archivo PDF');
-    }
-  };
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.currentTarget.files?.[0];
-    if (file?.type === 'application/pdf') {
-      setCvFile(file);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData(prev => ({ ...prev, cv: file }));
+      setCvFileName(file.name);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cvFile) {
-      alert('Por favor, sube tu CV en PDF');
-      return;
-    }
-    if (!consentimiento) {
-      alert('Debes aceptar la Política de Privacidad y los términos para continuar');
-      return;
-    }
+    setIsSubmitting(true);
 
-    setIsLoading(true);
     try {
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('email', formData.email);
       formDataToSend.append('telefono', formData.telefono);
-      formDataToSend.append('disponibilidad', formData.disponibilidad);
-      formDataToSend.append('salario', formData.salario);
-      formDataToSend.append('slug', slug);
-      formDataToSend.append('cv', cvFile);
+      formDataToSend.append('experiencia', formData.experiencia);
+      formDataToSend.append('habilidades', formData.habilidades);
+      formDataToSend.append('carta_presentacion', formData.carta_presentacion);
+      formDataToSend.append('vacante_id', params.slug);
+      if (formData.cv) formDataToSend.append('cv', formData.cv);
 
       const response = await fetch('/api/candidatos/postular', {
         method: 'POST',
         body: formDataToSend,
       });
 
-      const data = await response.json();
-
-      // Accept any 2xx or fallback responses
-      if (response.ok || data.success) {
+      if (response.ok) {
         setSubmitted(true);
-        setTimeout(() => {
-          setFormData({ nombre: '', email: '', telefono: '', disponibilidad: '', salario: '' });
-          setCvFile(null);
-          setSubmitted(false);
-        }, 4000);
-      } else {
-        throw new Error(data.error || 'Error al enviar la solicitud');
+        setTimeout(() => { window.location.href = '/'; }, 2000);
       }
-    } catch (error) {
-      console.error('Submission error:', error);
-      alert('Error al procesar tu solicitud. Intenta de nuevo.');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-        <Card className="max-w-md">
-          <CardHeader className="text-center">
-            <div className="text-4xl mb-4">✅</div>
-            <CardTitle>¡Solicitud Recibida!</CardTitle>
-            <CardDescription>
-              Gracias por tu interés. Te enviaremos un mensaje de WhatsApp pronto.
-            </CardDescription>
-          </CardHeader>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-12 pb-12 text-center">
+            <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-white mb-2">¡Solicitud Enviada!</h2>
+            <p className="text-zinc-400">Redirigiendo...</p>
+          </CardContent>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950">
-      <div className="max-w-2xl mx-auto px-4 py-16">
-        <div className="mb-12 text-center">
-          <h1 className="text-4xl font-bold text-white mb-2">Únete a Nuestro Equipo</h1>
-          <p className="text-zinc-400">
-            Completa tu perfil y compartir tu CV. Te contactaremos por WhatsApp.
-          </p>
-        </div>
+    <div className="min-h-screen bg-zinc-950 p-4">
+      <div className="max-w-2xl mx-auto">
+        <Link href="/" className="text-zinc-400 hover:text-white mb-6 inline-block">
+          ← Volver
+        </Link>
 
-        <Card className="mb-8">
+        <Card className="bg-zinc-900 border-zinc-800 mb-8">
           <CardHeader>
-            <CardTitle>Información Personal</CardTitle>
-            <CardDescription>Ayúdanos a conocerte mejor</CardDescription>
+            <CardTitle className="text-2xl">SHORTLIST<span className="text-emerald-500">.GT</span></CardTitle>
+            <CardDescription>Postúlate a: {vacante.titulo}</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Nombre Completo
-                </label>
-                <input
-                  type="text"
-                  name="nombre"
-                  value={formData.nombre}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Tu nombre"
-                  required
-                />
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="tu@email.com"
-                  required
-                />
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  <Phone className="inline w-4 h-4 mr-2" />
-                  Teléfono WhatsApp
-                </label>
-                <input
-                  type="tel"
-                  name="telefono"
-                  value={formData.telefono}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="+502 XXXX XXXX"
-                  required
-                />
-              </div>
-
-              {/* Availability */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Disponibilidad
-                </label>
-                <select
-                  name="disponibilidad"
-                  value={formData.disponibilidad}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  required
-                >
-                  <option value="">Selecciona una opción</option>
-                  <option value="inmediata">Inmediata</option>
-                  <option value="dos_semanas">2 Semanas</option>
-                  <option value="mes">1 Mes</option>
-                  <option value="negociable">Negociable</option>
-                </select>
-              </div>
-
-              {/* Salary */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Expectativa Salarial
-                </label>
-                <input
-                  type="text"
-                  name="salario"
-                  value={formData.salario}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Q XXX,XXX - Q YYY,YYY"
-                />
-              </div>
-
-              {/* CV Upload */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-4">
-                  <Upload className="inline w-4 h-4 mr-2" />
-                  Sube tu CV (PDF)
-                </label>
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={handleFileDrop}
-                  className={`
-                    relative border-2 border-dashed rounded-lg p-8 text-center
-                    transition-colors cursor-pointer
-                    ${
-                      cvFile
-                        ? 'border-emerald-500 bg-emerald-950/20'
-                        : 'border-zinc-700 hover:border-zinc-600 bg-zinc-800/50'
-                    }
-                  `}
-                >
-                  <input
-                    type="file"
-                    accept=".pdf"
-                    onChange={handleFileSelect}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <Upload className="w-8 h-8 mx-auto mb-2 text-zinc-500" />
-                  <p className="text-sm text-zinc-300">
-                    {cvFile ? cvFile.name : 'Arrastra tu CV aquí o haz clic para seleccionar'}
-                  </p>
-                  <p className="text-xs text-zinc-500 mt-1">PDF, máximo 5MB</p>
-                </div>
-              </div>
-
-              {/* Consentimiento */}
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={consentimiento}
-                    onChange={(e) => setConsentimiento(e.target.checked)}
-                    className="w-5 h-5 rounded border-zinc-600 text-emerald-500 focus:ring-emerald-500 mt-0.5"
-                  />
-                  <span className="text-sm text-zinc-300">
-                    He leído y acepto la{' '}
-                    <a href="/privacidad" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline">
-                      Política de Privacidad
-                    </a>{' '}
-                    y los{' '}
-                    <a href="/terminos" target="_blank" className="text-emerald-400 hover:text-emerald-300 underline">
-                      Términos de Servicio
-                    </a>
-                    . Autorizo el contacto vía WhatsApp y el procesamiento de mi CV mediante Inteligencia Artificial para esta vacante.
-                  </span>
-                </label>
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={!consentimiento}
-                isLoading={isLoading}
-                className="w-full mt-8"
-                size="lg"
-              >
-                Enviar Solicitud
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <input type="text" name="nombre" placeholder="Nombre" value={formData.nombre} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              <input type="tel" name="telefono" placeholder="Teléfono" value={formData.telefono} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              <input type="text" name="experiencia" placeholder="Años de experiencia" value={formData.experiencia} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" />
+              <textarea name="habilidades" placeholder="Habilidades" value={formData.habilidades} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white h-24 resize-none" />
+              <textarea name="carta_presentacion" placeholder="Carta de presentación" value={formData.carta_presentacion} onChange={handleInputChange} className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white h-24 resize-none" />
+              <label className="block">
+                <span className="text-white text-sm mb-2 block">Currículum (PDF/DOC)</span>
+                <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+                {cvFileName && <p className="text-xs text-emerald-400 mt-1">{cvFileName}</p>}
+              </label>
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
               </Button>
             </form>
           </CardContent>

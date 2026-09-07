@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, X } from 'lucide-react';
+import jsPDF from 'jspdf';
 
 interface ExportReportModalProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ interface ExportReportModalProps {
 }
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'custom';
-type Format = 'pdf' | 'csv';
+type Format = 'pdf' | 'xlsx';
 
 export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }: ExportReportModalProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<Period>('month');
@@ -57,89 +58,162 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
     });
   };
 
-  const generateReport = async () => {
-    setIsExporting(true);
+  const generatePDF = async () => {
     const filteredCandidates = filterCandidatesByPeriod();
     const [startDate, endDate] = getPeriodDates(selectedPeriod);
     const periodLabel = getPeriodLabel();
 
-    try {
-      if (selectedFormat === 'pdf') {
-        // Simulate PDF generation
-        const reportContent = `
-REPORTE: ${vacanteTitle}
-Período: ${startDate.toLocaleDateString()} al ${endDate.toLocaleDateString()} - ${periodLabel}
-Fecha de generación: ${new Date().toLocaleDateString()}
+    const doc = new jsPDF();
+    let yPosition = 20;
 
-MÉTRICAS:
-- Total de candidatos: ${filteredCandidates.length}
-- Score promedio: ${
-          filteredCandidates.length
-            ? Math.round(
-                filteredCandidates.reduce((sum, c) => sum + (c.score_total || c.score_cv || 0), 0) /
-                  filteredCandidates.length
-              )
-            : 0
-        }
-- Precalificados: ${filteredCandidates.filter(c => c.estado === 'precalificado').length}
-- En evaluación: ${filteredCandidates.filter(c => c.estado === 'evaluacion').length}
+    doc.setFontSize(20);
+    doc.setTextColor(34, 197, 94);
+    doc.text('SHORTLIST.GT', 20, yPosition);
 
-TOP CANDIDATOS:
-${filteredCandidates
-  .sort((a, b) => (b.score_total || b.score_cv || 0) - (a.score_total || a.score_cv || 0))
-  .slice(0, 5)
-  .map(
-    (c, i) => `
-${i + 1}. ${c.nombre}
-   Email: ${c.email}
-   Score: ${c.score_total || c.score_cv || c.score_ia || 0}
-   Estado: ${c.estado}
-`
-  )
-  .join('')}
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    yPosition += 15;
+    doc.text(`Reporte: ${vacanteTitle}`, 20, yPosition);
 
----
-Reporte generado automáticamente por SHORTLIST.GT
-        `;
+    yPosition += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Período: ${startDate.toLocaleDateString()} al ${endDate.toLocaleDateString()} (${periodLabel})`, 20, yPosition);
+    doc.text(`Generado: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 20, yPosition + 5);
 
-        const blob = new Blob([reportContent], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${startDate.toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        // Generate CSV
-        const headers = ['Nombre', 'Email', 'Teléfono', 'Score CV', 'Score Video', 'Score Test', 'Score Total', 'Estado'];
-        const rows = filteredCandidates.map(c => [
+    yPosition += 20;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('MÉTRICAS', 20, yPosition);
+
+    yPosition += 8;
+    doc.setFontSize(10);
+    const avgScore = filteredCandidates.length
+      ? Math.round(filteredCandidates.reduce((sum, c) => sum + (c.score_ia || 0), 0) / filteredCandidates.length)
+      : 0;
+
+    const metrics = [
+      `• Total de candidatos: ${filteredCandidates.length}`,
+      `• Score promedio: ${avgScore}/100`,
+      `• Precalificados: ${filteredCandidates.filter(c => c.estado === 'precalificado').length}`,
+      `• En evaluación: ${filteredCandidates.filter(c => c.estado === 'evaluacion').length}`
+    ];
+
+    metrics.forEach(metric => {
+      doc.text(metric, 20, yPosition);
+      yPosition += 6;
+    });
+
+    yPosition += 8;
+    doc.setFontSize(12);
+    doc.text('TOP CANDIDATOS', 20, yPosition);
+    yPosition += 8;
+
+    const sorted = [...filteredCandidates].sort((a, b) => (b.score_ia || 0) - (a.score_ia || 0)).slice(0, 5);
+
+    sorted.forEach((candidate, index) => {
+      doc.setFontSize(10);
+      doc.setTextColor(34, 197, 94);
+      doc.text(`${index + 1}. ${candidate.nombre}`, 20, yPosition);
+
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      yPosition += 5;
+      doc.text(`   Email: ${candidate.email}`, 20, yPosition);
+      yPosition += 4;
+      doc.text(`   Teléfono: ${candidate.telefono}`, 20, yPosition);
+      yPosition += 4;
+      doc.text(`   Score: ${candidate.score_ia || 0}/100 | Estado: ${candidate.estado}`, 20, yPosition);
+      yPosition += 4;
+      doc.text(`   Experiencia: ${candidate.experiencia_anos} años`, 20, yPosition);
+      yPosition += 6;
+
+      if (yPosition > 260) {
+        doc.addPage();
+        yPosition = 20;
+      }
+    });
+
+    yPosition += 5;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Reporte generado automáticamente por SHORTLIST.GT', 20, yPosition);
+
+    doc.save(`Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${startDate.toISOString().split('T')[0]}.pdf`);
+  };
+
+  const generateExcel = async () => {
+    const xlsx = await import('xlsx');
+    const filteredCandidates = filterCandidatesByPeriod();
+    const [startDate, endDate] = getPeriodDates(selectedPeriod);
+    const periodLabel = getPeriodLabel();
+
+    const wb = xlsx.utils.book_new();
+
+    // Sheet 1: Resumen
+    const summary = [
+      ['SHORTLIST.GT - REPORTE EJECUTIVO'],
+      [],
+      [`Vacante: ${vacanteTitle}`],
+      [`Período: ${startDate.toLocaleDateString()} al ${endDate.toLocaleDateString()}`],
+      [`Generado: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`],
+      [],
+      ['MÉTRICAS'],
+      ['Total de candidatos', filteredCandidates.length],
+      ['Precalificados', filteredCandidates.filter(c => c.estado === 'precalificado').length],
+      ['En evaluación', filteredCandidates.filter(c => c.estado === 'evaluacion').length],
+      ['Score promedio', Math.round(filteredCandidates.reduce((sum, c) => sum + (c.score_ia || 0), 0) / filteredCandidates.length || 0)]
+    ];
+
+    const ws1 = xlsx.utils.aoa_to_sheet(summary);
+    ws1['!cols'] = [{ wch: 30 }, { wch: 15 }];
+    xlsx.utils.book_append_sheet(wb, ws1, 'Resumen');
+
+    // Sheet 2: Candidatos
+    const candidates_data = [
+      ['Nombre', 'Email', 'Teléfono', 'Score IA', 'Experiencia (años)', 'Estado', 'Habilidades']
+    ];
+
+    [...filteredCandidates]
+      .sort((a, b) => (b.score_ia || 0) - (a.score_ia || 0))
+      .forEach(c => {
+        candidates_data.push([
           c.nombre,
           c.email,
           c.telefono,
-          c.score_cv || '-',
-          c.score_video || '-',
-          c.score_test || '-',
-          c.score_total || c.score_ia || '-',
+          c.score_ia || '-',
+          c.experiencia_anos || '-',
           c.estado,
+          (c.habilidades || []).join(', ')
         ]);
+      });
 
-        const csvContent = [
-          headers.join(','),
-          ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
-        ].join('\n');
+    const ws2 = xlsx.utils.aoa_to_sheet(candidates_data);
+    ws2['!cols'] = [
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 30 }
+    ];
+    xlsx.utils.book_append_sheet(wb, ws2, 'Candidatos');
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${startDate.toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+    xlsx.writeFile(wb, `Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${startDate.toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      if (selectedFormat === 'pdf') {
+        await generatePDF();
+      } else {
+        await generateExcel();
       }
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      alert('Error al generar reporte. Intenta de nuevo.');
     } finally {
       setIsExporting(false);
     }
@@ -229,8 +303,8 @@ Reporte generado automáticamente por SHORTLIST.GT
             <label className="block text-sm font-medium text-white mb-3">Formato:</label>
             <div className="space-y-2">
               {[
-                { id: 'pdf', label: '📄 PDF Ejecutivo' },
-                { id: 'csv', label: '📊 Excel/CSV' },
+                { id: 'pdf', label: '📄 PDF Profesional' },
+                { id: 'xlsx', label: '📊 Excel/XLSX' },
               ].map(format => (
                 <label key={format.id} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -250,7 +324,7 @@ Reporte generado automáticamente por SHORTLIST.GT
           {/* Action Buttons */}
           <div className="flex gap-2 pt-4">
             <Button
-              onClick={generateReport}
+              onClick={handleExport}
               disabled={isExporting || (selectedPeriod === 'custom' && (!customStartDate || !customEndDate))}
               className="flex-1 gap-2"
             >
