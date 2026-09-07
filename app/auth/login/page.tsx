@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { signIn } from '@/lib/auth';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
@@ -21,16 +20,33 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await signIn(email, password);
-      router.push('/dashboard');
-    } catch (err: any) {
-      const errorMsg = err.message || 'Error al iniciar sesión. Verifica tus credenciales.';
+      // Usar la ruta API (con rate limiting en servidor)
+      const response = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
 
-      if (errorMsg.includes('rate limit') || errorMsg.includes('too many')) {
-        setError('Demasiados intentos. Por favor, usa "Acceso Rápido Demo" o intenta en unos minutos.');
-      } else {
-        setError(errorMsg);
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          setError('Demasiados intentos. Por favor, intenta más tarde.');
+        } else {
+          setError(data.error || 'Error al iniciar sesión.');
+        }
+        return;
       }
+
+      // Guardar sesión (si lo necesitas)
+      if (data.session) {
+        localStorage.setItem('sb-auth-token', data.session.access_token);
+      }
+
+      router.push('/dashboard/reclutador');
+    } catch (err: any) {
+      setError('Error de conexión. Intenta más tarde.');
+      console.error('Login error:', err);
     } finally {
       setIsLoading(false);
     }
