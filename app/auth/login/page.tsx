@@ -38,11 +38,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Guardar sesión (si lo necesitas)
-      if (data.session) {
-        localStorage.setItem('sb-auth-token', data.session.access_token);
-      }
-
+      // El servidor ya estableció el cookie, redirigir directamente
       router.push('/dashboard/reclutador');
     } catch (err: any) {
       setError('Error de conexión. Intenta más tarde.');

@@ -78,10 +78,7 @@ export default function SignupPage() {
           });
 
           if (loginResponse.ok) {
-            const loginData = await loginResponse.json();
-            if (loginData.session) {
-              localStorage.setItem('sb-auth-token', loginData.session.access_token);
-            }
+            // El servidor ya estableció el cookie, redirigir directamente
             router.push('/dashboard/reclutador');
           } else {
             router.push('/auth/login');
