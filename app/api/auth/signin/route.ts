@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
+    // Crear respuesta con cookie de sesión
+    const response = NextResponse.json(
       {
         success: true,
         user: data.user,
@@ -68,6 +69,21 @@ export async function POST(request: NextRequest) {
       },
       { status: 200 }
     );
+
+    // Establecer cookie con el access token (para middleware)
+    if (data.session?.access_token) {
+      response.cookies.set({
+        name: 'sb-auth-token',
+        value: data.session.access_token,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 30, // 30 días
+        path: '/',
+      });
+    }
+
+    return response;
   } catch (error) {
     console.error('[SECURITY] Critical signin error:', {
       error: error instanceof Error ? error.message : 'Unknown error',
