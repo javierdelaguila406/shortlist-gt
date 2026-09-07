@@ -37,6 +37,8 @@ export default function DemoDashboard() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
   const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
+  const [showLinkedinLink, setShowLinkedinLink] = useState(false);
+  const [linkedinData, setLinkedinData] = useState<any>(null);
 
   const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
   const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
@@ -48,20 +50,43 @@ export default function DemoDashboard() {
     promedio: Math.round(filteredCandidates.reduce((sum, c) => sum + c.score_ia, 0) / filteredCandidates.length || 0),
   };
 
-  const handleCreateVacante = () => {
+  const handleCreateVacante = async () => {
     if (!newVacante.titulo.trim()) return;
     const newId = `vacante-${Date.now()}`;
-    const sharingLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/postular/${newId}`;
-    setVacantes([...vacantes, {
-      id: newId,
-      titulo: newVacante.titulo,
-      descripcion: newVacante.descripcion,
-      departamento: newVacante.departamento,
-      linkedinLink: sharingLink
-    }]);
-    setSelectedVacanteId(newId);
-    setShowCreateVacante(false);
-    setNewVacante({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://shortlist-gt.vercel.app';
+    const aplicarLink = `${baseUrl}/postular/${newId}`;
+
+    try {
+      const response = await fetch('/api/vacantes/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vacanteId: newId,
+          titulo: newVacante.titulo,
+          descripcion: newVacante.descripcion,
+          departamento: newVacante.departamento,
+        }),
+      });
+
+      const data = await response.json();
+
+      setVacantes([...vacantes, {
+        id: newId,
+        titulo: newVacante.titulo,
+        descripcion: newVacante.descripcion,
+        departamento: newVacante.departamento,
+        linkedinLink: data.linkedinShareUrl || aplicarLink
+      }]);
+
+      setLinkedinData(data);
+      setShowLinkedinLink(true);
+      setShowCreateVacante(false);
+      setSelectedVacanteId(newId);
+      setNewVacante({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error creando vacante');
+    }
   };
 
   return (
@@ -387,6 +412,73 @@ export default function DemoDashboard() {
                   Cancelar
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* LinkedIn Link Modal */}
+      {showLinkedinLink && linkedinData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl bg-zinc-900 border-zinc-800">
+            <CardHeader className="border-b border-zinc-800">
+              <CardTitle className="text-2xl">🔗 Link para LinkedIn</CardTitle>
+              <CardDescription>Usa este link para compartir la vacante en LinkedIn</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-6">
+                <p className="text-sm text-zinc-400 mb-3">LINK DE APLICACIÓN:</p>
+                <div className="flex items-center gap-2 bg-zinc-800 rounded-lg p-3">
+                  <code className="text-emerald-400 text-sm break-all flex-1">{linkedinData.aplicarLink}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(linkedinData.aplicarLink);
+                      alert('Link copiado al portapapeles');
+                    }}
+                    className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex-shrink-0"
+                  >
+                    Copiar
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm text-zinc-400 mb-3">TEXTO PARA LINKEDIN:</p>
+                <textarea
+                  value={linkedinData.linkedInText}
+                  readOnly
+                  rows={6}
+                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded text-white text-sm"
+                />
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(linkedinData.linkedInText + '\n\n' + linkedinData.aplicarLink);
+                    alert('Texto copiado al portapapeles');
+                  }}
+                  className="mt-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white text-sm w-full"
+                >
+                  Copiar Texto + Link
+                </button>
+              </div>
+
+              <div>
+                <p className="text-sm text-zinc-400 mb-3">LINK DE COMPARTIR:</p>
+                <a
+                  href={linkedinData.linkedinShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded text-white font-medium"
+                >
+                  Abrir en LinkedIn
+                </a>
+              </div>
+
+              <button
+                onClick={() => setShowLinkedinLink(false)}
+                className="w-full bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded text-white"
+              >
+                Cerrar
+              </button>
             </CardContent>
           </Card>
         </div>
