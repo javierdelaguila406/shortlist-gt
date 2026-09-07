@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase } from 'lucide-react';
+import { ExportReportModal } from '@/components/ExportReportModal';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -21,11 +22,22 @@ interface Candidate {
   puntuaciones: Record<string, number>;
 }
 
+interface Vacante {
+  id: string;
+  titulo: string;
+  descripcion?: string;
+  departamento?: string;
+}
+
 export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
+  const [showCreateVacante, setShowCreateVacante] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '' });
+  const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
 
-  const selectedVacante = mockVacantes.find(v => v.id === selectedVacanteId) || mockVacantes[0];
+  const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
   const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
 
   const stats = {
@@ -33,6 +45,20 @@ export default function DemoDashboard() {
     precalificados: filteredCandidates.filter(c => c.estado === 'precalificado').length,
     en_evaluacion: filteredCandidates.filter(c => c.estado === 'evaluacion').length,
     promedio: Math.round(filteredCandidates.reduce((sum, c) => sum + c.score_ia, 0) / filteredCandidates.length || 0),
+  };
+
+  const handleCreateVacante = () => {
+    if (!newVacante.titulo.trim()) return;
+    const newId = `vacante-${Date.now()}`;
+    setVacantes([...vacantes, {
+      id: newId,
+      titulo: newVacante.titulo,
+      descripcion: newVacante.descripcion,
+      departamento: newVacante.departamento
+    }]);
+    setSelectedVacanteId(newId);
+    setShowCreateVacante(false);
+    setNewVacante({ titulo: '', descripcion: '', departamento: '' });
   };
 
   return (
@@ -55,8 +81,8 @@ export default function DemoDashboard() {
             </Link>
           </div>
 
-          {/* Vacancy Selector */}
-          <div className="flex items-center gap-3">
+          {/* Vacancy Selector & Actions */}
+          <div className="flex items-center gap-3 flex-wrap">
             <Briefcase className="w-4 h-4 text-zinc-400" />
             <select
               value={selectedVacanteId}
@@ -66,13 +92,32 @@ export default function DemoDashboard() {
               }}
               className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500"
             >
-              {mockVacantes.map(vacante => (
+              {vacantes.map(vacante => (
                 <option key={vacante.id} value={vacante.id}>
                   {vacante.titulo}
                 </option>
               ))}
             </select>
-            <span className="text-xs text-zinc-500 ml-2">({filteredCandidates.length} candidatos)</span>
+            <span className="text-xs text-zinc-500">({filteredCandidates.length} candidatos)</span>
+
+            {/* Action Buttons */}
+            <div className="ml-auto flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowCreateVacante(true)}
+                className="gap-2"
+              >
+                <Plus className="w-4 h-4" /> Nueva Vacante
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setShowExportModal(true)}
+                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+              >
+                <Download className="w-4 h-4" /> Exportar Reporte
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -271,6 +316,74 @@ export default function DemoDashboard() {
           )}
         </div>
       </div>
+
+      {/* Create Vacante Modal */}
+      {showCreateVacante && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Nueva Vacante</CardTitle>
+              <button onClick={() => setShowCreateVacante(false)} className="text-zinc-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Título *</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Desarrollador Senior React"
+                  value={newVacante.titulo}
+                  onChange={(e) => setNewVacante({ ...newVacante, titulo: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Descripción</label>
+                <textarea
+                  placeholder="Descripción de la posición..."
+                  value={newVacante.descripcion}
+                  onChange={(e) => setNewVacante({ ...newVacante, descripcion: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 h-20 resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Departamento</label>
+                <input
+                  type="text"
+                  placeholder="Ej: Tecnología"
+                  value={newVacante.departamento}
+                  onChange={(e) => setNewVacante({ ...newVacante, departamento: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button
+                  onClick={handleCreateVacante}
+                  disabled={!newVacante.titulo.trim()}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                >
+                  Crear Vacante
+                </Button>
+                <Button onClick={() => setShowCreateVacante(false)} variant="outline" className="flex-1">
+                  Cancelar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Export Modal */}
+      <ExportReportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        vacanteTitle={selectedVacante?.titulo || 'Reporte'}
+        candidates={filteredCandidates}
+      />
     </div>
   );
 }
