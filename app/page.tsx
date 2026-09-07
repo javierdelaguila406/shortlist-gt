@@ -18,7 +18,7 @@ export default function Home() {
                 Dashboard
               </Button>
             </Link>
-            <Button size="sm">Acceder</Button>
+            <Link href="/auth/login"><Button size="sm">Acceder</Button></Link>
           </div>
         </div>
       </nav>
