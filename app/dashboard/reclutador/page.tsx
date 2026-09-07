@@ -100,10 +100,19 @@ export default function ReclutadorDashboard() {
     alert(response.ok ? `✅ ${data.message}` : `❌ Error: ${data.message}`);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('reclutador_token');
-    localStorage.removeItem('reclutador_email');
-    router.push('/dashboard/login');
+  const handleLogout = async () => {
+    try {
+      // Llamar al endpoint de logout para limpiar el cookie
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Limpiar localStorage
+      localStorage.removeItem('reclutador_token');
+      localStorage.removeItem('reclutador_email');
+      // Redirigir a login
+      router.push('/auth/login');
+    }
   };
 
   if (!isAuthenticated) {
