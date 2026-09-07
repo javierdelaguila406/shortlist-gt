@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { signUp } from '@/lib/auth';
 import { User, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 
 export default function SignupPage() {
@@ -36,45 +35,65 @@ export default function SignupPage() {
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const result = await signUp(formData.email, formData.password, formData.nombre);
+      // Usar la ruta API (con validación y rate limiting en servidor)
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: formData.nombre,
+          email: formData.email,
+          password: formData.password,
+          confirmPassword: formData.confirmPassword,
+        }),
+      });
 
-      // Intentar login automático después del signup
-      if (result.success) {
-        setSuccess(true);
-        setTimeout(async () => {
-          try {
-            await fetch('/api/auth/signin', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                email: formData.email,
-                password: formData.password,
-              }),
-            });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          setError('Demasiados intentos. Por favor, intenta más tarde.');
+        } else if (Array.isArray(data.details)) {
+          setError(data.details[0] || data.error || 'Error al registrar.');
+        } else {
+          setError(data.error || 'Error al registrar.');
+        }
+        return;
+      }
+
+      setSuccess(true);
+
+      // Intentar auto-login después del signup
+      setTimeout(async () => {
+        try {
+          const loginResponse = await fetch('/api/auth/signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password,
+            }),
+          });
+
+          if (loginResponse.ok) {
+            const loginData = await loginResponse.json();
+            if (loginData.session) {
+              localStorage.setItem('sb-auth-token', loginData.session.access_token);
+            }
             router.push('/dashboard/reclutador');
-          } catch {
+          } else {
             router.push('/auth/login');
           }
-        }, 1500);
-      }
+        } catch (err) {
+          console.error('Auto-login failed:', err);
+          router.push('/auth/login');
+        }
+      }, 1500);
     } catch (err: any) {
-      const errorMsg = err.message || 'Error al registrar. Intenta de nuevo.';
-
-      if (errorMsg.includes('rate limit') || errorMsg.includes('too many')) {
-        setError('Demasiados intentos. Por favor, usa "Acceso Rápido Demo" o intenta en unos minutos.');
-      } else if (errorMsg.includes('already registered')) {
-        setError('Este email ya está registrado. Usa "Acceso Rápido Demo" o inicia sesión.');
-      } else {
-        setError(errorMsg);
-      }
+      setError('Error de conexión. Intenta más tarde.');
+      console.error('Signup error:', err);
     } finally {
       setIsLoading(false);
     }

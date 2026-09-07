@@ -13,10 +13,10 @@
 ### ✅ Pilar 2: Rate Limiting y Bloqueos
 - **Archivo:** `lib/rate-limit.ts`
 - **Límites implementados:**
-  - `/api/candidatos/postular`: 5 solicitudes por IP / 15 minutos
-  - `/api/cv`: 20 análisis por IP / 10 minutos
-  - `/auth/login`: 10 intentos / 15 minutos (implementar en auth)
-  - `/auth/signup`: 3 registros / 1 hora (implementar en auth)
+  - `/api/candidatos/postular`: 5 solicitudes por IP / 15 minutos ✓
+  - `/api/cv`: 20 análisis por IP / 10 minutos ✓
+  - `/api/auth/signin`: 10 intentos por IP / 15 minutos ✓
+  - `/api/auth/signup`: 3 registros por IP / 1 hora ✓
 - **Respuesta:** HTTP 429 (Too Many Requests) con `Retry-After` header
 
 ### ✅ Pilar 3: Autenticación y Gestión de Sesiones
@@ -145,6 +145,10 @@ cp .env.example .env.local
 | `app/api/candidatos/postular/route.ts` | Actualizado | Validación + Rate Limiting |
 | `app/api/cv/route.ts` | Actualizado | Validación + Errores seguros |
 | `app/api/candidatos/eliminar/route.ts` | **CRÍTICO** | Autenticación + Auditoría |
+| `app/api/auth/signin/route.ts` | Actualizado | Rate Limiting (10/15min) |
+| `app/api/auth/signup/route.ts` | **Creado** | Validación + Rate Limiting (3/1h) |
+| `app/auth/login/page.tsx` | Actualizado | Usar API con rate limiting |
+| `app/auth/signup/page.tsx` | Actualizado | Usar API con rate limiting |
 | `next.config.ts` | Actualizado | Security Headers |
 
 ---
