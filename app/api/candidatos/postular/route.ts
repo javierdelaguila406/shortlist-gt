@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
     const telefono = formData.get('telefono') as string;
     const vacante_id = formData.get('vacante_id') as string;
     const cvText = formData.get('cvText') as string;
+    const habilidades = formData.get('habilidades') as string;
     const cv = formData.get('cv') as File;
 
     if (!nombre || !telefono || !vacante_id) {
@@ -77,9 +78,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Vacante no encontrada', success: false }, { status: 404 });
     }
 
-    // Usar cvText que viene del frontend (ya extraído)
-    // Si no viene, intentar extraer del buffer como fallback
-    let finalCVText = cvText || '';
+    // Usar cvText + habilidades para análisis
+    let finalCVText = (cvText || '') + ' ' + (habilidades || '');
 
     if (!finalCVText && cv) {
       try {

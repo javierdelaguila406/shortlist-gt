@@ -15,6 +15,7 @@ interface FormData {
   telefono: string;
   cv: File | null;
   cvText: string;
+  habilidades: string;
   consentimiento: boolean;
 }
 
@@ -123,6 +124,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     telefono: '',
     cv: null,
     cvText: '',
+    habilidades: '',
     consentimiento: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -223,6 +225,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       formDataToSend.append('telefono', formData.telefono);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
       formDataToSend.append('cvText', formData.cvText);
+      formDataToSend.append('habilidades', formData.habilidades);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
       const response = await fetch('/api/candidatos/postular', {
@@ -329,6 +332,18 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
                   <Upload className="w-8 h-8 text-zinc-400 mb-2" />
                   <p className="text-sm text-white">{cvFileName || 'Selecciona tu CV (PDF)'}</p>
                 </label>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Habilidades y Experiencia *</label>
+                <textarea
+                  name="habilidades"
+                  value={formData.habilidades}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Ventas B2B, CRM Salesforce, Negociación, 5 años de experiencia en telemarketing"
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 h-24 resize-none"
+                  required
+                />
               </div>
 
               <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
