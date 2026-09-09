@@ -122,6 +122,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     nombre: '',
     telefono: '',
     cv: null,
+    cvText: '',
     consentimiento: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
