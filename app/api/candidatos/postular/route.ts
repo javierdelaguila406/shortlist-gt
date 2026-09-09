@@ -97,30 +97,27 @@ export async function POST(request: NextRequest) {
         email: generatedEmail,
         telefono,
         cv_url: cvUrl,
+        cv_texto: null,
+        score_cv: 0,
+        score_video: 0,
+        score_test: 0,
+        score_total: 0,
         estado: 'pendiente',
-        score_ia: 0,
         metadata: {
           aplicacion_fecha: new Date().toISOString(),
         },
       };
 
-      // Try Supabase first
-      try {
-        await supabase
-          .from('candidatos')
-          .insert(candidatoData);
-      } catch (dbError) {
-        console.warn('Supabase save failed, using localStorage:', dbError);
-      }
+      // Save to Supabase - this is the primary storage
+      const { error: dbError } = await supabase
+        .from('candidatos')
+        .insert(candidatoData);
 
-      // Always save to localStorage for dashboard
-      try {
-        const saved = localStorage.getItem('candidatos_postulantes') || '[]';
-        const list = JSON.parse(saved);
-        list.push(candidatoData);
-        localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
-      } catch (e) {
-        console.error('localStorage save failed:', e);
+      if (dbError) {
+        console.error('[API] Supabase save failed:', dbError);
+        // Still return success to user, but log the error
+      } else {
+        console.log('[API] Candidato guardado en Supabase:', candidatoId);
       }
     } catch (fileError) {
       console.error('File operation failed:', fileError);
