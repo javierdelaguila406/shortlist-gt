@@ -4,9 +4,9 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 
 export default function CrearVacantePage() {
-  const [loading, setLoading] = useState(false);
   const [link, setLink] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -14,33 +14,37 @@ export default function CrearVacantePage() {
     setLoading(true);
 
     try {
-      const formData = new FormData(e.currentTarget);
-      const response = await fetch('/api/vacantes/crear', {
-        method: 'POST',
-        body: formData,
-      });
+      const fd = new FormData(e.currentTarget);
+      const titulo = fd.get('titulo') as string;
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result.error || 'Error al crear vacante');
+      if (!titulo.trim()) {
+        setError('Título requerido');
+        setLoading(false);
         return;
       }
 
-      setLink(result.vacante.aplicarLink);
-      e.currentTarget.reset();
+      const newId = `vacante-${Date.now()}`;
+      const baseUrl = window.location.origin;
+      const aplicarLink = `${baseUrl}/postular/${newId}`;
+
+      const newVacante = {
+        id: newId,
+        titulo,
+        descripcion: fd.get('descripcion'),
+        departamento: fd.get('departamento'),
+        aplicarLink,
+      };
 
       // Save to localStorage
-      try {
-        const saved = localStorage.getItem('vacantes') || '[]';
-        const list = JSON.parse(saved);
-        list.push(result.vacante);
-        localStorage.setItem('vacantes', JSON.stringify(list));
-      } catch (e) {
-        console.log('localStorage error:', e);
-      }
+      const saved = localStorage.getItem('vacantes') || '[]';
+      const list = JSON.parse(saved);
+      list.push(newVacante);
+      localStorage.setItem('vacantes', JSON.stringify(list));
+
+      setLink(aplicarLink);
+      e.currentTarget.reset();
     } catch (err) {
-      setError('Error de conexión');
+      setError('Error: ' + (err instanceof Error ? err.message : 'desconocido'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -53,20 +57,20 @@ export default function CrearVacantePage() {
         <div style={{ maxWidth: '42rem', width: '100%', background: '#18181b', border: '1px solid #3f3f46', borderRadius: '0.5rem', padding: '2rem', textAlign: 'center' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#22c55e', marginBottom: '1rem' }}>✅ ¡Vacante Creada!</h2>
           <p style={{ color: '#a1a1aa', marginBottom: '1.5rem' }}>Tu link de aplicación:</p>
-          <div style={{ background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', padding: '1rem', marginBottom: '1.5rem', wordBreak: 'break-all' }}>
-            <code style={{ color: '#10b981', fontSize: '0.875rem' }}>{link}</code>
+          <div style={{ background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', padding: '1rem', marginBottom: '1.5rem', wordBreak: 'break-all', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+            <code style={{ color: '#10b981' }}>{link}</code>
           </div>
           <button
             onClick={() => {
               navigator.clipboard.writeText(link);
-              alert('Copiado al portapapeles');
+              alert('✅ Copiado al portapapeles');
             }}
-            style={{ background: '#059669', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', marginRight: '0.5rem' }}
+            style={{ background: '#059669', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', border: 'none', cursor: 'pointer', marginRight: '0.5rem', fontWeight: '500' }}
           >
-            Copiar
+            📋 Copiar Link
           </button>
-          <Link href="/vacantes/crear" style={{ background: '#3f3f46', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', textDecoration: 'none', display: 'inline-block' }}>
-            Crear otra
+          <Link href="/vacantes/crear" style={{ background: '#3f3f46', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '0.375rem', textDecoration: 'none', display: 'inline-block', marginLeft: '0.5rem', fontWeight: '500' }}>
+            ➕ Crear Otra
           </Link>
         </div>
       </div>
@@ -99,7 +103,7 @@ export default function CrearVacantePage() {
                 name="titulo"
                 placeholder="Ej: Desarrollador Senior"
                 required
-                style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
             </div>
             <div>
@@ -121,19 +125,19 @@ export default function CrearVacantePage() {
                 type="text"
                 name="departamento"
                 placeholder="Ej: Tecnología"
-                style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white', boxSizing: 'border-box', fontFamily: 'inherit' }}
               />
             </div>
             <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem' }}>
               <button
                 type="submit"
                 disabled={loading}
-                style={{ flex: 1, background: '#059669', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', border: 'none', fontWeight: '500', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1 }}
+                style={{ flex: 1, background: '#059669', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', border: 'none', fontWeight: '500', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.5 : 1, fontFamily: 'inherit' }}
               >
-                {loading ? 'Creando...' : 'Crear Vacante'}
+                {loading ? '⏳ Creando...' : '✅ Crear Vacante'}
               </button>
-              <Link href="/" style={{ flex: 1, background: '#3f3f46', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none', textAlign: 'center', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                Cancelar
+              <Link href="/" style={{ flex: 1, background: '#3f3f46', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none', textAlign: 'center', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' }}>
+                ❌ Cancelar
               </Link>
             </div>
           </form>
