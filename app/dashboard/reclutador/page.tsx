@@ -393,12 +393,12 @@ export default function DemoDashboard() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 mb-3">
-                      {candidate.habilidades.slice(0, 3).map((skill) => (
+                      {candidate.habilidades && candidate.habilidades.slice(0, 3).map((skill) => (
                         <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
                           {skill}
                         </span>
                       ))}
-                      {candidate.habilidades.length > 3 && (
+                      {candidate.habilidades && candidate.habilidades.length > 3 && (
                         <span className="px-2 py-1 bg-zinc-800 text-xs text-zinc-400">
                           +{candidate.habilidades.length - 3}
                         </span>
@@ -444,7 +444,7 @@ export default function DemoDashboard() {
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3">Puntuaciones por Competencia</h4>
                     <div className="space-y-2">
-                      {Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                      {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
                         <div key={key} className="space-y-1">
                           <div className="flex justify-between text-xs">
                             <span className="text-zinc-400 capitalize">{key.replace(/_/g, ' ')}</span>
@@ -714,7 +714,7 @@ export default function DemoDashboard() {
               <div>
                 <h3 className="text-lg font-semibold text-white mb-3">Habilidades</h3>
                 <div className="flex flex-wrap gap-2">
-                  {selectedCandidate.habilidades.map((skill) => (
+                  {selectedCandidate.habilidades && selectedCandidate.habilidades.map((skill) => (
                     <span
                       key={skill}
                       className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-sm rounded"
