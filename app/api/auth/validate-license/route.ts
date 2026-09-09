@@ -23,7 +23,7 @@ const VALID_LICENSES: Record<string, License> = {
     activo: true,
     maxVacantes: 999,
     maxUsers: 10,
-    fechaExpiracion: '2025-09-08',
+    fechaExpiracion: '2027-09-08',
   },
   'TRIAL-2024': {
     tipo: 'TRIAL',
@@ -31,7 +31,7 @@ const VALID_LICENSES: Record<string, License> = {
     activo: true,
     maxVacantes: 1,
     maxUsers: 1,
-    fechaExpiracion: '2026-09-15',
+    fechaExpiracion: '2027-09-15',
   },
 };
 
