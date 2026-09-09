@@ -15,6 +15,9 @@ const publicRoutes = [
   '/auth/signup',
   '/auth/confirm',
   '/dashboard/demo',
+  '/acceso',
+  '/vacantes/crear',
+  '/postular',
   '/',
 ];
 
