@@ -52,6 +52,7 @@ export default function DemoDashboard() {
   const [linkedinData, setLinkedinData] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>(mockCandidates);
 
   useEffect(() => {
     const savedVacantes = localStorage.getItem('vacantes');
@@ -59,6 +60,17 @@ export default function DemoDashboard() {
       setVacantes(JSON.parse(savedVacantes));
     } else {
       setVacantes(mockVacantes as Vacante[]);
+    }
+
+    // Load postulantes from localStorage
+    try {
+      const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
+      const postulantes = JSON.parse(savedPostulantes);
+      const combined = [...mockCandidates, ...postulantes];
+      setAllCandidates(combined);
+      console.log('[Dashboard] Candidatos combinados:', { mock: mockCandidates.length, postulantes: postulantes.length, total: combined.length });
+    } catch (e) {
+      console.error('Error loading postulantes:', e);
     }
 
     const license = getUserLicenseFromStorage();
@@ -78,8 +90,8 @@ export default function DemoDashboard() {
   );
 
   const filteredCandidates = useMemo(
-    () => mockCandidates.filter(c => c.vacante_id === selectedVacanteId),
-    [selectedVacanteId]
+    () => allCandidates.filter(c => c.vacante_id === selectedVacanteId),
+    [allCandidates, selectedVacanteId]
   );
 
   const stats = useMemo(

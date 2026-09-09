@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase } from 'lucide-react';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -24,9 +24,24 @@ interface Candidate {
 export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
+  const [showCreateVacante, setShowCreateVacante] = useState(false);
+  const [allCandidates, setAllCandidates] = useState<Candidate[]>(mockCandidates);
+
+  useEffect(() => {
+    // Load postulantes from localStorage
+    try {
+      const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
+      const postulantes = JSON.parse(savedPostulantes);
+      const combined = [...mockCandidates, ...postulantes];
+      setAllCandidates(combined);
+      console.log('[Dashboard] Candidatos combinados:', { mock: mockCandidates.length, postulantes: postulantes.length, total: combined.length });
+    } catch (e) {
+      console.error('Error loading postulantes:', e);
+    }
+  }, []);
 
   const selectedVacante = mockVacantes.find(v => v.id === selectedVacanteId) || mockVacantes[0];
-  const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
+  const filteredCandidates = allCandidates.filter(c => c.vacante_id === selectedVacanteId);
 
   const stats = {
     total: filteredCandidates.length,
