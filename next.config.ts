@@ -21,11 +21,11 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          // Content Security Policy
-          {
-            key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
-          },
+          // Content Security Policy - Disabled for development to allow Supabase connections
+          // {
+          //   key: 'Content-Security-Policy',
+          //   value: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:;",
+          // },
           // Referrer Policy
           {
             key: 'Referrer-Policy',
