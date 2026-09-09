@@ -43,12 +43,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 3. Si no encontramos nada, retornar el slug tal cual
-    // (podría ser un ID que aún no existe, pero el usuario intentará postularse)
+    // 3. No encontramos la vacante
     return NextResponse.json({
-      success: true,
-      vacante_id: slug,
-    });
+      success: false,
+      error: 'Vacante no encontrada',
+    }, { status: 404 });
   } catch (error) {
     console.error('[API] Error:', error);
     return NextResponse.json(
