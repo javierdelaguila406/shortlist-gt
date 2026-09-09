@@ -16,6 +16,7 @@ interface ReportModalProps {
 
 export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candidates, company = 'FORNITURE CITY' }: ReportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [periodo, setPeriodo] = useState('mes');
 
   const generateProfessionalPDF = async () => {
     setIsExporting(true);
@@ -336,6 +337,53 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-zinc-400">Genera un reporte ejecutivo profesional para presentar a la empresa.</p>
+
+          {/* Filtro de Período */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white">Período del Reporte</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setPeriodo('hoy')}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  periodo === 'hoy'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                Hoy
+              </button>
+              <button
+                onClick={() => setPeriodo('semana')}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  periodo === 'semana'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                Últimos 7 días
+              </button>
+              <button
+                onClick={() => setPeriodo('mes')}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  periodo === 'mes'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                Este mes
+              </button>
+              <button
+                onClick={() => setPeriodo('ano')}
+                className={`px-3 py-2 rounded text-sm transition-colors ${
+                  periodo === 'ano'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                Este año
+              </button>
+            </div>
+          </div>
 
           <div className="space-y-3">
             <button
