@@ -67,11 +67,13 @@ export default function DemoDashboard() {
     setUserLicense(license);
 
     // Check if coming back from postulation
-    const params = new URLSearchParams(window.location.search);
-    const vacanteParam = params.get('vacante');
-    if (vacanteParam) {
-      setSelectedVacanteId(vacanteParam);
-      console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const vacanteParam = params.get('vacante');
+      if (vacanteParam) {
+        setSelectedVacanteId(vacanteParam);
+        console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
+      }
     }
   }, []);
 
