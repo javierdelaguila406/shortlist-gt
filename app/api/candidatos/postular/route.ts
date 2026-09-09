@@ -7,29 +7,43 @@ const KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
 };
 
 function analyzeCV(cvText: string, vacanteTitle: string): number {
-  if (!cvText || cvText.length < 50) return 0;
+  if (!cvText || cvText.length < 20) return 20; // Mínimo 20 si hay algo
 
   const textLower = cvText.toLowerCase();
   let industry = 'default';
-  
+
   if (vacanteTitle.toLowerCase().includes('venta')) industry = 'ventas';
   else if (vacanteTitle.toLowerCase().includes('mecán')) industry = 'mecanica';
 
   const keywords = KEYWORDS_BY_INDUSTRY[industry] || [];
-  let score = 0;
+  let score = 20; // Base 20
 
+  // Contar palabras clave (peso aumentado)
   for (const keyword of keywords) {
     const count = (textLower.match(new RegExp(keyword, 'g')) || []).length;
-    score += count * 5;
+    score += Math.min(count, 3) * 8; // Max 3 por palabra, 8 puntos cada
   }
 
-  // Bonus por años
-  if (/(\d+)\s*(?:años|years)/.test(textLower)) score += 15;
-  
-  // Bonus por educación
-  if (/(?:licenciatura|técnico|carrera|diploma)/.test(textLower)) score += 10;
+  // Bonus significativo por años de experiencia
+  const yearsMatch = textLower.match(/(\d+)\s*(?:años|years|a[ñ]os)/);
+  if (yearsMatch) {
+    const years = parseInt(yearsMatch[1]);
+    if (years >= 5) score += 25;
+    else if (years >= 3) score += 20;
+    else if (years >= 1) score += 10;
+  }
 
-  return Math.min(100, score || 0);
+  // Bonus por educación
+  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado)/.test(textLower)) {
+    score += 15;
+  }
+
+  // Bonus si tiene múltiples palabras clave (indica mejor fit)
+  const keywordMatches = keywords.filter(k => textLower.includes(k)).length;
+  if (keywordMatches >= 3) score += 15;
+  if (keywordMatches >= 5) score += 10;
+
+  return Math.min(100, Math.max(20, score));
 }
 
 function extractTextFromBuffer(buffer: Buffer): string {
@@ -53,6 +67,7 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const nombre = formData.get('nombre') as string;
+    const email = formData.get('email') as string;
     const telefono = formData.get('telefono') as string;
     const vacante_id = formData.get('vacante_id') as string;
     const cvText = formData.get('cvText') as string;
@@ -94,7 +109,6 @@ export async function POST(request: NextRequest) {
     const score_ia = analyzeCV(finalCVText, vacanteData.titulo);
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
-    const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
     const candidato_id = `candidato-${Date.now()}`;
 
     const { data: candidato, error } = await supabase
