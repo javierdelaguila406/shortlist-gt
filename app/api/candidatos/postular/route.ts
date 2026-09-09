@@ -88,33 +88,39 @@ export async function POST(request: NextRequest) {
       const buffer = await cvFile.arrayBuffer();
       fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(buffer));
       const cvUrl = `/uploads/${fileName}`;
+      candidatoId = `candidato-${Date.now()}`;
 
+      const candidatoData = {
+        id: candidatoId,
+        vacante_id,
+        nombre,
+        email: generatedEmail,
+        telefono,
+        cv_url: cvUrl,
+        estado: 'pendiente',
+        score_ia: 0,
+        metadata: {
+          aplicacion_fecha: new Date().toISOString(),
+        },
+      };
+
+      // Try Supabase first
       try {
-        const { data: candidato, error: candidatoError } = await supabase
+        await supabase
           .from('candidatos')
-          .insert({
-            vacante_id,
-            nombre,
-            email: generatedEmail,
-            telefono,
-            cv_url: cvUrl,
-            estado: 'pendiente',
-            metadata: {
-              aplicacion_fecha: new Date().toISOString(),
-            },
-          })
-          .select()
-          .single();
-
-        if (candidatoError) {
-          console.error('Database error:', candidatoError);
-          candidatoId = `local-${Date.now()}`;
-        } else if (candidato) {
-          candidatoId = candidato.id;
-        }
+          .insert(candidatoData);
       } catch (dbError) {
-        console.error('Database operation failed:', dbError);
-        candidatoId = `local-${Date.now()}`;
+        console.warn('Supabase save failed, using localStorage:', dbError);
+      }
+
+      // Always save to localStorage for dashboard
+      try {
+        const saved = localStorage.getItem('candidatos_postulantes') || '[]';
+        const list = JSON.parse(saved);
+        list.push(candidatoData);
+        localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
+      } catch (e) {
+        console.error('localStorage save failed:', e);
       }
     } catch (fileError) {
       console.error('File operation failed:', fileError);
