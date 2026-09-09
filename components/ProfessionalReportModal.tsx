@@ -17,6 +17,8 @@ interface ReportModalProps {
 export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candidates, company = 'FORNITURE CITY' }: ReportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [periodo, setPeriodo] = useState('mes');
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   const generateProfessionalPDF = async () => {
     setIsExporting(true);
@@ -382,7 +384,40 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               >
                 Este año
               </button>
+              <button
+                onClick={() => setPeriodo('personalizado')}
+                className={`col-span-2 px-3 py-2 rounded text-sm transition-colors ${
+                  periodo === 'personalizado'
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                }`}
+              >
+                Personalizado
+              </button>
             </div>
+
+            {periodo === 'personalizado' && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Desde</label>
+                  <input
+                    type="date"
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
+                    className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-400 block mb-1">Hasta</label>
+                  <input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
