@@ -18,20 +18,27 @@ const publicRoutes = [
   '/acceso',
   '/vacantes/crear',
   '/postular',
+  '/api/vacantes/crear',
+  '/api/vacantes/buscar',
+  '/api/candidatos/postular',
   '/',
 ];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Verificar si es ruta pública PRIMERO (tiene prioridad)
+  const isPublicRoute = publicRoutes.some(route =>
+    pathname === route || pathname.startsWith(route)
+  );
+
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
   // Verificar si es ruta protegida
   const isProtectedRoute = protectedRoutes.some(route =>
     pathname.startsWith(route)
-  );
-
-  // Verificar si es ruta pública
-  const isPublicRoute = publicRoutes.some(route =>
-    pathname === route || pathname.startsWith(route)
   );
 
   // Si es ruta protegida, verificar autenticación

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,25 +8,44 @@ export async function POST(request: NextRequest) {
 
     if (!titulo || !titulo.trim()) {
       return NextResponse.json(
-        { error: 'Título requerido' },
+        { error: 'Título requerido', success: false },
         { status: 400 }
       );
     }
 
     const newId = `vacante-${Date.now()}`;
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
-    const host = request.headers.get('host') || 'shortlist-gt.vercel.app';
-    const aplicarLink = `${proto}://${host}/postular/${newId}`;
 
+    const vacante = {
+      id: newId,
+      titulo: titulo.trim(),
+      descripcion: descripcion || '',
+      departamento: departamento || '',
+      usuario_id: 'public',
+      created_at: new Date().toISOString(),
+    };
+
+    const { error: insertError } = await supabase
+      .from('vacantes')
+      .insert([vacante]);
+
+    if (insertError) {
+      console.error('[API] Error inserting vacante:', insertError);
+      return NextResponse.json(
+        { error: 'Error al crear vacante', success: false },
+        { status: 500 }
+      );
+    }
+
+    console.log('[API] Vacante creada en Supabase:', newId);
     return NextResponse.json({
       success: true,
-      newId,
-      aplicarLink,
+      vacante_id: newId,
+      link: `/postular/${newId}`,
     });
   } catch (error) {
-    console.error('POST /api/vacantes/crear error:', error);
+    console.error('[API] Error en crear vacante:', error);
     return NextResponse.json(
-      { error: 'Error al crear vacante', details: error instanceof Error ? error.message : 'Unknown' },
+      { error: 'Error del servidor', success: false },
       { status: 500 }
     );
   }
