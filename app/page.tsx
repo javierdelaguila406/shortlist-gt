@@ -34,14 +34,14 @@ export default function Home() {
           candidatos, WhatsApp para comunicación y análisis profundo de competencias.
         </p>
         <div className="flex gap-4 justify-center">
-          <Link href="/postular/sample">
+          <Link href="/acceso">
             <Button size="lg" className="flex items-center gap-2">
-              Postularme <ArrowRight className="w-4 h-4" />
+              Acceder Ahora <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
-          <Link href="/dashboard/demo">
+          <Link href="/auth/login">
             <Button size="lg" variant="secondary">
-              Probar Demo
+              Inicia Sesión
             </Button>
           </Link>
         </div>

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
-import { ExportReportModal } from '@/components/ExportReportModal';
+import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
+import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
+import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
 import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
 
 interface Candidate {
@@ -31,6 +33,14 @@ interface Vacante {
   aplicarLink?: string;
 }
 
+interface UserLicense {
+  codigo: string;
+  tipo: 'DEMO' | 'TRIAL' | 'PREMIUM';
+  maxVacantes: number;
+  vacantesCreadoras: number;
+  activo: boolean;
+}
+
 export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
@@ -40,6 +50,8 @@ export default function DemoDashboard() {
   const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
   const [showLinkedinLink, setShowLinkedinLink] = useState(false);
   const [linkedinData, setLinkedinData] = useState<any>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
 
   useEffect(() => {
     const savedVacantes = localStorage.getItem('vacantes');
@@ -48,10 +60,16 @@ export default function DemoDashboard() {
     } else {
       setVacantes(mockVacantes as Vacante[]);
     }
+
+    const license = getUserLicenseFromStorage();
+    setUserLicense(license);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('vacantes', JSON.stringify(vacantes));
+    const vacanteJson = JSON.stringify(vacantes);
+    localStorage.setItem('vacantes', vacanteJson);
+    sessionStorage.setItem('vacantes', vacanteJson);
+    console.log('[Dashboard] Vacantes guardadas:', { count: vacantes.length, ids: vacantes.map(v => v.id) });
   }, [vacantes]);
 
   const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
@@ -66,6 +84,17 @@ export default function DemoDashboard() {
 
   const handleCreateVacante = async () => {
     if (!newVacante.titulo.trim()) return;
+
+    // Verificar licencia
+    const license = getUserLicenseFromStorage();
+    const { canCreate, reason } = canCreateVacante(license);
+
+    if (!canCreate) {
+      alert(`No puedes crear vacantes: ${reason}`);
+      setShowCreateVacante(false);
+      return;
+    }
+
     const newId = `vacante-${Date.now()}`;
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://shortlist-gt.vercel.app';
     const aplicarLink = `${baseUrl}/postular/${newId}`;
@@ -110,22 +139,25 @@ export default function DemoDashboard() {
       <div className="border-b border-zinc-800/40 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between mb-4">
-            <div>
+            <div className="flex-1">
               <h1 className="text-2xl font-bold text-white">
                 SHORTLIST<span className="text-emerald-500">.GT</span>
               </h1>
               <p className="text-sm text-zinc-400 mt-1">Dashboard Reclutador</p>
             </div>
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Button>
-            </Link>
+            <div className="flex items-center gap-4">
+              <LicenseStatusBadge />
+              <Link href="/">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Volver
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Vacancy Selector & Actions */}
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
             <Briefcase className="w-4 h-4 text-zinc-400" />
             <select
               value={selectedVacanteId}
@@ -153,7 +185,7 @@ export default function DemoDashboard() {
                   });
                   setShowLinkedinLink(true);
                 }}
-                className="ml-auto bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+                className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
               >
                 <Link2 className="w-4 h-4" />
                 Ver Link
@@ -161,22 +193,23 @@ export default function DemoDashboard() {
             )}
 
             {/* Action Buttons */}
-            <div className="ml-auto flex gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => setShowCreateVacante(true)}
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" /> Nueva Vacante
-              </Button>
-              <Button
-                size="sm"
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+              <button
                 onClick={() => setShowExportModal(true)}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                style={{
+                  backgroundColor: '#16a34a',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
               >
                 <Download className="w-4 h-4" /> Exportar Reporte
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -367,7 +400,10 @@ export default function DemoDashboard() {
                   </div>
 
                   {/* CTA */}
-                  <Button className="w-full mt-4">
+                  <Button
+                    className="w-full mt-4"
+                    onClick={() => setShowDetailModal(true)}
+                  >
                     Ver Perfil Completo
                   </Button>
                 </CardContent>
@@ -516,12 +552,108 @@ export default function DemoDashboard() {
         </div>
       )}
 
+      {/* Full Profile Modal */}
+      {showDetailModal && selectedCandidate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800">
+            <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-zinc-900 border-b border-zinc-800">
+              <div>
+                <CardTitle className="text-2xl">{selectedCandidate.nombre}</CardTitle>
+                <CardDescription>Perfil Completo del Candidato</CardDescription>
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-zinc-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
+              {/* Contact Info */}
+              <div className="border-b border-zinc-800 pb-4">
+                <h3 className="text-lg font-semibold text-white mb-3">Información de Contacto</h3>
+                <div className="space-y-2 text-sm">
+                  <p><span className="text-zinc-400">Email:</span> <span className="text-white">{selectedCandidate.email}</span></p>
+                  <p><span className="text-zinc-400">Teléfono:</span> <span className="text-white">{selectedCandidate.telefono}</span></p>
+                  <p><span className="text-zinc-400">Experiencia:</span> <span className="text-white">{selectedCandidate.experiencia_anos} años</span></p>
+                </div>
+              </div>
+
+              {/* Score Overview */}
+              <div className="border-b border-zinc-800 pb-4">
+                <h3 className="text-lg font-semibold text-white mb-3">Score IA Detallado</h3>
+                <div className="bg-zinc-800/40 rounded-lg p-4 mb-4">
+                  <div className="text-4xl font-bold text-emerald-500">{selectedCandidate.score_ia}/100</div>
+                  <p className="text-sm text-zinc-400 mt-1">Puntuación General</p>
+                </div>
+                <div className="space-y-3">
+                  {Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                    <div key={key}>
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-zinc-300 capitalize">{key.replace(/_/g, ' ')}</span>
+                        <span className="text-emerald-400 font-medium">{value}/100</span>
+                      </div>
+                      <div className="w-full bg-zinc-800 h-2 rounded overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded"
+                          style={{ width: `${value}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* AI Feedback */}
+              <div className="border-b border-zinc-800 pb-4">
+                <h3 className="text-lg font-semibold text-white mb-3">Análisis IA</h3>
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                  {selectedCandidate.feedback_ia}
+                </p>
+              </div>
+
+              {/* Executive Summary */}
+              <div className="border-b border-zinc-800 pb-4">
+                <h3 className="text-lg font-semibold text-white mb-3">Resumen Ejecutivo</h3>
+                <p className="text-sm text-zinc-300 leading-relaxed">
+                  {selectedCandidate.resumen_ejecutivo}
+                </p>
+              </div>
+
+              {/* Skills */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">Habilidades</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCandidate.habilidades.map((skill) => (
+                    <span
+                      key={skill}
+                      className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-sm rounded"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <Button
+                onClick={() => setShowDetailModal(false)}
+                className="w-full mt-6"
+              >
+                Cerrar
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Export Modal */}
-      <ExportReportModal
+      <ProfessionalReportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
         vacanteTitle={selectedVacante?.titulo || 'Reporte'}
         candidates={filteredCandidates}
+        company="FORNITURE CITY"
       />
     </div>
   );
