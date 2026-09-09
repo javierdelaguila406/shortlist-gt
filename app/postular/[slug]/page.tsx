@@ -39,9 +39,17 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       });
     });
 
-    // 2. Intentar agregar desde localStorage
+    // 2. Intentar agregar desde localStorage o cookie
     try {
-      const savedVacantes = localStorage.getItem('vacantes');
+      let savedVacantes = localStorage.getItem('vacantes');
+      // Fallback to cookie if localStorage empty
+      if (!savedVacantes) {
+        const cookies = document.cookie.split(';');
+        const vacCookie = cookies.find(c => c.trim().startsWith('vacantes='));
+        if (vacCookie) {
+          savedVacantes = decodeURIComponent(vacCookie.split('=')[1]);
+        }
+      }
       if (savedVacantes) {
         const parsed = JSON.parse(savedVacantes);
         if (Array.isArray(parsed)) {

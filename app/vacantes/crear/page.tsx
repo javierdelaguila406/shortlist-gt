@@ -35,12 +35,13 @@ export default function CrearVacantePage() {
         aplicarLink,
       };
 
-      // Save to localStorage AND sessionStorage
+      // Save to localStorage AND cookie for persistence
       const saved = localStorage.getItem('vacantes') || '[]';
       const list = JSON.parse(saved);
       list.push(newVacante);
       localStorage.setItem('vacantes', JSON.stringify(list));
-      sessionStorage.setItem('vacantes', JSON.stringify(list));
+      // Also set cookie so it persists across navigations
+      document.cookie = `vacantes=${encodeURIComponent(JSON.stringify(list))}; path=/; max-age=604800`;
 
       setLink(aplicarLink);
       e.currentTarget.reset();
