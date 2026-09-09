@@ -41,6 +41,19 @@ export default function CrearVacantePage() {
       }
 
       const data = await response.json();
+      const fullVacante = {
+        id: data.newId,
+        titulo,
+        descripcion: fd.get('descripcion'),
+        departamento: fd.get('departamento'),
+      };
+
+      // Also save to localStorage as fallback
+      const saved = localStorage.getItem('vacantes') || '[]';
+      const list = JSON.parse(saved);
+      list.push(fullVacante);
+      localStorage.setItem('vacantes', JSON.stringify(list));
+
       setLink(data.aplicarLink);
       e.currentTarget.reset();
     } catch (err) {

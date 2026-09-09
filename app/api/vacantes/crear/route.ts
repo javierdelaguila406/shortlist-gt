@@ -26,16 +26,16 @@ export async function POST(request: NextRequest) {
       aplicarLink,
     };
 
-    // Use server-side Supabase with service role key
+    // Try to save to Supabase (optional - API works without it)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (supabaseUrl && supabaseServiceKey) {
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
       try {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
         await supabase.from('vacantes').insert([newVacante]);
       } catch (e) {
-        console.error('Supabase insert failed:', e);
+        console.warn('Supabase save optional, continuing:', e);
       }
     }
 
