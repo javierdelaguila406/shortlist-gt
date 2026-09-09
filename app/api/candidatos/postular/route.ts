@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
 
     if (cvText && cvText.trim().length > 50) {
       score_ia = analyzeCV(cvText, vacanteData.titulo, vacanteData.descripcion || '');
-      estado = score_ia >= 80 ? 'precalificado' : 'pendiente';
+      estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
       console.log('[API] 🤖 Análisis completado:', { nombre, score_ia, estado });
     } else {
       console.warn('[API] ⚠️ CV vacío, score mínimo');
