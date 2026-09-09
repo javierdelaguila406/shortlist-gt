@@ -17,6 +17,8 @@ export default function CrearVacantePage() {
     try {
       const fd = new FormData(e.currentTarget);
       const titulo = fd.get('titulo') as string;
+      const descripcion = fd.get('descripcion') as string;
+      const departamento = fd.get('departamento') as string;
 
       if (!titulo.trim()) {
         setError('Título requerido');
@@ -24,23 +26,32 @@ export default function CrearVacantePage() {
         return;
       }
 
-      const newId = `vacante-${Date.now()}`;
+      // Call API to save to Supabase
+      const response = await fetch('/api/vacantes/crear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: titulo.trim(),
+          descripcion,
+          departamento,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.error || 'Error al crear vacante');
+        setLoading(false);
+        return;
+      }
+
       const baseUrl = window.location.origin;
-      const aplicarLink = `${baseUrl}/postular/${newId}`;
+      console.log('[CREAR] data.link from API:', data.link);
+      console.log('[CREAR] data.vacante_id from API:', data.vacante_id);
+      const aplicarLink = `${baseUrl}${data.link}`;
+      console.log('[CREAR] Final aplicarLink:', aplicarLink);
 
-      const newVacante = {
-        id: newId,
-        titulo,
-        descripcion: fd.get('descripcion') || '',
-        departamento: fd.get('departamento') || '',
-      };
-
-      // Save to localStorage
-      const saved = localStorage.getItem('vacantes') || '[]';
-      const list = JSON.parse(saved);
-      list.push(newVacante);
-      localStorage.setItem('vacantes', JSON.stringify(list));
-
+      console.log('[CREAR] Vacante creada en Supabase:', data.vacante_id);
       setLink(aplicarLink);
       e.currentTarget.reset();
     } catch (err) {
