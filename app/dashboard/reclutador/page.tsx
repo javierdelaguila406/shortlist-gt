@@ -172,18 +172,36 @@ export default function DemoDashboard() {
 
       const data = await response.json();
 
-      const updatedVacantes = [...vacantes, {
+      const newVacanteData = {
         id: newId,
         titulo: newVacante.titulo,
         descripcion: newVacante.descripcion,
         departamento: newVacante.departamento,
         linkedinLink: data.linkedinShareUrl,
         aplicarLink: aplicarLink
-      }];
+      };
+
+      const updatedVacantes = [...vacantes, newVacanteData];
 
       // Save immediately to localStorage
       localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
       sessionStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
+
+      // Also save to Supabase for cross-session access
+      try {
+        await supabase.from('vacantes').insert({
+          id: newId,
+          usuario_id: 'demo-user',
+          titulo: newVacante.titulo,
+          descripcion: newVacante.descripcion,
+          slug: newId,
+          departamento: newVacante.departamento,
+          estado: 'activa'
+        });
+        console.log('[DASHBOARD] Vacante guardada en Supabase:', newId);
+      } catch (e) {
+        console.warn('[DASHBOARD] No se pudo guardar en Supabase:', e);
+      }
 
       setVacantes(updatedVacantes);
 
