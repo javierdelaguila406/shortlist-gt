@@ -236,8 +236,8 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-white mb-2">¡Solicitud Enviada!</h2>
             <p className="text-zinc-400 mb-6">Tu CV fue compartido con Forniture City</p>
-            <Link href="/">
-              <Button>Volver</Button>
+            <Link href={`/dashboard/reclutador?vacante=${params.slug}`}>
+              <Button>Ver en Dashboard</Button>
             </Link>
           </CardContent>
         </Card>
