@@ -39,10 +39,10 @@ function extractKeywords(text: string): string[] {
   // Agregar palabras técnicas
   techMatches.forEach(word => keywords.add(word.toLowerCase()));
 
-  // Extraer palabras largas (3+ caracteres) que no sean stopwords
+  // Extraer palabras largas (4+ caracteres) que no sean stopwords
   const words = textLower.split(/\W+/);
   words.forEach(word => {
-    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóú]+$/.test(word)) {
+    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóúa-z0-9]+$/.test(word)) {
       keywords.add(word);
     }
   });
@@ -51,16 +51,25 @@ function extractKeywords(text: string): string[] {
 }
 
 function analyzeCV(cvText: string, vacanteTitle: string, vacanteDesc: string = ''): number {
-  if (!cvText || cvText.length < 20) return 20;
+  if (!cvText || cvText.trim().length < 10) {
+    console.log('[SCORING] CV muy corto, score mínimo');
+    return 20;
+  }
 
   const cvLower = cvText.toLowerCase();
-  const descLower = vacanteDesc.toLowerCase();
 
   // Extraer palabras clave de la descripción de la plaza
   const plazaKeywords = extractKeywords(vacanteDesc);
   const cvKeywords = extractKeywords(cvText);
 
-  let score = 30; // Base 30 en lugar de 20
+  if (plazaKeywords.length === 0) {
+    console.log('[SCORING] No se extrajeron palabras de la plaza');
+  }
+  if (cvKeywords.length === 0) {
+    console.log('[SCORING] No se extrajeron palabras del CV');
+  }
+
+  let score = 30; // Base 30
 
   // Comparar palabras clave
   let matchCount = 0;
@@ -71,32 +80,43 @@ function analyzeCV(cvText: string, vacanteTitle: string, vacanteDesc: string = '
     }
   }
 
+  console.log(`[SCORING] Matches: ${matchCount}/${plazaKeywords.length}`);
+
   // Bonus por cobertura (qué porcentaje de requisitos cubre)
   if (plazaKeywords.length > 0) {
     const coverage = Math.min(matchCount / plazaKeywords.length, 1);
-    score += coverage * 20; // Hasta 20 puntos por cobertura
+    const coverageBonus = coverage * 20;
+    score += coverageBonus;
+    console.log(`[SCORING] Cobertura: ${(coverage * 100).toFixed(0)}% (+${coverageBonus.toFixed(0)} pts)`);
   }
 
   // Bonus por años de experiencia
   const yearsMatch = cvLower.match(/(\d+)\s*(?:años|years|a[ñ]os)/);
   if (yearsMatch) {
     const years = parseInt(yearsMatch[1]);
-    if (years >= 5) score += 20;
-    else if (years >= 3) score += 15;
-    else if (years >= 1) score += 8;
+    let yearsBonus = 0;
+    if (years >= 5) yearsBonus = 20;
+    else if (years >= 3) yearsBonus = 15;
+    else if (years >= 1) yearsBonus = 8;
+    score += yearsBonus;
+    console.log(`[SCORING] Experiencia: ${years} años (+${yearsBonus} pts)`);
   }
 
   // Bonus por educación
-  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado|profesional)/.test(cvLower)) {
+  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado|profesional|degree|university|bachelor)/.test(cvLower)) {
     score += 10;
+    console.log('[SCORING] Educación detectada (+10 pts)');
   }
 
   // Bonus por certificaciones
-  if (/(?:certificad|cert\.|certification|certified)/.test(cvLower)) {
+  if (/(?:certificad|cert\.|certification|certified|certificate)/.test(cvLower)) {
     score += 8;
+    console.log('[SCORING] Certificaciones detectadas (+8 pts)');
   }
 
-  return Math.min(100, Math.max(20, score));
+  const finalScore = Math.min(100, Math.max(20, score));
+  console.log(`[SCORING] Score final: ${finalScore}/100`);
+  return finalScore;
 }
 
 function extractTextFromBuffer(buffer: Buffer): string {
@@ -127,8 +147,11 @@ export async function POST(request: NextRequest) {
     const habilidades = formData.get('habilidades') as string;
     const cv = formData.get('cv') as File;
 
+    // Generar candidato_id al inicio (necesario para Storage)
+    const candidato_id = `candidato-${Date.now()}`;
+
     if (!nombre || !telefono || !vacante_id) {
-      return NextResponse.json({ error: 'Faltan campos', success: false }, { status: 400 });
+      return NextResponse.json({ error: 'Faltan campos requeridos', success: false }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -147,26 +170,38 @@ export async function POST(request: NextRequest) {
     }
 
     // Usar cvText + habilidades para análisis
-    let finalCVText = (cvText || '') + ' ' + (habilidades || '');
+    let finalCVText = (cvText || '').trim();
     let cvUrl = '';
     let extractedEmail = email; // Usar email ingresado como base
     let extractedPhone = telefono;
 
+    // Si no hay cvText del frontend, intentar extraer del PDF
     if (!finalCVText && cv) {
       try {
         const buffer = await cv.arrayBuffer();
         finalCVText = extractTextFromBuffer(Buffer.from(buffer));
       } catch (e) {
-        console.error('Error extrayendo buffer:', e);
+        console.error('[API] Error extrayendo PDF buffer:', e);
       }
     }
 
-    // Extraer email y teléfono del PDF si no vienen en formulario
-    if (finalCVText) {
+    // Agregar habilidades al final
+    if (habilidades) {
+      finalCVText = finalCVText + ' ' + habilidades;
+    }
+
+    // Extraer email del PDF si no vino en formulario
+    if (finalCVText && !email) {
       const pdfEmail = extractEmailFromText(finalCVText);
-      if (pdfEmail && !email) {
+      if (pdfEmail) {
         extractedEmail = pdfEmail;
+        console.log('[API] Email extraído del PDF:', pdfEmail);
       }
+    }
+
+    // Validar que tenemos email (requerido)
+    if (!extractedEmail) {
+      return NextResponse.json({ error: 'Email requerido (no se pudo extraer del PDF)', success: false }, { status: 400 });
     }
 
     // Guardar PDF en Supabase Storage
@@ -199,7 +234,7 @@ export async function POST(request: NextRequest) {
     const score_ia = analyzeCV(finalCVText, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
-    const candidato_id = `candidato-${Date.now()}`;
+    console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
 
     const { data: candidato, error } = await supabase
       .from('candidatos')
@@ -217,15 +252,25 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Error al guardar', success: false }, { status: 500 });
+      console.error('[API] Error guardando candidato:', error);
+      return NextResponse.json({ error: 'Error al guardar candidato', success: false }, { status: 500 });
     }
+
+    console.log('[API] Candidato guardado exitosamente:', candidato.id);
 
     return NextResponse.json({
       success: true,
       candidatoId: candidato.id,
-      candidato: { id: candidato.id, email, score_ia, estado },
+      candidato: {
+        id: candidato.id,
+        email: extractedEmail,  // ✅ Retorna email extraído
+        score_ia,
+        estado,
+        cv_url: cvUrl
+      },
     });
   } catch (error) {
-    return NextResponse.json({ error: 'Error', success: false }, { status: 500 });
+    console.error('[API] Error inesperado:', error);
+    return NextResponse.json({ error: 'Error del servidor', success: false }, { status: 500 });
   }
 }
