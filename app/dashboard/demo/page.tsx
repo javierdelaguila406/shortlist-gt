@@ -14,11 +14,13 @@ interface Candidate {
   telefono: string;
   score_ia: number;
   estado: string;
-  habilidades: string[];
-  experiencia_anos: number;
-  feedback_ia: string;
-  resumen_ejecutivo: string;
-  puntuaciones: Record<string, number>;
+  vacante_id?: string;
+  cv_url?: string;
+  habilidades?: string[];
+  experiencia_anos?: number;
+  feedback_ia?: string;
+  resumen_ejecutivo?: string;
+  puntuaciones?: Record<string, number>;
 }
 
 export default function DemoDashboard() {
