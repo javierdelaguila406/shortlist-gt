@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
     const nombre = formData.get('nombre') as string;
     const telefono = formData.get('telefono') as string;
     const vacante_id = formData.get('vacante_id') as string;
+    const cvText = formData.get('cvText') as string;
     const cv = formData.get('cv') as File;
 
     if (!nombre || !telefono || !vacante_id) {
@@ -76,18 +77,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Vacante no encontrada', success: false }, { status: 404 });
     }
 
-    let cvText = '';
-    try {
-      if (cv) {
+    // Usar cvText que viene del frontend (ya extraído)
+    // Si no viene, intentar extraer del buffer como fallback
+    let finalCVText = cvText || '';
+
+    if (!finalCVText && cv) {
+      try {
         const buffer = await cv.arrayBuffer();
-        cvText = extractTextFromBuffer(Buffer.from(buffer));
+        finalCVText = extractTextFromBuffer(Buffer.from(buffer));
+      } catch (e) {
+        console.error('Error extrayendo buffer:', e);
       }
-    } catch (e) {
-      console.error('Error extrayendo buffer:', e);
     }
 
     // Analizar y generar score
-    const score_ia = analyzeCV(cvText, vacanteData.titulo);
+    const score_ia = analyzeCV(finalCVText, vacanteData.titulo);
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
     const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
