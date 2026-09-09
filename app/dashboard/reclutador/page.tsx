@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,15 +72,25 @@ export default function DemoDashboard() {
     console.log('[Dashboard] Vacantes guardadas:', { count: vacantes.length, ids: vacantes.map(v => v.id) });
   }, [vacantes]);
 
-  const selectedVacante = vacantes.find(v => v.id === selectedVacanteId) || vacantes[0];
-  const filteredCandidates = mockCandidates.filter(c => c.vacante_id === selectedVacanteId);
+  const selectedVacante = useMemo(
+    () => vacantes.find(v => v.id === selectedVacanteId) || vacantes[0],
+    [vacantes, selectedVacanteId]
+  );
 
-  const stats = {
-    total: filteredCandidates.length,
-    precalificados: filteredCandidates.filter(c => c.estado === 'precalificado').length,
-    en_evaluacion: filteredCandidates.filter(c => c.estado === 'evaluacion').length,
-    promedio: Math.round(filteredCandidates.reduce((sum, c) => sum + c.score_ia, 0) / filteredCandidates.length || 0),
-  };
+  const filteredCandidates = useMemo(
+    () => mockCandidates.filter(c => c.vacante_id === selectedVacanteId),
+    [selectedVacanteId]
+  );
+
+  const stats = useMemo(
+    () => ({
+      total: filteredCandidates.length,
+      precalificados: filteredCandidates.filter(c => c.estado === 'precalificado').length,
+      en_evaluacion: filteredCandidates.filter(c => c.estado === 'evaluacion').length,
+      promedio: Math.round(filteredCandidates.reduce((sum, c) => sum + c.score_ia, 0) / filteredCandidates.length || 0),
+    }),
+    [filteredCandidates]
+  );
 
   const handleCreateVacante = async () => {
     if (!newVacante.titulo.trim()) return;
