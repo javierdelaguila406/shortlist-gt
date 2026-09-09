@@ -65,6 +65,14 @@ export default function DemoDashboard() {
 
     const license = getUserLicenseFromStorage();
     setUserLicense(license);
+
+    // Check if coming back from postulation
+    const params = new URLSearchParams(window.location.search);
+    const vacanteParam = params.get('vacante');
+    if (vacanteParam) {
+      setSelectedVacanteId(vacanteParam);
+      console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
+    }
   }, []);
 
   useEffect(() => {
