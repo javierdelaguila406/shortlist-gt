@@ -6,11 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockVacantes } from '@/lib/mock-data';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 interface FormData {
   nombre: string;
   telefono: string;
   cv: File | null;
+  cvText: string;
   consentimiento: boolean;
 }
 
@@ -124,6 +128,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   const [submitted, setSubmitted] = useState(false);
   const [cvFileName, setCvFileName] = useState('');
   const [submitError, setSubmitError] = useState('');
+  const [extractingPDF, setExtractingPDF] = useState(false);
 
   if (vacante === undefined) {
     return (
@@ -157,7 +162,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
@@ -166,6 +171,28 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       }
       setFormData(prev => ({ ...prev, cv: file }));
       setCvFileName(file.name);
+      setExtractingPDF(true);
+
+      try {
+        const buffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        let text = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          text += pageText + ' ';
+        }
+
+        setFormData(prev => ({ ...prev, cvText: text }));
+        console.log('PDF extraído:', text.length, 'caracteres');
+      } catch (error) {
+        console.error('Error extrayendo PDF:', error);
+        setFormData(prev => ({ ...prev, cvText: '' }));
+      } finally {
+        setExtractingPDF(false);
+      }
     }
   };
 
@@ -194,6 +221,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('telefono', formData.telefono);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
+      formDataToSend.append('cvText', formData.cvText);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
       const response = await fetch('/api/candidatos/postular', {
