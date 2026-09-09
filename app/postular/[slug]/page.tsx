@@ -12,6 +12,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.j
 
 interface FormData {
   nombre: string;
+  email: string;
   telefono: string;
   cv: File | null;
   cvText: string;
@@ -121,6 +122,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   }, [params.slug]);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
+    email: '',
     telefono: '',
     cv: null,
     cvText: '',
@@ -222,6 +224,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
+      formDataToSend.append('email', formData.email);
       formDataToSend.append('telefono', formData.telefono);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
       formDataToSend.append('cvText', formData.cvText);
@@ -318,6 +321,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>
                 <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Email *</label>
+                <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
               </div>
 
               <div>
