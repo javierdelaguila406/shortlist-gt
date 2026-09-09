@@ -76,107 +76,48 @@ export async function POST(request: NextRequest) {
     }
 
     let candidatoId: string = '';
-    let isDemo = false;
+    const generatedEmail = `${nombre.replace(/\s+/g, '.')}@postulacion.local`;
 
     try {
-      // Note: vacante_id is sent by frontend, we process candidate even in demo mode
-      // (vacante may not exist in DB if created from home page)
+      const fileName = `${Date.now()}-${cvFile.name}`;
+      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
 
-      let vacante = null;
+      const buffer = await cvFile.arrayBuffer();
+      fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(buffer));
+      const cvUrl = `/uploads/${fileName}`;
+
       try {
-        const { data, error } = await supabase
-          .from('vacantes')
-          .select('id, titulo, descripcion')
-          .eq('id', vacante_id)
+        const { data: candidato, error: candidatoError } = await supabase
+          .from('candidatos')
+          .insert({
+            vacante_id,
+            nombre,
+            email: generatedEmail,
+            telefono,
+            cv_url: cvUrl,
+            estado: 'pendiente',
+            metadata: {
+              aplicacion_fecha: new Date().toISOString(),
+            },
+          })
+          .select()
           .single();
 
-        if (!error && data) {
-          vacante = data;
-        }
-      } catch (e) {
-        console.warn('Vacancy not found in DB, continuing with fallback:', e);
-      }
-
-      if (vacante) {
-        try {
-          // Save CV file locally
-          const fileName = `${Date.now()}-${cvFile.name}`;
-          const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-          }
-
-          const buffer = await cvFile.arrayBuffer();
-          fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(buffer));
-          const cvUrl = `/uploads/${fileName}`;
-
-          // Create candidate in database
-          const { data: candidato, error: candidatoError } = await supabase
-            .from('candidatos')
-            .insert({
-              vacante_id: vacante.id,
-              nombre,
-              email: `${nombre.replace(/\s+/g, '.')}@postulacion.local`,
-              telefono,
-              cv_url: cvUrl,
-              estado: 'pendiente',
-              metadata: {
-                aplicacion_fecha: new Date().toISOString(),
-              },
-            })
-            .select()
-            .single();
-
-          if (candidatoError) {
-            console.error('Database error:', candidatoError);
-            // Fallback: still return success to user
-            isDemo = true;
-            candidatoId = `local-${Date.now()}`;
-          } else {
-            candidatoId = candidato.id;
-          }
-
-          // Background task: Process CV with AI (fire and forget)
-          if (candidato && process.env.OPENAI_API_KEY) {
-            try {
-              const cvTextPreview = `CV uploaded for ${nombre} - ${email}`;
-              const { data: vacanteDetails } = await supabase
-                .from('vacantes')
-                .select('titulo, descripcion')
-                .eq('id', vacante.id)
-                .single();
-
-              const jobDescription = `
-Position: ${vacanteDetails?.titulo || 'Position'}
-Description: ${vacanteDetails?.descripcion || 'No description provided'}
-`;
-
-              // Call CV analysis API (fire and forget)
-              fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/cv`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  cvText: cvTextPreview,
-                  jobDescription,
-                  candidatoId: candidato.id,
-                  cvPath: cvUrl,
-                }),
-              }).catch((error) => {
-                console.error('Error triggering CV analysis:', error);
-              });
-            } catch (error) {
-              console.error('Error in CV processing trigger:', error);
-            }
-          }
-        } catch (dbError) {
-          console.error('Database operation failed, using fallback:', dbError);
-          isDemo = true;
+        if (candidatoError) {
+          console.error('Database error:', candidatoError);
           candidatoId = `local-${Date.now()}`;
+        } else if (candidato) {
+          candidatoId = candidato.id;
         }
+      } catch (dbError) {
+        console.error('Database operation failed:', dbError);
+        candidatoId = `local-${Date.now()}`;
       }
-    } catch (supabaseError) {
-      console.error('Supabase connection error, using fallback mode:', supabaseError);
-      isDemo = true;
+    } catch (fileError) {
+      console.error('File operation failed:', fileError);
       candidatoId = `local-${Date.now()}`;
     }
 
@@ -188,14 +129,11 @@ Description: ${vacanteDetails?.descripcion || 'No description provided'}
         candidato: {
           id: candidatoId,
           nombre,
-          email,
+          email: generatedEmail,
           telefono,
           estado: 'pendiente',
         },
-        message: isDemo
-          ? '✅ ¡Postulación recibida con éxito! Iniciando precalificación automática...'
-          : '✅ ¡Postulación recibida! Te contactaremos pronto por WhatsApp.',
-        mode: isDemo ? 'fallback' : 'standard',
+        message: '✅ ¡Postulación recibida! Te contactaremos pronto por WhatsApp.',
       },
       { status: 201 }
     );
