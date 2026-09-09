@@ -8,6 +8,7 @@ import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data
 import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
 import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
 
 interface Candidate {
@@ -54,6 +55,7 @@ export default function DemoDashboard() {
   const [linkedinData, setLinkedinData] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
+  const [supabaseCandidates, setSupabaseCandidates] = useState<Candidate[]>([]);
 
   useEffect(() => {
     const savedVacantes = localStorage.getItem('vacantes');
@@ -84,22 +86,39 @@ export default function DemoDashboard() {
     console.log('[Dashboard] Vacantes guardadas:', { count: vacantes.length, ids: vacantes.map(v => v.id) });
   }, [vacantes]);
 
+  // Load candidates from Supabase when selectedVacanteId changes
+  useEffect(() => {
+    const loadCandidates = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('candidatos')
+          .select('*')
+          .eq('vacante_id', selectedVacanteId);
+
+        if (error) {
+          console.warn('[DASHBOARD] Supabase error:', error);
+          setSupabaseCandidates([]);
+          return;
+        }
+
+        console.log('[DASHBOARD] Candidatos desde Supabase:', data);
+        if (data) {
+          setSupabaseCandidates(data as Candidate[]);
+        }
+      } catch (e) {
+        console.error('[DASHBOARD] Error loading candidates:', e);
+        setSupabaseCandidates([]);
+      }
+    };
+
+    loadCandidates();
+  }, [selectedVacanteId]);
+
   const getFilteredCandidates = () => {
-    const allCandidates = [...mockCandidates];
-    try {
-      const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
-      const postulantes = JSON.parse(savedPostulantes);
-      console.log('[DASHBOARD] localStorage candidatos_postulantes:', savedPostulantes);
-      console.log('[DASHBOARD] Postulantes parseados:', postulantes);
-      allCandidates.push(...postulantes);
-      console.log('[DASHBOARD] Todos los candidatos (mock + postulantes):', allCandidates);
-    } catch (e) {
-      console.error('[DASHBOARD] Error al cargar postulantes:', e);
-    }
-    const filtered = allCandidates.filter(c => c.vacante_id === selectedVacanteId);
-    console.log('[DASHBOARD] Filtrando por vacante_id:', selectedVacanteId);
-    console.log('[DASHBOARD] Candidatos filtrados:', filtered);
-    return filtered;
+    // Use candidates from Supabase + mock candidates
+    const allCandidates = [...mockCandidates, ...supabaseCandidates];
+    console.log('[DASHBOARD] Candidatos totales (mock + supabase):', allCandidates);
+    return allCandidates;
   };
 
   const selectedVacante = useMemo(
