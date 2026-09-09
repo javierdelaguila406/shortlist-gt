@@ -210,8 +210,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
           const list = JSON.parse(saved);
           list.push(candidatoData);
           localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
+          console.log('[POSTULAR] Candidato guardado en localStorage:', candidatoData);
+          console.log('[POSTULAR] Lista completa en localStorage:', list);
+          console.log('[POSTULAR] Vacante ID para filtrar:', params.slug);
         } catch (e) {
-          console.warn('Could not save to localStorage:', e);
+          console.error('[POSTULAR] Error al guardar en localStorage:', e);
         }
         setSubmitted(true);
       } else {

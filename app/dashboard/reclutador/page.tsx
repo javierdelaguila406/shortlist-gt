@@ -79,11 +79,17 @@ export default function DemoDashboard() {
     try {
       const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
       const postulantes = JSON.parse(savedPostulantes);
+      console.log('[DASHBOARD] localStorage candidatos_postulantes:', savedPostulantes);
+      console.log('[DASHBOARD] Postulantes parseados:', postulantes);
       allCandidates.push(...postulantes);
+      console.log('[DASHBOARD] Todos los candidatos (mock + postulantes):', allCandidates);
     } catch (e) {
-      console.warn('Could not load postulantes from localStorage');
+      console.error('[DASHBOARD] Error al cargar postulantes:', e);
     }
-    return allCandidates.filter(c => c.vacante_id === selectedVacanteId);
+    const filtered = allCandidates.filter(c => c.vacante_id === selectedVacanteId);
+    console.log('[DASHBOARD] Filtrando por vacante_id:', selectedVacanteId);
+    console.log('[DASHBOARD] Candidatos filtrados:', filtered);
+    return filtered;
   };
 
   const selectedVacante = useMemo(
