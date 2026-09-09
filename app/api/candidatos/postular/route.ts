@@ -12,13 +12,6 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-// Función para extraer teléfono del texto
-function extractPhoneFromText(text: string): string | null {
-  const phoneRegex = /(\+?[\d\s\-()]{9,}|\d{8,})/;
-  const match = text.match(phoneRegex);
-  return match ? match[0] : null;
-}
-
 function extractKeywords(text: string): string[] {
   if (!text) return [];
   const textLower = text.toLowerCase();
@@ -148,7 +141,8 @@ export async function POST(request: NextRequest) {
     const cv = formData.get('cv') as File;
 
     // Generar candidato_id al inicio (necesario para Storage)
-    const candidato_id = `candidato-${Date.now()}`;
+    // Usar timestamp + random para evitar colisiones
+    const candidato_id = `candidato-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
     if (!nombre || !telefono || !vacante_id) {
       return NextResponse.json({ error: 'Faltan campos requeridos', success: false }, { status: 400 });
@@ -173,7 +167,6 @@ export async function POST(request: NextRequest) {
     let finalCVText = (cvText || '').trim();
     let cvUrl = '';
     let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
-    let extractedPhone = telefono || '';
 
     // Si no hay cvText del frontend, intentar extraer del PDF
     if (!finalCVText && cv) {
@@ -249,7 +242,7 @@ export async function POST(request: NextRequest) {
         vacante_id: vacante_id,
         nombre: nombre,
         email: extractedEmail,
-        telefono: extractedPhone,
+        telefono: telefono,
         cv_url: cvUrl,
         estado: estado,
         score_ia: score_ia,
