@@ -1,7 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
-import { Anthropic } from '@anthropic-ai/sdk';
+
+// Palabras clave por industria
+const KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
+  ventas: ['ventas', 'cliente', 'comisión', 'prospección', 'crm', 'negociación', 'cierre', 'pipeline', 'lead', 'venta', 'vendedor', 'comercial', 'telemarketing'],
+  mecanica: ['motor', 'transmisión', 'diagnóstico', 'suspensión', 'frenos', 'inyección', 'herramientas', 'scanner', 'reparación', 'automotriz', 'vehículo', 'soldadura', 'eléctrico'],
+  tecnologia: ['desarrollo', 'programación', 'código', 'javascript', 'python', 'react', 'node', 'sql', 'api', 'base de datos', 'frontend', 'backend', 'fullstack'],
+  default: ['experiencia', 'años', 'trabajo', 'responsable', 'líder', 'equipo', 'gestión', 'proyecto'],
+};
+
+function analyzeCV(cvText: string, vacanteTitle: string, vacanteDescription: string): number {
+  const textLower = cvText.toLowerCase();
+  
+  // Detectar industria basado en título
+  let industry = 'default';
+  if (vacanteTitle.toLowerCase().includes('venta')) industry = 'ventas';
+  else if (vacanteTitle.toLowerCase().includes('mecán')) industry = 'mecanica';
+  else if (vacanteTitle.toLowerCase().includes('desarro') || vacanteTitle.toLowerCase().includes('progra')) industry = 'tecnologia';
+
+  // Obtener palabras clave para la industria
+  const keywords = [...KEYWORDS_BY_INDUSTRY[industry], ...KEYWORDS_BY_INDUSTRY.default];
+  
+  // Contar coincidencias de palabras clave
+  let matches = 0;
+  for (const keyword of keywords) {
+    const regex = new RegExp(`\b${keyword}\b`, 'gi');
+    const found = textLower.match(regex);
+    if (found) matches += found.length;
+  }
+
+  // Buscar años de experiencia
+  let yearsScore = 0;
+  const yearsRegex = /(\d+)\s*(?:años|years|a[ño]os)\s*(?:de\s*)?(?:experiencia|exp\.?)/gi;
+  const yearsMatch = textLower.match(yearsRegex);
+  if (yearsMatch) {
+    yearsScore = 20; // Bonus por tener experiencia documentada
+  }
+
+  // Buscar educación/certificaciones
+  let educationScore = 0;
+  const educationKeywords = ['licenciatura', 'bachillerato', 'diploma', 'certificado', 'carrera', 'técnico', 'ingeniería', 'grado'];
+  for (const keyword of educationKeywords) {
+    if (textLower.includes(keyword)) {
+      educationScore = 15;
+      break;
+    }
+  }
+
+  // Calcular score basado en coincidencias
+  // Mínimo 20 (tiene algo), máximo 100
+  let score = Math.min(100, Math.max(20, Math.floor(matches * 3 + yearsScore + educationScore)));
+
+  return score;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +63,7 @@ export async function POST(request: NextRequest) {
     const vacante_id = formData.get('vacante_id') as string;
     const cv = formData.get('cv') as File;
 
-    console.log('[API] Iniciando análisis de postulación:', { nombre, vacante_id });
+    console.log('[API] 📝 Postulación recibida:', { nombre, vacante_id });
 
     if (!nombre || !telefono || !vacante_id) {
       return NextResponse.json(
@@ -32,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Verify vacante exists and get details
+    // Obtener vacante
     const { data: vacanteData, error: vacanteError } = await supabase
       .from('vacantes')
       .select('id, titulo, descripcion, departamento')
@@ -40,103 +92,47 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (vacanteError || !vacanteData) {
-      console.error('[API] Vacante not found:', vacante_id);
+      console.error('[API] ❌ Vacante no encontrada:', vacante_id);
       return NextResponse.json(
         { error: 'Vacante no encontrada', success: false },
         { status: 404 }
       );
     }
 
-    console.log('[API] Vacante encontrada:', vacanteData.titulo);
+    console.log('[API] ✅ Vacante encontrada:', vacanteData.titulo);
 
-    // Extract text from PDF CV
+    // Extraer texto del PDF
     let cvText = '';
     if (cv) {
       try {
-        console.log('[API] Extrayendo PDF:', cv.name, 'Tamaño:', cv.size);
+        console.log('[API] 📄 Extrayendo PDF...');
         const buffer = await cv.arrayBuffer();
         const data = await pdfParse(Buffer.from(buffer));
         cvText = data.text;
-        console.log('[API] PDF extraído - Caracteres:', cvText.length);
+        console.log('[API] ✅ PDF extraído:', cvText.length, 'caracteres');
       } catch (pdfError) {
-        console.error('[API] Error extrayendo PDF:', pdfError);
+        console.error('[API] ❌ Error en PDF:', pdfError);
         cvText = '';
       }
     }
 
-    // Generate email
-    const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
-
-    // Analyze CV with Claude AI
-    let score_ia = 0;
+    // Analizar CV
+    let score_ia = 30; // Score mínimo si no hay CV
     let estado = 'pendiente';
 
-    if (cvText && cvText.trim().length > 20) {
-      try {
-        console.log('[API] Iniciando análisis con Claude...');
-
-        const apiKey = process.env.ANTHROPIC_API_KEY;
-        if (!apiKey) {
-          console.warn('[API] ANTHROPIC_API_KEY no configurada, usando fallback');
-          throw new Error('API key no configurada');
-        }
-
-        const anthropic = new Anthropic({ apiKey });
-
-        const analysisPrompt = `Analiza este CV y compara con los requisitos de la plaza. Devuelve SOLO un número entre 0-100.
-
-REQUISITOS DE LA PLAZA:
-Título: ${vacanteData.titulo}
-Descripción: ${vacanteData.descripcion || 'No especificada'}
-Departamento: ${vacanteData.departamento || 'No especificado'}
-
-CONTENIDO DEL CV:
-${cvText.substring(0, 3000)}
-
-Evalúa qué tan bien el candidato se adapta a los requisitos. Considera:
-- Habilidades técnicas relevantes
-- Experiencia en el área
-- Educación relacionada
-- Años de experiencia
-
-Devuelve SOLO el número (0-100), sin explicaciones.`;
-
-        const message = await anthropic.messages.create({
-          model: 'claude-opus-5',
-          max_tokens: 10,
-          messages: [
-            {
-              role: 'user',
-              content: analysisPrompt,
-            },
-          ],
-        });
-
-        const scoreText = message.content[0].type === 'text'
-          ? message.content[0].text.trim()
-          : '0';
-        score_ia = Math.min(100, Math.max(0, parseInt(scoreText) || 0));
-        estado = score_ia >= 80 ? 'precalificado' : 'pendiente';
-
-        console.log('[API] Análisis completado:', { nombre, score_ia, estado });
-      } catch (aiError) {
-        console.error('[API] Error en análisis Claude:', aiError);
-        // Fallback: generar score aleatorio entre 45-85
-        score_ia = Math.floor(Math.random() * 40) + 45;
-        estado = score_ia >= 80 ? 'precalificado' : 'pendiente';
-        console.log('[API] Usando fallback score:', { nombre, score_ia, estado });
-      }
-    } else {
-      console.warn('[API] CV vacío o muy corto, usando fallback');
-      // Fallback si no hay CV
-      score_ia = Math.floor(Math.random() * 40) + 45;
+    if (cvText && cvText.trim().length > 50) {
+      score_ia = analyzeCV(cvText, vacanteData.titulo, vacanteData.descripcion || '');
       estado = score_ia >= 80 ? 'precalificado' : 'pendiente';
+      console.log('[API] 🤖 Análisis completado:', { nombre, score_ia, estado });
+    } else {
+      console.warn('[API] ⚠️ CV vacío, score mínimo');
     }
 
-    // Generate unique candidate ID
+    // Generar email
+    const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
     const candidato_id = `candidato-${Date.now()}`;
 
-    // Create candidate in Supabase
+    // Crear candidato en Supabase
     const { data: candidato, error: candidatoError } = await supabase
       .from('candidatos')
       .insert({
@@ -152,18 +148,16 @@ Devuelve SOLO el número (0-100), sin explicaciones.`;
       .single();
 
     if (candidatoError) {
-      console.error('[API] Error creando candidato:', candidatoError);
+      console.error('[API] ❌ Error creando candidato:', candidatoError);
       return NextResponse.json(
         { error: `Error al guardar candidato: ${candidatoError.message}`, success: false },
         { status: 500 }
       );
     }
 
-    console.log('[API] ✅ Candidato creado:', {
-      candidatoId: candidato.id,
-      vacante_id: vacante_id,
-      nombre: nombre,
-      score_ia: score_ia,
+    console.log('[API] ✅ Candidato guardado:', {
+      id: candidato.id,
+      score: score_ia,
       estado: estado,
     });
 
@@ -178,7 +172,7 @@ Devuelve SOLO el número (0-100), sin explicaciones.`;
       },
     });
   } catch (error) {
-    console.error('[API] Error general:', error);
+    console.error('[API] ❌ Error general:', error);
     return NextResponse.json(
       { error: 'Error del servidor', success: false },
       { status: 500 }
