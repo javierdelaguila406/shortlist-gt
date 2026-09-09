@@ -19,47 +19,82 @@ function extractPhoneFromText(text: string): string | null {
   return match ? match[0] : null;
 }
 
-const KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
-  ventas: ['ventas', 'cliente', 'comisión', 'prospección', 'crm', 'negociación', 'cierre', 'lead', 'comercial', 'asesor', 'venta'],
-  mecanica: ['motor', 'transmisión', 'diagnóstico', 'suspensión', 'frenos', 'inyección', 'reparación', 'automotriz', 'mecánico', 'scanner'],
-};
+function extractKeywords(text: string): string[] {
+  if (!text) return [];
+  const textLower = text.toLowerCase();
 
-function analyzeCV(cvText: string, vacanteTitle: string): number {
-  if (!cvText || cvText.length < 20) return 20; // Mínimo 20 si hay algo
+  // Palabras a excluir (comunes y poco relevantes)
+  const stopwords = new Set([
+    'el', 'la', 'de', 'que', 'y', 'a', 'en', 'es', 'se', 'por', 'con', 'para', 'una', 'un', 'sus',
+    'del', 'las', 'los', 'o', 'este', 'ese', 'este', 'como', 'si', 'no', 'los', 'en', 'al', 'es'
+  ]);
 
-  const textLower = cvText.toLowerCase();
-  let industry = 'default';
+  // Palabras técnicas relevantes para búsqueda
+  const techWords = /\b(?:python|java|javascript|react|angular|vue|node|sql|mongodb|postgresql|git|docker|kubernetes|aws|azure|gcp|api|rest|graphql|html|css|typescript|golang|rust|php|laravel|django|spring|kotlin|swift|mobile|web|frontend|backend|fullstack|devops|ci|cd|linux|windows|agile|scrum|jira|confluence|slack|figma|ui|ux|wordpress|drupal|shopify|salesforce|sap|crm|erp|excel|vba|tableau|power bi|powerpoint|wordpress|linux|apache|nginx|jenkins)\b/gi;
 
-  if (vacanteTitle.toLowerCase().includes('venta')) industry = 'ventas';
-  else if (vacanteTitle.toLowerCase().includes('mecán')) industry = 'mecanica';
+  // Extraer palabras técnicas
+  const techMatches = textLower.match(techWords) || [];
+  const keywords = new Set<string>();
 
-  const keywords = KEYWORDS_BY_INDUSTRY[industry] || [];
-  let score = 20; // Base 20
+  // Agregar palabras técnicas
+  techMatches.forEach(word => keywords.add(word.toLowerCase()));
 
-  // Contar palabras clave (peso aumentado)
-  for (const keyword of keywords) {
-    const count = (textLower.match(new RegExp(keyword, 'g')) || []).length;
-    score += Math.min(count, 3) * 8; // Max 3 por palabra, 8 puntos cada
+  // Extraer palabras largas (3+ caracteres) que no sean stopwords
+  const words = textLower.split(/\W+/);
+  words.forEach(word => {
+    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóú]+$/.test(word)) {
+      keywords.add(word);
+    }
+  });
+
+  return Array.from(keywords);
+}
+
+function analyzeCV(cvText: string, vacanteTitle: string, vacanteDesc: string = ''): number {
+  if (!cvText || cvText.length < 20) return 20;
+
+  const cvLower = cvText.toLowerCase();
+  const descLower = vacanteDesc.toLowerCase();
+
+  // Extraer palabras clave de la descripción de la plaza
+  const plazaKeywords = extractKeywords(vacanteDesc);
+  const cvKeywords = extractKeywords(cvText);
+
+  let score = 30; // Base 30 en lugar de 20
+
+  // Comparar palabras clave
+  let matchCount = 0;
+  for (const keyword of plazaKeywords) {
+    if (cvKeywords.includes(keyword)) {
+      matchCount++;
+      score += 3; // 3 puntos por cada coincidencia
+    }
   }
 
-  // Bonus significativo por años de experiencia
-  const yearsMatch = textLower.match(/(\d+)\s*(?:años|years|a[ñ]os)/);
+  // Bonus por cobertura (qué porcentaje de requisitos cubre)
+  if (plazaKeywords.length > 0) {
+    const coverage = Math.min(matchCount / plazaKeywords.length, 1);
+    score += coverage * 20; // Hasta 20 puntos por cobertura
+  }
+
+  // Bonus por años de experiencia
+  const yearsMatch = cvLower.match(/(\d+)\s*(?:años|years|a[ñ]os)/);
   if (yearsMatch) {
     const years = parseInt(yearsMatch[1]);
-    if (years >= 5) score += 25;
-    else if (years >= 3) score += 20;
-    else if (years >= 1) score += 10;
+    if (years >= 5) score += 20;
+    else if (years >= 3) score += 15;
+    else if (years >= 1) score += 8;
   }
 
   // Bonus por educación
-  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado)/.test(textLower)) {
-    score += 15;
+  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado|profesional)/.test(cvLower)) {
+    score += 10;
   }
 
-  // Bonus si tiene múltiples palabras clave (indica mejor fit)
-  const keywordMatches = keywords.filter(k => textLower.includes(k)).length;
-  if (keywordMatches >= 3) score += 15;
-  if (keywordMatches >= 5) score += 10;
+  // Bonus por certificaciones
+  if (/(?:certificad|cert\.|certification|certified)/.test(cvLower)) {
+    score += 8;
+  }
 
   return Math.min(100, Math.max(20, score));
 }
@@ -103,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     const { data: vacanteData } = await supabase
       .from('vacantes')
-      .select('titulo')
+      .select('titulo, descripcion')
       .eq('id', vacante_id)
       .single();
 
@@ -161,7 +196,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Analizar y generar score
-    const score_ia = analyzeCV(finalCVText, vacanteData.titulo);
+    const score_ia = analyzeCV(finalCVText, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
     const candidato_id = `candidato-${Date.now()}`;
