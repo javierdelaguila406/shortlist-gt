@@ -54,7 +54,6 @@ export default function DemoDashboard() {
   const [linkedinData, setLinkedinData] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
-  const [allCandidates, setAllCandidates] = useState<Candidate[]>(mockCandidates);
 
   useEffect(() => {
     const savedVacantes = localStorage.getItem('vacantes');
@@ -62,17 +61,6 @@ export default function DemoDashboard() {
       setVacantes(JSON.parse(savedVacantes));
     } else {
       setVacantes(mockVacantes as Vacante[]);
-    }
-
-    // Load postulantes from localStorage
-    try {
-      const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
-      const postulantes = JSON.parse(savedPostulantes);
-      const combined = [...mockCandidates, ...postulantes];
-      setAllCandidates(combined);
-      console.log('[Dashboard] Candidatos combinados:', { mock: mockCandidates.length, postulantes: postulantes.length, total: combined.length });
-    } catch (e) {
-      console.error('Error loading postulantes:', e);
     }
 
     const license = getUserLicenseFromStorage();
@@ -86,14 +74,26 @@ export default function DemoDashboard() {
     console.log('[Dashboard] Vacantes guardadas:', { count: vacantes.length, ids: vacantes.map(v => v.id) });
   }, [vacantes]);
 
+  const getFilteredCandidates = () => {
+    const allCandidates = [...mockCandidates];
+    try {
+      const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
+      const postulantes = JSON.parse(savedPostulantes);
+      allCandidates.push(...postulantes);
+    } catch (e) {
+      console.warn('Could not load postulantes from localStorage');
+    }
+    return allCandidates.filter(c => c.vacante_id === selectedVacanteId);
+  };
+
   const selectedVacante = useMemo(
     () => vacantes.find(v => v.id === selectedVacanteId) || vacantes[0],
     [vacantes, selectedVacanteId]
   );
 
   const filteredCandidates = useMemo(
-    () => allCandidates.filter(c => c.vacante_id === selectedVacanteId),
-    [allCandidates, selectedVacanteId]
+    () => getFilteredCandidates(),
+    [selectedVacanteId]
   );
 
   const stats = useMemo(

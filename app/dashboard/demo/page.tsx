@@ -27,23 +27,21 @@ export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
   const [showCreateVacante, setShowCreateVacante] = useState(false);
-  const [allCandidates, setAllCandidates] = useState<Candidate[]>(mockCandidates);
 
-  useEffect(() => {
-    // Load postulantes from localStorage
+  const getFilteredCandidates = () => {
+    const allCandidates = [...mockCandidates];
     try {
       const savedPostulantes = localStorage.getItem('candidatos_postulantes') || '[]';
       const postulantes = JSON.parse(savedPostulantes);
-      const combined = [...mockCandidates, ...postulantes];
-      setAllCandidates(combined);
-      console.log('[Dashboard] Candidatos combinados:', { mock: mockCandidates.length, postulantes: postulantes.length, total: combined.length });
+      allCandidates.push(...postulantes);
     } catch (e) {
-      console.error('Error loading postulantes:', e);
+      console.warn('Could not load postulantes from localStorage');
     }
-  }, []);
+    return allCandidates.filter(c => c.vacante_id === selectedVacanteId);
+  };
 
   const selectedVacante = mockVacantes.find(v => v.id === selectedVacanteId) || mockVacantes[0];
-  const filteredCandidates = allCandidates.filter(c => c.vacante_id === selectedVacanteId);
+  const filteredCandidates = getFilteredCandidates();
 
   const stats = {
     total: filteredCandidates.length,
