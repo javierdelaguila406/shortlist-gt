@@ -103,6 +103,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [cvFileName, setCvFileName] = useState('');
+  const [submitError, setSubmitError] = useState('');
 
   if (vacante === undefined) {
     return (
@@ -150,9 +151,10 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
 
     if (!formData.nombre || !formData.telefono || !formData.cv || !formData.consentimiento) {
-      alert('Completa todos los campos y acepta el consentimiento');
+      setSubmitError('Completa todos los campos y acepta el consentimiento');
       return;
     }
 
@@ -161,7 +163,6 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('telefono', formData.telefono);
-      formDataToSend.append('consentimiento', 'true');
       formDataToSend.append('vacante_id', params.slug);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
@@ -170,9 +171,16 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
         body: formDataToSend,
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setSubmitted(true);
+      } else {
+        setSubmitError(data.error || 'Error al enviar la solicitud. Intenta de nuevo.');
       }
+    } catch (err) {
+      setSubmitError('Error de conexión. Verifica tu internet e intenta de nuevo.');
+      console.error('Submit error:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -217,6 +225,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
             <CardTitle>Formulario de Aplicación</CardTitle>
           </CardHeader>
           <CardContent>
+            {submitError && (
+              <div className="bg-red-950/30 border border-red-800/40 rounded-lg p-4 mb-5">
+                <p className="text-sm text-red-300">{submitError}</p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>

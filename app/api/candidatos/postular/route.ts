@@ -30,30 +30,28 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const nombre = formData.get('nombre') as string;
-    const email = formData.get('email') as string;
     const telefono = formData.get('telefono') as string;
-    const disponibilidad = formData.get('disponibilidad') as string;
-    const salario = formData.get('salario') as string;
-    const slug = formData.get('slug') as string;
+    const vacante_id = formData.get('vacante_id') as string;
     const cvFile = formData.get('cv') as File;
 
-    // Validar con Zod
-    const validationResult = candidatoPostulacionSchema.safeParse({
-      nombre,
-      email,
-      telefono,
-      disponibilidad,
-      salario,
-      slug,
-    });
-
-    if (!validationResult.success) {
+    // Validar campos requeridos
+    if (!nombre || !nombre.trim()) {
       return NextResponse.json(
-        {
-          error: 'Validación fallida',
-          details: validationResult.error.issues.map((e: any) => e.message),
-          success: false
-        },
+        { error: 'El nombre es requerido', success: false },
+        { status: 400 }
+      );
+    }
+
+    if (!telefono || !telefono.trim()) {
+      return NextResponse.json(
+        { error: 'El teléfono es requerido', success: false },
+        { status: 400 }
+      );
+    }
+
+    if (!vacante_id || !vacante_id.trim()) {
+      return NextResponse.json(
+        { error: 'La vacante es requerida', success: false },
         { status: 400 }
       );
     }
@@ -81,17 +79,25 @@ export async function POST(request: NextRequest) {
     let isDemo = false;
 
     try {
-      // Get vacancy by slug
-      const { data: vacante, error: vacanteError } = await supabase
-        .from('vacantes')
-        .select('id')
-        .eq('slug', slug)
-        .single();
+      // Note: vacante_id is sent by frontend, we process candidate even in demo mode
+      // (vacante may not exist in DB if created from home page)
 
-      if (vacanteError || !vacante) {
-        console.warn('Vacancy not found, using fallback mode:', vacanteError);
-        isDemo = true;
-      } else {
+      let vacante = null;
+      try {
+        const { data, error } = await supabase
+          .from('vacantes')
+          .select('id, titulo, descripcion')
+          .eq('id', vacante_id)
+          .single();
+
+        if (!error && data) {
+          vacante = data;
+        }
+      } catch (e) {
+        console.warn('Vacancy not found in DB, continuing with fallback:', e);
+      }
+
+      if (vacante) {
         try {
           // Save CV file locally
           const fileName = `${Date.now()}-${cvFile.name}`;
@@ -110,13 +116,11 @@ export async function POST(request: NextRequest) {
             .insert({
               vacante_id: vacante.id,
               nombre,
-              email,
+              email: `${nombre.replace(/\s+/g, '.')}@postulacion.local`,
               telefono,
               cv_url: cvUrl,
               estado: 'pendiente',
               metadata: {
-                disponibilidad,
-                salario,
                 aplicacion_fecha: new Date().toISOString(),
               },
             })
