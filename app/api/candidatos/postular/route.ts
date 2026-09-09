@@ -81,40 +81,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let candidatoId: string = '';
+    const candidatoId = `candidato-${Date.now()}`;
     const generatedEmail = `${nombre.replace(/\s+/g, '.')}@postulacion.local`;
 
+    const candidatoData = {
+      id: candidatoId,
+      vacante_id,
+      nombre,
+      email: generatedEmail,
+      telefono,
+      cv_url: null,
+      cv_texto: null,
+      score_cv: 0,
+      score_video: 0,
+      score_test: 0,
+      score_total: 0,
+      estado: 'pendiente',
+      metadata: {
+        aplicacion_fecha: new Date().toISOString(),
+        archivo_nombre: cvFile.name,
+        archivo_tamaño: cvFile.size,
+      },
+    };
+
+    // Save to Supabase - this is the primary storage
     try {
-      const fileName = `${Date.now()}-${cvFile.name}`;
-      const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-
-      const buffer = await cvFile.arrayBuffer();
-      fs.writeFileSync(path.join(uploadsDir, fileName), Buffer.from(buffer));
-      const cvUrl = `/uploads/${fileName}`;
-      candidatoId = `candidato-${Date.now()}`;
-
-      const candidatoData = {
-        id: candidatoId,
-        vacante_id,
-        nombre,
-        email: generatedEmail,
-        telefono,
-        cv_url: cvUrl,
-        cv_texto: null,
-        score_cv: 0,
-        score_video: 0,
-        score_test: 0,
-        score_total: 0,
-        estado: 'pendiente',
-        metadata: {
-          aplicacion_fecha: new Date().toISOString(),
-        },
-      };
-
-      // Save to Supabase - this is the primary storage
       const { error: dbError } = await supabase
         .from('candidatos')
         .insert(candidatoData);
@@ -128,10 +119,10 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('[API] Candidato guardado en Supabase:', candidatoId);
-    } catch (fileError) {
-      console.error('File operation failed:', fileError);
+    } catch (error) {
+      console.error('Error saving to Supabase:', error);
       return NextResponse.json(
-        { error: 'Error al procesar archivo: ' + (fileError instanceof Error ? fileError.message : 'desconocido'), success: false },
+        { error: 'Error al guardar en base de datos', success: false },
         { status: 500 }
       );
     }
