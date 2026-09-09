@@ -481,7 +481,7 @@ export default function DemoDashboard() {
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-2">Habilidades Técnicas</h4>
                     <div className="flex flex-wrap gap-1">
-                      {selectedCandidate.habilidades.map((skill) => (
+                      {selectedCandidate.habilidades && selectedCandidate.habilidades.map((skill) => (
                         <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
                           {skill}
                         </span>
@@ -677,7 +677,7 @@ export default function DemoDashboard() {
                   <p className="text-sm text-zinc-400 mt-1">Puntuación General</p>
                 </div>
                 <div className="space-y-3">
-                  {Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                  {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
                     <div key={key}>
                       <div className="flex justify-between text-sm mb-1">
                         <span className="text-zinc-300 capitalize">{key.replace(/_/g, ' ')}</span>
