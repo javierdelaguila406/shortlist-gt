@@ -23,38 +23,24 @@ export default function CrearVacantePage() {
         return;
       }
 
+      const newId = `vacante-${Date.now()}`;
+      const baseUrl = window.location.origin;
+      const aplicarLink = `${baseUrl}/postular/${newId}`;
+
       const newVacante = {
+        id: newId,
         titulo,
-        descripcion: fd.get('descripcion'),
-        departamento: fd.get('departamento'),
+        descripcion: fd.get('descripcion') || '',
+        departamento: fd.get('departamento') || '',
       };
 
-      // Use API route (bypasses CSP)
-      const response = await fetch('/api/vacantes/crear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newVacante),
-      });
-
-      if (!response.ok) {
-        throw new Error('Error creating vacancy');
-      }
-
-      const data = await response.json();
-      const fullVacante = {
-        id: data.newId,
-        titulo,
-        descripcion: fd.get('descripcion'),
-        departamento: fd.get('departamento'),
-      };
-
-      // Also save to localStorage as fallback
+      // Save to localStorage
       const saved = localStorage.getItem('vacantes') || '[]';
       const list = JSON.parse(saved);
-      list.push(fullVacante);
+      list.push(newVacante);
       localStorage.setItem('vacantes', JSON.stringify(list));
 
-      setLink(data.aplicarLink);
+      setLink(aplicarLink);
       e.currentTarget.reset();
     } catch (err) {
       setError('Error: ' + (err instanceof Error ? err.message : 'desconocido'));
