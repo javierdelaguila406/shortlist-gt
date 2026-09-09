@@ -4,6 +4,7 @@ import { FormEvent, useState } from 'react';
 import Link from 'next/link';
 
 export default function CrearVacantePage() {
+  // Force rebuild v2
   const [link, setLink] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
