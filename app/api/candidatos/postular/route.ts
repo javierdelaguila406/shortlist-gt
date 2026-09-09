@@ -30,19 +30,19 @@ function extractKeywords(text: string): string[] {
   ]);
 
   // Palabras técnicas relevantes para búsqueda
-  const techWords = /\b(?:python|java|javascript|react|angular|vue|node|sql|mongodb|postgresql|git|docker|kubernetes|aws|azure|gcp|api|rest|graphql|html|css|typescript|golang|rust|php|laravel|django|spring|kotlin|swift|mobile|web|frontend|backend|fullstack|devops|ci|cd|linux|windows|agile|scrum|jira|confluence|slack|figma|ui|ux|wordpress|drupal|shopify|salesforce|sap|crm|erp|excel|vba|tableau|power bi|powerpoint|wordpress|linux|apache|nginx|jenkins)\b/gi;
+  const techWords = /\b(?:python|java|javascript|react|angular|vue|node|sql|mongodb|postgresql|git|docker|kubernetes|aws|azure|gcp|api|rest|graphql|html|css|typescript|golang|rust|php|laravel|django|spring|kotlin|swift|mobile|web|frontend|backend|fullstack|devops|ci|cd|linux|windows|agile|scrum|jira|confluence|slack|figma|ui|ux|wordpress|drupal|shopify|salesforce|sap|crm|erp|excel|vba|tableau|power bi|powerpoint|apache|nginx|jenkins)\b/g;
 
-  // Extraer palabras técnicas
+  // Extraer palabras técnicas (ya en lowercase)
   const techMatches = textLower.match(techWords) || [];
   const keywords = new Set<string>();
 
   // Agregar palabras técnicas
-  techMatches.forEach(word => keywords.add(word.toLowerCase()));
+  techMatches.forEach(word => keywords.add(word));
 
   // Extraer palabras largas (4+ caracteres) que no sean stopwords
   const words = textLower.split(/\W+/);
   words.forEach(word => {
-    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóúa-z0-9]+$/.test(word)) {
+    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóú0-9]+$/i.test(word)) {
       keywords.add(word);
     }
   });
@@ -172,25 +172,21 @@ export async function POST(request: NextRequest) {
     // Usar cvText + habilidades para análisis
     let finalCVText = (cvText || '').trim();
     let cvUrl = '';
-    let extractedEmail = email; // Usar email ingresado como base
-    let extractedPhone = telefono;
+    let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
+    let extractedPhone = telefono || '';
 
     // Si no hay cvText del frontend, intentar extraer del PDF
     if (!finalCVText && cv) {
       try {
         const buffer = await cv.arrayBuffer();
         finalCVText = extractTextFromBuffer(Buffer.from(buffer));
+        console.log('[API] Texto extraído del PDF:', finalCVText.substring(0, 100) + '...');
       } catch (e) {
         console.error('[API] Error extrayendo PDF buffer:', e);
       }
     }
 
-    // Agregar habilidades al final
-    if (habilidades) {
-      finalCVText = finalCVText + ' ' + habilidades;
-    }
-
-    // Extraer email del PDF si no vino en formulario
+    // Extraer email del PDF si no vino en formulario (ANTES de agregar habilidades)
     if (finalCVText && !email) {
       const pdfEmail = extractEmailFromText(finalCVText);
       if (pdfEmail) {
@@ -199,9 +195,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validar que tenemos email (requerido)
-    if (!extractedEmail) {
-      return NextResponse.json({ error: 'Email requerido (no se pudo extraer del PDF)', success: false }, { status: 400 });
+    // Agregar habilidades al final (para scoring, NO para extraction)
+    let textForScoring = finalCVText.trim();
+    if (habilidades) {
+      textForScoring = (textForScoring + ' ' + habilidades).trim();
+      console.log('[API] Agregando habilidades para scoring');
+    }
+
+    // Validar que tenemos email (REQUERIDO)
+    if (!extractedEmail || extractedEmail.trim().length === 0) {
+      return NextResponse.json({
+        error: 'Email es requerido. Proporciona tu email o asegúrate que esté en el PDF.',
+        success: false
+      }, { status: 400 });
     }
 
     // Guardar PDF en Supabase Storage
@@ -230,8 +236,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Analizar y generar score
-    const score_ia = analyzeCV(finalCVText, vacanteData.titulo, vacanteData.descripcion || '');
+    // Analizar y generar score (con habilidades incluidas)
+    const score_ia = analyzeCV(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
     console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });

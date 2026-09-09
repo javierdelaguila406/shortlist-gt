@@ -239,31 +239,31 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Save to localStorage for dashboard
+        // Save to localStorage for dashboard (deprecated but keeping for compatibility)
         try {
           const candidatoData = {
             id: data.candidatoId,
             vacante_id: params.slug,
             nombre: formData.nombre,
-            email: data.candidato.email,
+            email: data.candidato.email,  // ✅ Usa email del backend (extraído del PDF)
             telefono: formData.telefono,
-            cv_url: '',
-            estado: 'pendiente',
-            score_ia: 0,
+            cv_url: data.candidato.cv_url || '',  // ✅ Usa URL del PDF de Storage
+            estado: data.candidato.estado,  // ✅ Usa estado del backend
+            score_ia: data.candidato.score_ia,  // ✅ Usa score del backend
           };
           const saved = localStorage.getItem('candidatos_postulantes') || '[]';
           const list = JSON.parse(saved);
           list.push(candidatoData);
           localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
           console.log('[POSTULAR] Candidato guardado en localStorage:', candidatoData);
-          console.log('[POSTULAR] Lista completa en localStorage:', list);
-          console.log('[POSTULAR] Vacante ID para filtrar:', params.slug);
+          console.log('[POSTULAR] Candidato guardado en Supabase también');
         } catch (e) {
           console.error('[POSTULAR] Error al guardar en localStorage:', e);
         }
         setSubmitted(true);
       } else {
         setSubmitError(data.error || 'Error al enviar la solicitud. Intenta de nuevo.');
+        console.error('[POSTULAR] Error en respuesta:', data);
       }
     } catch (err) {
       setSubmitError('Error de conexión. Verifica tu internet e intenta de nuevo.');
