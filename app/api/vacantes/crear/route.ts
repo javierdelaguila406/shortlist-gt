@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,10 +26,17 @@ export async function POST(request: NextRequest) {
       aplicarLink,
     };
 
-    try {
-      await supabase.from('vacantes').insert([newVacante]);
-    } catch (e) {
-      console.error('Supabase insert failed:', e);
+    // Use server-side Supabase with service role key
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (supabaseUrl && supabaseServiceKey) {
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      try {
+        await supabase.from('vacantes').insert([newVacante]);
+      } catch (e) {
+        console.error('Supabase insert failed:', e);
+      }
     }
 
     return NextResponse.json({
