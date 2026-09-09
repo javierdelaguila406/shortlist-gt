@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function CrearVacantePage() {
   const [link, setLink] = useState('');
@@ -35,13 +36,18 @@ export default function CrearVacantePage() {
         aplicarLink,
       };
 
-      // Save to localStorage AND cookie for persistence
+      // Save to Supabase
+      try {
+        await supabase.from('vacantes').insert([newVacante]);
+      } catch (e) {
+        console.log('Supabase save failed, using localStorage:', e);
+      }
+
+      // Fallback: save to localStorage
       const saved = localStorage.getItem('vacantes') || '[]';
       const list = JSON.parse(saved);
       list.push(newVacante);
       localStorage.setItem('vacantes', JSON.stringify(list));
-      // Also set cookie so it persists across navigations
-      document.cookie = `vacantes=${encodeURIComponent(JSON.stringify(list))}; path=/; max-age=604800`;
 
       setLink(aplicarLink);
       e.currentTarget.reset();
