@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import pdfParse from 'pdf-parse';
 
-// Palabras clave por industria
 const KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
   ventas: ['ventas', 'cliente', 'comisión', 'prospección', 'crm', 'negociación', 'cierre', 'pipeline', 'lead', 'venta', 'vendedor', 'comercial', 'telemarketing'],
   mecanica: ['motor', 'transmisión', 'diagnóstico', 'suspensión', 'frenos', 'inyección', 'herramientas', 'scanner', 'reparación', 'automotriz', 'vehículo', 'soldadura', 'eléctrico'],
@@ -10,19 +9,26 @@ const KEYWORDS_BY_INDUSTRY: Record<string, string[]> = {
   default: ['experiencia', 'años', 'trabajo', 'responsable', 'líder', 'equipo', 'gestión', 'proyecto'],
 };
 
-function analyzeCV(cvText: string, vacanteTitle: string, vacanteDescription: string): number {
+function extractEmail(text: string): string | null {
+  const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+  const match = text.match(emailRegex);
+  return match ? match[0] : null;
+}
+
+function analyzeCV(cvText: string, vacanteTitle: string): number {
+  if (!cvText || cvText.trim().length < 50) {
+    return 30; // Score mínimo si CV es muy corto
+  }
+
   const textLower = cvText.toLowerCase();
   
-  // Detectar industria basado en título
   let industry = 'default';
   if (vacanteTitle.toLowerCase().includes('venta')) industry = 'ventas';
   else if (vacanteTitle.toLowerCase().includes('mecán')) industry = 'mecanica';
   else if (vacanteTitle.toLowerCase().includes('desarro') || vacanteTitle.toLowerCase().includes('progra')) industry = 'tecnologia';
 
-  // Obtener palabras clave para la industria
   const keywords = [...KEYWORDS_BY_INDUSTRY[industry], ...KEYWORDS_BY_INDUSTRY.default];
   
-  // Contar coincidencias de palabras clave
   let matches = 0;
   for (const keyword of keywords) {
     const regex = new RegExp(`\b${keyword}\b`, 'gi');
@@ -30,15 +36,12 @@ function analyzeCV(cvText: string, vacanteTitle: string, vacanteDescription: str
     if (found) matches += found.length;
   }
 
-  // Buscar años de experiencia
   let yearsScore = 0;
   const yearsRegex = /(\d+)\s*(?:años|years|a[ño]os)\s*(?:de\s*)?(?:experiencia|exp\.?)/gi;
-  const yearsMatch = textLower.match(yearsRegex);
-  if (yearsMatch) {
-    yearsScore = 20; // Bonus por tener experiencia documentada
+  if (textLower.match(yearsRegex)) {
+    yearsScore = 20;
   }
 
-  // Buscar educación/certificaciones
   let educationScore = 0;
   const educationKeywords = ['licenciatura', 'bachillerato', 'diploma', 'certificado', 'carrera', 'técnico', 'ingeniería', 'grado'];
   for (const keyword of educationKeywords) {
@@ -48,10 +51,7 @@ function analyzeCV(cvText: string, vacanteTitle: string, vacanteDescription: str
     }
   }
 
-  // Calcular score basado en coincidencias
-  // Mínimo 20 (tiene algo), máximo 100
-  let score = Math.min(100, Math.max(20, Math.floor(matches * 3 + yearsScore + educationScore)));
-
+  let score = Math.min(100, Math.max(30, Math.floor(matches * 3 + yearsScore + educationScore)));
   return score;
 }
 
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const vacante_id = formData.get('vacante_id') as string;
     const cv = formData.get('cv') as File;
 
-    console.log('[API] 📝 Postulación recibida:', { nombre, vacante_id });
+    console.log('[API] 📝 Postulación:', { nombre, vacante_id });
 
     if (!nombre || !telefono || !vacante_id) {
       return NextResponse.json(
@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Obtener vacante
     const { data: vacanteData, error: vacanteError } = await supabase
       .from('vacantes')
       .select('id, titulo, descripcion, departamento')
@@ -92,47 +91,70 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (vacanteError || !vacanteData) {
-      console.error('[API] ❌ Vacante no encontrada:', vacante_id);
+      console.error('[API] ❌ Vacante no encontrada');
       return NextResponse.json(
         { error: 'Vacante no encontrada', success: false },
         { status: 404 }
       );
     }
 
-    console.log('[API] ✅ Vacante encontrada:', vacanteData.titulo);
+    console.log('[API] ✅ Vacante:', vacanteData.titulo);
 
-    // Extraer texto del PDF
+    // Extraer PDF
     let cvText = '';
+    let extractedEmail: string | null = null;
+
     if (cv) {
       try {
-        console.log('[API] 📄 Extrayendo PDF...');
+        console.log('[API] 📄 PDF recibido:', cv.name, cv.size, 'bytes');
         const buffer = await cv.arrayBuffer();
-        const data = await pdfParse(Buffer.from(buffer));
-        cvText = data.text;
-        console.log('[API] ✅ PDF extraído:', cvText.length, 'caracteres');
+        
+        // Intentar con pdf-parse
+        try {
+          const data = await pdfParse(Buffer.from(buffer));
+          cvText = data.text || '';
+          console.log('[API] ✅ PDF parseado:', cvText.length, 'caracteres');
+        } catch (parseError) {
+          console.warn('[API] ⚠️ pdf-parse falló, intentando fallback');
+          // Fallback: intentar extraer como texto plano
+          cvText = Buffer.from(buffer).toString('utf-8', 0, Math.min(5000, buffer.byteLength));
+        }
+
+        // Extraer email del CV si existe
+        if (cvText) {
+          extractedEmail = extractEmail(cvText);
+          if (extractedEmail) {
+            console.log('[API] 📧 Email encontrado en CV:', extractedEmail);
+          }
+        }
       } catch (pdfError) {
-        console.error('[API] ❌ Error en PDF:', pdfError);
+        console.error('[API] ❌ Error extrayendo PDF:', pdfError);
         cvText = '';
       }
     }
 
+    console.log('[API] 📊 CV extraído:', {
+      length: cvText.length,
+      hasEmail: !!extractedEmail,
+      firstChars: cvText.substring(0, 100),
+    });
+
     // Analizar CV
-    let score_ia = 30; // Score mínimo si no hay CV
+    let score_ia = 30;
     let estado = 'pendiente';
 
     if (cvText && cvText.trim().length > 50) {
-      score_ia = analyzeCV(cvText, vacanteData.titulo, vacanteData.descripcion || '');
+      score_ia = analyzeCV(cvText, vacanteData.titulo);
       estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
-      console.log('[API] 🤖 Análisis completado:', { nombre, score_ia, estado });
+      console.log('[API] 🤖 Análisis:', { score_ia, estado });
     } else {
-      console.warn('[API] ⚠️ CV vacío, score mínimo');
+      console.warn('[API] ⚠️ CV muy corto o vacío');
     }
 
-    // Generar email
-    const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
+    // Email: extraído o generado
+    const email = extractedEmail || `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
     const candidato_id = `candidato-${Date.now()}`;
 
-    // Crear candidato en Supabase
     const { data: candidato, error: candidatoError } = await supabase
       .from('candidatos')
       .insert({
@@ -148,18 +170,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (candidatoError) {
-      console.error('[API] ❌ Error creando candidato:', candidatoError);
+      console.error('[API] ❌ Error BD:', candidatoError);
       return NextResponse.json(
-        { error: `Error al guardar candidato: ${candidatoError.message}`, success: false },
+        { error: `Error al guardar: ${candidatoError.message}`, success: false },
         { status: 500 }
       );
     }
 
-    console.log('[API] ✅ Candidato guardado:', {
-      id: candidato.id,
-      score: score_ia,
-      estado: estado,
-    });
+    console.log('[API] ✅ Guardado:', { id: candidato.id, score: score_ia, estado });
 
     return NextResponse.json({
       success: true,
@@ -172,7 +190,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[API] ❌ Error general:', error);
+    console.error('[API] ❌ Error:', error);
     return NextResponse.json(
       { error: 'Error del servidor', success: false },
       { status: 500 }
