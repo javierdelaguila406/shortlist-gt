@@ -52,9 +52,6 @@ export default function CrearVacantePage() {
       setTitulo('');
       setDescripcion('');
       setDepartamento('');
-
-      // Redirigir al dashboard
-      router.push('/dashboard/reclutador');
     } catch (err) {
       setError('Error al crear la vacante');
       console.error(err);
