@@ -515,6 +515,33 @@ export default function DemoDashboard() {
                   <CardDescription>Análisis Detallado</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
+                  {/* Contact Info */}
+                  <div className="bg-zinc-800/50 rounded-lg p-3 space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-400">📧</span>
+                      <a href={`mailto:${selectedCandidate.email}`} className="text-emerald-400 hover:underline truncate">
+                        {selectedCandidate.email}
+                      </a>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-zinc-400">📱</span>
+                      <span className="text-white">{selectedCandidate.telefono}</span>
+                    </div>
+                    {selectedCandidate.cv_url && (
+                      <div className="flex items-center gap-2 pt-2 border-t border-zinc-700">
+                        <span className="text-zinc-400">📄</span>
+                        <a
+                          href={selectedCandidate.cv_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-400 hover:underline text-xs"
+                        >
+                          Ver PDF del CV
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Score Breakdown */}
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-3">Puntuaciones por Competencia</h4>
