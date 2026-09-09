@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
-import { supabase } from '@/lib/supabase';
 
 export default function CrearVacantePage() {
   const [link, setLink] = useState('');
@@ -24,32 +23,25 @@ export default function CrearVacantePage() {
         return;
       }
 
-      const newId = `vacante-${Date.now()}`;
-      const baseUrl = window.location.origin;
-      const aplicarLink = `${baseUrl}/postular/${newId}`;
-
       const newVacante = {
-        id: newId,
         titulo,
         descripcion: fd.get('descripcion'),
         departamento: fd.get('departamento'),
-        aplicarLink,
       };
 
-      // Save to Supabase
-      try {
-        await supabase.from('vacantes').insert([newVacante]);
-      } catch (e) {
-        console.log('Supabase save failed, using localStorage:', e);
+      // Use API route (bypasses CSP)
+      const response = await fetch('/api/vacantes/crear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newVacante),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error creating vacancy');
       }
 
-      // Fallback: save to localStorage
-      const saved = localStorage.getItem('vacantes') || '[]';
-      const list = JSON.parse(saved);
-      list.push(newVacante);
-      localStorage.setItem('vacantes', JSON.stringify(list));
-
-      setLink(aplicarLink);
+      const data = await response.json();
+      setLink(data.aplicarLink);
       e.currentTarget.reset();
     } catch (err) {
       setError('Error: ' + (err instanceof Error ? err.message : 'desconocido'));

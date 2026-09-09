@@ -1,37 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.formData();
-    const titulo = data.get('titulo') as string;
-    const descripcion = data.get('descripcion') as string;
-    const departamento = data.get('departamento') as string;
+    const body = await request.json();
+    const { titulo, descripcion, departamento } = body;
 
-    if (!titulo || !titulo.trim()) {
-      return NextResponse.json({ error: 'Título requerido' }, { status: 400 });
+    if (!titulo?.trim()) {
+      return NextResponse.json(
+        { error: 'Título requerido' },
+        { status: 400 }
+      );
     }
 
     const newId = `vacante-${Date.now()}`;
-    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    const baseUrl = request.headers.get('x-forwarded-proto') || 'https';
     const host = request.headers.get('host') || 'shortlist-gt.vercel.app';
-    const baseUrl = `${proto}://${host}`;
-    const aplicarLink = `${baseUrl}/postular/${newId}`;
+    const aplicarLink = `${baseUrl}://${host}/postular/${newId}`;
 
     const newVacante = {
       id: newId,
       titulo,
-      descripcion,
-      departamento,
+      descripcion: descripcion || null,
+      departamento: departamento || null,
       aplicarLink,
-      createdAt: new Date().toISOString(),
     };
+
+    try {
+      await supabase.from('vacantes').insert([newVacante]);
+    } catch (e) {
+      console.error('Supabase insert failed:', e);
+    }
 
     return NextResponse.json({
       success: true,
-      vacante: newVacante,
+      newId,
+      aplicarLink,
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json({ error: 'Error al crear vacante' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Error al crear vacante' },
+      { status: 500 }
+    );
   }
 }
