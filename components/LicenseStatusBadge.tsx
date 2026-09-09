@@ -39,13 +39,16 @@ export function LicenseStatusBadge() {
   const { canCreate, remaining } = canCreateVacante(license);
 
   const typeColors = {
-    DEMO: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
-    TRIAL: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
-    PREMIUM: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+    DEMO: 'bg-blue-500/20 border-blue-500/40 text-blue-300 hover:bg-blue-500/30 cursor-pointer',
+    TRIAL: 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30 cursor-pointer',
+    PREMIUM: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 cursor-pointer',
   };
 
   return (
-    <div className={`border rounded-lg px-3 py-2 flex items-center gap-2 text-sm ${typeColors[license.tipo]}`}>
+    <button
+      onClick={() => router.push('/acceso')}
+      className={`border rounded-lg px-3 py-2 flex items-center gap-2 text-sm transition-colors ${typeColors[license.tipo]}`}
+    >
       {canCreate ? (
         <CheckCircle className="w-4 h-4" />
       ) : (
@@ -64,6 +67,6 @@ export function LicenseStatusBadge() {
           {license.tipo === 'DEMO' && 'Ilimitado - Sin restricciones'}
         </div>
       </div>
-    </div>
+    </button>
   );
 }
