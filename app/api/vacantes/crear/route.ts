@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
     }
 
     const newId = `vacante-${Date.now()}`;
-    const baseUrl = request.headers.get('x-forwarded-proto') + '://' + request.headers.get('host');
+    const proto = request.headers.get('x-forwarded-proto') || 'https';
+    const host = request.headers.get('host') || 'shortlist-gt.vercel.app';
+    const baseUrl = `${proto}://${host}`;
     const aplicarLink = `${baseUrl}/postular/${newId}`;
 
     const newVacante = {
