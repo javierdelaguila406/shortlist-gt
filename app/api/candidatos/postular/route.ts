@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { candidatoPostulacionSchema, pdfFileSchema } from '@/lib/validations';
 import * as fs from 'fs';
 import * as path from 'path';
+
+// Use service role key for server-side operations (has full permissions)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export async function POST(request: NextRequest) {
   try {
@@ -115,16 +125,22 @@ export async function POST(request: NextRequest) {
 
       if (dbError) {
         console.error('[API] Supabase save failed:', dbError);
-        // Still return success to user, but log the error
-      } else {
-        console.log('[API] Candidato guardado en Supabase:', candidatoId);
+        return NextResponse.json(
+          { error: 'Error al guardar en base de datos: ' + dbError.message, success: false },
+          { status: 500 }
+        );
       }
+
+      console.log('[API] Candidato guardado en Supabase:', candidatoId);
     } catch (fileError) {
       console.error('File operation failed:', fileError);
-      candidatoId = `local-${Date.now()}`;
+      return NextResponse.json(
+        { error: 'Error al procesar archivo: ' + (fileError instanceof Error ? fileError.message : 'desconocido'), success: false },
+        { status: 500 }
+      );
     }
 
-    // Always return success - this is the key for resilience
+    // Return success only if everything worked
     return NextResponse.json(
       {
         success: true,
