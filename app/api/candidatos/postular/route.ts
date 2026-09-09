@@ -46,10 +46,14 @@ export async function POST(request: NextRequest) {
     // Generate email from nombre if not provided
     const email = `${nombre.toLowerCase().replace(/\s+/g, '.')}@candidate.shortlist.gt`;
 
+    // Generate unique candidate ID
+    const candidato_id = `candidato-${Date.now()}`;
+
     // Create candidate in Supabase
     const { data: candidato, error: candidatoError } = await supabase
       .from('candidatos')
       .insert({
+        id: candidato_id,
         vacante_id: vacante_id,
         nombre: nombre,
         email: email,
