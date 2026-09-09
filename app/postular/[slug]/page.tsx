@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { mockVacantes } from '@/lib/mock-data';
+import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface FormData {
@@ -26,10 +27,27 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   const [vacante, setVacante] = useState<Vacante | null>(null);
 
   useEffect(() => {
-    // Construir lista de vacantes desde TODAS las fuentes
-    const allVacantes: Vacante[] = [];
+    const fetchVacante = async () => {
+      // 1. Try Supabase first
+      try {
+        const { data } = await supabase
+          .from('vacantes')
+          .select('*')
+          .eq('id', params.slug)
+          .single();
 
-    // 1. Agregar mockVacantes primero
+        if (data) {
+          setVacante(data);
+          return;
+        }
+      } catch (e) {
+        console.log('Supabase search failed, trying fallback:', e);
+      }
+
+      // 2. Construir lista de vacantes desde TODAS las fuentes
+      const allVacantes: Vacante[] = [];
+
+      // 2a. Agregar mockVacantes primero
     mockVacantes.forEach(v => {
       allVacantes.push({
         id: v.id,
@@ -94,13 +112,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       console.error('Error parsing sessionStorage vacantes:', e);
     }
 
-    const found = allVacantes.find(v => v.id === params.slug);
-    console.log(`[Postular] Buscando ID: ${params.slug}`, {
-      found: found?.titulo || 'NO ENCONTRADA',
-      totalVacantes: allVacantes.length,
-      idsDisponibles: allVacantes.map(v => v.id)
-    });
-    setVacante(found || null);
+      const found = allVacantes.find(v => v.id === params.slug);
+      setVacante(found || null);
+    };
+
+    fetchVacante();
   }, [params.slug]);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
