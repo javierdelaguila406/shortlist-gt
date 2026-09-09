@@ -88,13 +88,6 @@ export default function DemoDashboard() {
               ))}
             </select>
             <span className="text-xs text-zinc-500 ml-2">({filteredCandidates.length} candidatos)</span>
-
-            <button
-              onClick={() => setShowCreateVacante(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2 ml-2"
-            >
-              <Plus className="w-4 h-4" /> Crear Vacante
-            </button>
           </div>
         </div>
       </div>
