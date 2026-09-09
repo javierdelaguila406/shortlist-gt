@@ -153,14 +153,20 @@ export default function DemoDashboard() {
 
       const data = await response.json();
 
-      setVacantes([...vacantes, {
+      const updatedVacantes = [...vacantes, {
         id: newId,
         titulo: newVacante.titulo,
         descripcion: newVacante.descripcion,
         departamento: newVacante.departamento,
         linkedinLink: data.linkedinShareUrl,
         aplicarLink: aplicarLink
-      }]);
+      }];
+
+      // Save immediately to localStorage
+      localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
+      sessionStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
+
+      setVacantes(updatedVacantes);
 
       setLinkedinData(data);
       setShowLinkedinLink(true);
