@@ -33,10 +33,15 @@ export default function Home() {
           Encuentra los mejores talentos 10x más rápido. SHORTLIST.GT utiliza IA para evaluar
           candidatos, WhatsApp para comunicación y análisis profundo de competencias.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-4 justify-center flex-wrap">
           <Link href="/acceso">
             <Button size="lg" className="flex items-center gap-2">
               Acceder Ahora <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+          <Link href="/vacantes/crear">
+            <Button size="lg" variant="secondary">
+              Crear Vacante
             </Button>
           </Link>
           <Link href="/auth/login">
