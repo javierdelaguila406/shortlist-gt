@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +14,86 @@ interface FormData {
   consentimiento: boolean;
 }
 
-export default function PostularPage({ params }: { params: { slug: string } }) {
-  const vacante = mockVacantes.find(v => v.id === params.slug);
+interface Vacante {
+  id: string;
+  titulo: string;
+  descripcion?: string;
+  departamento?: string;
+}
+
+export default function PostularPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+  const params = use(paramsPromise);
+  const [vacante, setVacante] = useState<Vacante | null>(null);
+
+  useEffect(() => {
+    // Construir lista de vacantes desde TODAS las fuentes
+    const allVacantes: Vacante[] = [];
+
+    // 1. Agregar mockVacantes primero
+    mockVacantes.forEach(v => {
+      allVacantes.push({
+        id: v.id,
+        titulo: v.titulo,
+        descripcion: v.descripcion,
+        departamento: undefined, // mockVacantes no tiene departamento
+      });
+    });
+
+    // 2. Intentar agregar desde localStorage
+    try {
+      const savedVacantes = localStorage.getItem('vacantes');
+      if (savedVacantes) {
+        const parsed = JSON.parse(savedVacantes);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(v => {
+            if (v && v.id && !allVacantes.find(av => av.id === v.id)) {
+              allVacantes.push({
+                id: v.id,
+                titulo: v.titulo,
+                descripcion: v.descripcion,
+                departamento: v.departamento,
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing localStorage vacantes:', e);
+    }
+
+    // 3. Fallback: intentar desde sessionStorage si no hay localStorage
+    try {
+      const savedVacantes = localStorage.getItem('vacantes');
+      if (!savedVacantes) {
+        const sessionVacantes = sessionStorage.getItem('vacantes');
+        if (sessionVacantes) {
+          const parsed = JSON.parse(sessionVacantes);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(v => {
+              if (v && v.id && !allVacantes.find(av => av.id === v.id)) {
+                allVacantes.push({
+                  id: v.id,
+                  titulo: v.titulo,
+                  descripcion: v.descripcion,
+                  departamento: v.departamento,
+                });
+              }
+            });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing sessionStorage vacantes:', e);
+    }
+
+    const found = allVacantes.find(v => v.id === params.slug);
+    console.log(`[Postular] Buscando ID: ${params.slug}`, {
+      found: found?.titulo || 'NO ENCONTRADA',
+      totalVacantes: allVacantes.length,
+      idsDisponibles: allVacantes.map(v => v.id)
+    });
+    setVacante(found || null);
+  }, [params.slug]);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
     telefono: '',
@@ -26,12 +104,23 @@ export default function PostularPage({ params }: { params: { slug: string } }) {
   const [submitted, setSubmitted] = useState(false);
   const [cvFileName, setCvFileName] = useState('');
 
+  if (vacante === undefined) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <p className="text-zinc-400">Cargando...</p>
+      </div>
+    );
+  }
+
   if (!vacante) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
         <Card>
           <CardContent className="pt-6 text-center">
             <p className="text-zinc-400">Vacante no encontrada</p>
+            <Link href="/" className="mt-4 inline-block">
+              <Button>Volver al inicio</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>
