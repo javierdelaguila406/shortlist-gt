@@ -194,6 +194,25 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Save to localStorage for dashboard
+        try {
+          const candidatoData = {
+            id: data.candidatoId,
+            vacante_id: params.slug,
+            nombre: formData.nombre,
+            email: data.candidato.email,
+            telefono: formData.telefono,
+            cv_url: '',
+            estado: 'pendiente',
+            score_ia: 0,
+          };
+          const saved = localStorage.getItem('candidatos_postulantes') || '[]';
+          const list = JSON.parse(saved);
+          list.push(candidatoData);
+          localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
+        } catch (e) {
+          console.warn('Could not save to localStorage:', e);
+        }
         setSubmitted(true);
       } else {
         setSubmitError(data.error || 'Error al enviar la solicitud. Intenta de nuevo.');
