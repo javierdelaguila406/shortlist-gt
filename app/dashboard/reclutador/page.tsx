@@ -119,21 +119,25 @@ export default function DemoDashboard() {
   // Load candidates from Supabase when selectedVacanteId changes
   useEffect(() => {
     const loadCandidates = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('candidatos')
-          .select('*')
-          .eq('vacante_id', selectedVacanteId);
+      if (!selectedVacanteId) {
+        setSupabaseCandidates([]);
+        return;
+      }
 
-        if (error) {
-          console.warn('[DASHBOARD] Supabase error:', error);
+      try {
+        // Use API route to load candidates (server-side with service role key)
+        const response = await fetch(`/api/candidatos/listar?vacante_id=${selectedVacanteId}`);
+
+        if (!response.ok) {
+          console.warn('[DASHBOARD] API error:', response.status);
           setSupabaseCandidates([]);
           return;
         }
 
-        console.log('[DASHBOARD] Candidatos desde Supabase:', data);
-        if (data) {
-          setSupabaseCandidates(data as Candidate[]);
+        const data = await response.json();
+        console.log('[DASHBOARD] Candidatos desde API:', data);
+        if (data.candidatos) {
+          setSupabaseCandidates(data.candidatos as Candidate[]);
         }
       } catch (e) {
         console.error('[DASHBOARD] Error loading candidates:', e);
