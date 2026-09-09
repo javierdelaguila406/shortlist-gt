@@ -35,11 +35,12 @@ export default function CrearVacantePage() {
         aplicarLink,
       };
 
-      // Save to localStorage
+      // Save to localStorage AND sessionStorage
       const saved = localStorage.getItem('vacantes') || '[]';
       const list = JSON.parse(saved);
       list.push(newVacante);
       localStorage.setItem('vacantes', JSON.stringify(list));
+      sessionStorage.setItem('vacantes', JSON.stringify(list));
 
       setLink(aplicarLink);
       e.currentTarget.reset();
