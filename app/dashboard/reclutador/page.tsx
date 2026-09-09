@@ -56,6 +56,7 @@ export default function DemoDashboard() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
   const [supabaseCandidates, setSupabaseCandidates] = useState<Candidate[]>([]);
+  const [deletingVacante, setDeletingVacante] = useState<string | null>(null);
 
   useEffect(() => {
     const loadVacantes = async () => {
@@ -162,7 +163,7 @@ export default function DemoDashboard() {
 
   const filteredCandidates = useMemo(
     () => getFilteredCandidates(),
-    [selectedVacanteId]
+    [selectedVacanteId, supabaseCandidates]
   );
 
   const stats = useMemo(
@@ -250,6 +251,37 @@ export default function DemoDashboard() {
     }
   };
 
+  const handleDeleteVacante = async (vacanteId: string) => {
+    setDeletingVacante(vacanteId);
+    try {
+      const response = await fetch('/api/vacantes/eliminar', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vacante_id: vacanteId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        console.error('[DELETE] Error:', data.error);
+        return;
+      }
+
+      const updatedVacantes = vacantes.filter(v => v.id !== vacanteId);
+      setVacantes(updatedVacantes);
+      localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
+
+      if (selectedVacanteId === vacanteId) {
+        setSelectedVacanteId(updatedVacantes[0]?.id || 'demo-1');
+      }
+
+      setSelectedCandidate(null);
+    } catch (error) {
+      console.error('[DELETE] Error:', error);
+    } finally {
+      setDeletingVacante(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
@@ -315,6 +347,15 @@ export default function DemoDashboard() {
                 Ver Link
               </button>
             )}
+
+            <button
+              onClick={() => handleDeleteVacante(selectedVacanteId)}
+              disabled={deletingVacante === selectedVacanteId}
+              className="bg-red-600 hover:bg-red-700 disabled:bg-red-900 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              {deletingVacante === selectedVacanteId ? 'Eliminando...' : 'Eliminar'}
+            </button>
 
             {/* Action Buttons */}
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>

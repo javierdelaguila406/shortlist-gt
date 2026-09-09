@@ -180,10 +180,20 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
     setIsSubmitting(true);
     try {
+      // Resolver el slug al ID correcto de la vacante
+      const resolverResponse = await fetch(`/api/vacantes/resolver-slug?slug=${params.slug}`);
+      const resolverData = await resolverResponse.json();
+
+      if (!resolverData.success) {
+        setSubmitError('Vacante no encontrada');
+        setIsSubmitting(false);
+        return;
+      }
+
       const formDataToSend = new FormData();
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('telefono', formData.telefono);
-      formDataToSend.append('vacante_id', params.slug);
+      formDataToSend.append('vacante_id', resolverData.vacante_id);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
       const response = await fetch('/api/candidatos/postular', {
