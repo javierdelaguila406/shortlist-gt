@@ -58,25 +58,55 @@ export default function DemoDashboard() {
   const [supabaseCandidates, setSupabaseCandidates] = useState<Candidate[]>([]);
 
   useEffect(() => {
-    const savedVacantes = localStorage.getItem('vacantes');
-    if (savedVacantes) {
-      setVacantes(JSON.parse(savedVacantes));
-    } else {
-      setVacantes(mockVacantes as Vacante[]);
-    }
+    const loadVacantes = async () => {
+      // 1. Load mock vacantes
+      let allVacantes: Vacante[] = mockVacantes as Vacante[];
 
-    const license = getUserLicenseFromStorage();
-    setUserLicense(license);
-
-    // Check if coming back from postulation
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const vacanteParam = params.get('vacante');
-      if (vacanteParam) {
-        setSelectedVacanteId(vacanteParam);
-        console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
+      // 2. Load from localStorage
+      const savedVacantes = localStorage.getItem('vacantes');
+      if (savedVacantes) {
+        const parsed = JSON.parse(savedVacantes);
+        allVacantes = [...allVacantes, ...parsed];
       }
-    }
+
+      // 3. Load from Supabase
+      try {
+        const { data, error } = await supabase
+          .from('vacantes')
+          .select('id, titulo, descripcion, departamento');
+
+        if (!error && data) {
+          const supabaseVacantes: Vacante[] = data.map(v => ({
+            id: v.id,
+            titulo: v.titulo,
+            descripcion: v.descripcion,
+            departamento: v.departamento,
+          }));
+          allVacantes = [...allVacantes, ...supabaseVacantes];
+        }
+      } catch (e) {
+        console.error('[DASHBOARD] Error loading vacantes from Supabase:', e);
+      }
+
+      // Remove duplicates by id
+      const uniqueVacantes = Array.from(new Map(allVacantes.map(v => [v.id, v])).values());
+      setVacantes(uniqueVacantes);
+
+      const license = getUserLicenseFromStorage();
+      setUserLicense(license);
+
+      // Check if coming back from postulation
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const vacanteParam = params.get('vacante');
+        if (vacanteParam) {
+          setSelectedVacanteId(vacanteParam);
+          console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
+        }
+      }
+    };
+
+    loadVacantes();
   }, []);
 
   useEffect(() => {
