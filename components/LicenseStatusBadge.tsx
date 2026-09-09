@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
 import { AlertCircle, CheckCircle, Lock } from 'lucide-react';
 
@@ -15,6 +16,7 @@ interface UserLicense {
 }
 
 export function LicenseStatusBadge() {
+  const router = useRouter();
   const [license, setLicense] = useState<UserLicense | null>(null);
 
   useEffect(() => {
@@ -24,10 +26,13 @@ export function LicenseStatusBadge() {
 
   if (!license) {
     return (
-      <div className="bg-zinc-800/50 border border-zinc-700 rounded-lg px-3 py-2 flex items-center gap-2 text-sm">
+      <button
+        onClick={() => router.push('/acceso')}
+        className="bg-amber-950/30 border border-amber-800/40 rounded-lg px-3 py-2 flex items-center gap-2 text-sm hover:bg-amber-950/50 transition-colors cursor-pointer"
+      >
         <AlertCircle className="w-4 h-4 text-amber-500" />
-        <span className="text-zinc-300">Sin licencia activa</span>
-      </div>
+        <span className="text-amber-300">Sin licencia - Click para activar</span>
+      </button>
     );
   }
 
