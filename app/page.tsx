@@ -39,11 +39,6 @@ export default function Home() {
               Acceder Ahora <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
-          <Link href="/vacantes/crear">
-            <Button size="lg" variant="secondary">
-              Crear Vacante
-            </Button>
-          </Link>
           <Link href="/auth/login">
             <Button size="lg" variant="secondary">
               Inicia Sesión

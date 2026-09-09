@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { getDemoLicense, validateLicenseCode, saveUserLicense } from '@/lib/license-manager';
-import { ArrowLeft, Zap, Lock, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Zap, Lock, CheckCircle, Plus } from 'lucide-react';
 
 export default function AccesoPage() {
   const router = useRouter();
@@ -72,7 +72,7 @@ export default function AccesoPage() {
               <p className="text-zinc-400">Elige cómo deseas acceder</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Demo Card */}
               <Card className="bg-blue-950/20 border-blue-800/40 cursor-pointer hover:border-blue-800/60 transition-all">
                 <CardHeader>
@@ -120,6 +120,30 @@ export default function AccesoPage() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Create Vacancy Card */}
+              <Link href="/vacantes/crear">
+                <Card className="bg-amber-950/20 border-amber-800/40 cursor-pointer hover:border-amber-800/60 transition-all h-full">
+                  <CardHeader>
+                    <div className="flex items-center gap-2 mb-2">
+                      <Plus className="w-6 h-6 text-amber-400" />
+                      <CardTitle>Crear Vacante</CardTitle>
+                    </div>
+                    <CardDescription>Crea una nueva posición</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <p className="text-sm text-zinc-300">✓ Completa el formulario</p>
+                      <p className="text-sm text-zinc-300">✓ Genera link automático</p>
+                      <p className="text-sm text-zinc-300">✓ Compartir en redes</p>
+                      <p className="text-sm text-zinc-300">✓ Gestionar candidatos</p>
+                    </div>
+                    <Button variant="secondary" className="w-full border-amber-800 hover:bg-amber-800/20">
+                      Crear Nueva Vacante
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <div className="bg-zinc-900/50 border border-zinc-800/40 rounded-lg p-6 text-center">
