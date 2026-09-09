@@ -1,125 +1,65 @@
 'use client';
 
-import { FormEvent } from 'react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft } from 'lucide-react';
-
 export default function CrearVacantePage() {
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    const formData = new FormData(e.currentTarget);
-    const titulo = formData.get('titulo') as string;
-    const descripcion = formData.get('descripcion') as string;
-    const departamento = formData.get('departamento') as string;
-
-    if (!titulo.trim()) {
-      alert('El título es requerido');
-      return;
-    }
-
-    const newId = `vacante-${Date.now()}`;
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://shortlist-gt.vercel.app';
-    const aplicarLink = `${baseUrl}/postular/${newId}`;
-
-    try {
-      const savedVacantes = localStorage.getItem('vacantes');
-      let vacantes = savedVacantes ? JSON.parse(savedVacantes) : [];
-
-      const newVacante = {
-        id: newId,
-        titulo,
-        descripcion,
-        departamento,
-        aplicarLink,
-      };
-
-      vacantes.push(newVacante);
-      localStorage.setItem('vacantes', JSON.stringify(vacantes));
-
-      alert(`✅ Vacante creada exitosamente!\n\nLink de aplicación:\n${aplicarLink}`);
-      e.currentTarget.reset();
-    } catch (err) {
-      alert('Error al crear la vacante');
-      console.error(err);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-4">
-      <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-zinc-400 hover:text-white mb-6 inline-flex items-center gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Volver al inicio
-        </Link>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(to bottom, #18181b, #27272a, #18181b)', padding: '1rem' }}>
+      <div style={{ maxWidth: '42rem', margin: '0 auto' }}>
+        <a href="/" style={{ color: '#a1a1aa', textDecoration: 'none', marginBottom: '1.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+          ← Volver al inicio
+        </a>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-2xl">Crear Nueva Vacante</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Título de la Vacante *
-                </label>
-                <input
-                  type="text"
-                  name="titulo"
-                  placeholder="Ej: Desarrollador Senior React"
-                  required
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
+        <div style={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: '0.5rem', padding: '1.5rem' }}>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', color: 'white', marginBottom: '1.5rem' }}>Crear Nueva Vacante</h1>
 
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Descripción
-                </label>
-                <textarea
-                  name="descripcion"
-                  placeholder="Describe la posición, responsabilidades y requisitos..."
-                  rows={5}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Departamento
-                </label>
-                <input
-                  type="text"
-                  name="departamento"
-                  placeholder="Ej: Tecnología, Ventas, etc."
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="submit"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Crear Vacante
-                </Button>
-                <Link href="/" className="flex-1">
-                  <Button type="button" variant="secondary" className="w-full">
-                    Cancelar
-                  </Button>
-                </Link>
-              </div>
-
-              <div className="bg-zinc-800/40 rounded-lg p-4 border border-zinc-700/40">
-                <p className="text-xs text-zinc-400">
-                  💡 <strong>Tip:</strong> Después de crear la vacante, recibirás un link que puedes compartir en LinkedIn o WhatsApp para que los candidatos se postulen.
-                </p>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            const titulo = fd.get('titulo') as string;
+            if (!titulo.trim()) {
+              alert('El título es requerido');
+              return;
+            }
+            const id = `vacante-${Date.now()}`;
+            const url = `${window.location.origin}/postular/${id}`;
+            try {
+              const saved = localStorage.getItem('vacantes');
+              const list = saved ? JSON.parse(saved) : [];
+              list.push({ id, titulo, descripcion: fd.get('descripcion'), departamento: fd.get('departamento'), aplicarLink: url });
+              localStorage.setItem('vacantes', JSON.stringify(list));
+              alert(`✅ Vacante creada!\n\nLink:\n${url}`);
+              e.currentTarget.reset();
+            } catch (err) {
+              alert('Error: ' + err);
+            }
+          }} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'white', marginBottom: '0.5rem' }}>
+                Título *
+              </label>
+              <input type="text" name="titulo" placeholder="Ej: Desarrollador Senior" required style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'white', marginBottom: '0.5rem' }}>
+                Descripción
+              </label>
+              <textarea name="descripcion" placeholder="Describe la posición..." rows={5} style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white', fontFamily: 'inherit', resize: 'none' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'white', marginBottom: '0.5rem' }}>
+                Departamento
+              </label>
+              <input type="text" name="departamento" placeholder="Ej: Tecnología" style={{ width: '100%', padding: '0.5rem 1rem', background: '#27272a', border: '1px solid #3f3f46', borderRadius: '0.375rem', color: 'white' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem' }}>
+              <button type="submit" style={{ flex: 1, background: '#059669', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', border: 'none', fontWeight: '500', cursor: 'pointer' }}>
+                Crear Vacante
+              </button>
+              <a href="/" style={{ flex: 1, background: '#3f3f46', color: 'white', padding: '0.75rem', borderRadius: '0.375rem', textDecoration: 'none', textAlign: 'center', fontWeight: '500' }}>
+                Cancelar
+              </a>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
