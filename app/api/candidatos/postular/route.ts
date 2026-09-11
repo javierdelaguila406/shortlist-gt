@@ -12,104 +12,31 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-function extractKeywords(text: string): string[] {
-  if (!text) return [];
-  const textLower = text.toLowerCase();
+async function scoreCVWithPython(cvText: string, plazaTitulo: string, plazaDesc: string): Promise<number> {
+  try {
+    const response = await fetch('https://web-production-7eec0.up.railway.app/score', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cv_text: cvText,
+        plaza_titulo: plazaTitulo,
+        plaza_descripcion: plazaDesc
+      })
+    });
 
-  // Palabras a excluir (comunes y poco relevantes)
-  const stopwords = new Set([
-    'el', 'la', 'de', 'que', 'y', 'a', 'en', 'es', 'se', 'por', 'con', 'para', 'una', 'un', 'sus',
-    'del', 'las', 'los', 'o', 'este', 'ese', 'este', 'como', 'si', 'no', 'los', 'en', 'al', 'es'
-  ]);
-
-  // Palabras técnicas relevantes para búsqueda
-  const techWords = /\b(?:python|java|javascript|react|angular|vue|node|sql|mongodb|postgresql|git|docker|kubernetes|aws|azure|gcp|api|rest|graphql|html|css|typescript|golang|rust|php|laravel|django|spring|kotlin|swift|mobile|web|frontend|backend|fullstack|devops|ci|cd|linux|windows|agile|scrum|jira|confluence|slack|figma|ui|ux|wordpress|drupal|shopify|salesforce|sap|crm|erp|excel|vba|tableau|power bi|powerpoint|apache|nginx|jenkins)\b/g;
-
-  // Extraer palabras técnicas (ya en lowercase)
-  const techMatches = textLower.match(techWords) || [];
-  const keywords = new Set<string>();
-
-  // Agregar palabras técnicas
-  techMatches.forEach(word => keywords.add(word));
-
-  // Extraer palabras largas (4+ caracteres) que no sean stopwords
-  const words = textLower.split(/\W+/);
-  words.forEach(word => {
-    if (word.length >= 4 && !stopwords.has(word) && /^[a-záéíóú0-9]+$/i.test(word)) {
-      keywords.add(word);
+    if (!response.ok) {
+      console.error('[SCORING] Error desde Python:', response.status);
+      return 20; // Score por defecto si falla
     }
-  });
 
-  return Array.from(keywords);
-}
-
-function analyzeCV(cvText: string, vacanteTitle: string, vacanteDesc: string = ''): number {
-  if (!cvText || cvText.trim().length < 10) {
-    console.log('[SCORING] CV muy corto, score mínimo');
-    return 20;
+    const data = await response.json();
+    const score = Math.round(data.score);
+    console.log('[SCORING] Score desde Python:', score);
+    return score;
+  } catch (e) {
+    console.error('[SCORING] Error llamando a Python:', e);
+    return 20; // Score por defecto si falla la conexión
   }
-
-  const cvLower = cvText.toLowerCase();
-
-  // Extraer palabras clave de la descripción de la plaza
-  const plazaKeywords = extractKeywords(vacanteDesc);
-  const cvKeywords = extractKeywords(cvText);
-
-  if (plazaKeywords.length === 0) {
-    console.log('[SCORING] No se extrajeron palabras de la plaza');
-  }
-  if (cvKeywords.length === 0) {
-    console.log('[SCORING] No se extrajeron palabras del CV');
-  }
-
-  let score = 30; // Base 30
-
-  // Comparar palabras clave
-  let matchCount = 0;
-  for (const keyword of plazaKeywords) {
-    if (cvKeywords.includes(keyword)) {
-      matchCount++;
-      score += 3; // 3 puntos por cada coincidencia
-    }
-  }
-
-  console.log(`[SCORING] Matches: ${matchCount}/${plazaKeywords.length}`);
-
-  // Bonus por cobertura (qué porcentaje de requisitos cubre)
-  if (plazaKeywords.length > 0) {
-    const coverage = Math.min(matchCount / plazaKeywords.length, 1);
-    const coverageBonus = coverage * 20;
-    score += coverageBonus;
-    console.log(`[SCORING] Cobertura: ${(coverage * 100).toFixed(0)}% (+${coverageBonus.toFixed(0)} pts)`);
-  }
-
-  // Bonus por años de experiencia
-  const yearsMatch = cvLower.match(/(\d+)\s*(?:años|years|a[ñ]os)/);
-  if (yearsMatch) {
-    const years = parseInt(yearsMatch[1]);
-    let yearsBonus = 0;
-    if (years >= 5) yearsBonus = 20;
-    else if (years >= 3) yearsBonus = 15;
-    else if (years >= 1) yearsBonus = 8;
-    score += yearsBonus;
-    console.log(`[SCORING] Experiencia: ${years} años (+${yearsBonus} pts)`);
-  }
-
-  // Bonus por educación
-  if (/(?:licenciatura|técnico|carrera|ingeniería|diploma|grado|profesional|degree|university|bachelor)/.test(cvLower)) {
-    score += 10;
-    console.log('[SCORING] Educación detectada (+10 pts)');
-  }
-
-  // Bonus por certificaciones
-  if (/(?:certificad|cert\.|certification|certified|certificate)/.test(cvLower)) {
-    score += 8;
-    console.log('[SCORING] Certificaciones detectadas (+8 pts)');
-  }
-
-  const finalScore = Math.min(100, Math.max(20, score));
-  console.log(`[SCORING] Score final: ${finalScore}/100`);
-  return finalScore;
 }
 
 function extractTextFromBuffer(buffer: Buffer): string {
@@ -229,8 +156,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Analizar y generar score (con habilidades incluidas)
-    const score_ia = analyzeCV(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
+    // Analizar y generar score llamando a Python en Railway
+    const score_ia = await scoreCVWithPython(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
     console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
