@@ -13,7 +13,12 @@ function extractEmailFromText(text: string): string | null {
 }
 
 async function scoreCVWithPython(cvText: string, plazaTitulo: string, plazaDesc: string): Promise<number> {
+  console.log('[SCORING] INICIANDO - Llamando a Python...');
+  console.log('[SCORING] CV length:', cvText?.length || 0);
+  console.log('[SCORING] Plaza:', plazaTitulo);
+
   try {
+    console.log('[SCORING] Enviando request a Railway...');
     const response = await fetch('https://web-production-7eec0.up.railway.app/score', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,18 +29,20 @@ async function scoreCVWithPython(cvText: string, plazaTitulo: string, plazaDesc:
       })
     });
 
+    console.log('[SCORING] Response status:', response.status);
+
     if (!response.ok) {
-      console.error('[SCORING] Error desde Python:', response.status);
-      return 20; // Score por defecto si falla
+      console.error('[SCORING] Error desde Python, status:', response.status);
+      return 20;
     }
 
     const data = await response.json();
     const score = Math.round(data.score);
-    console.log('[SCORING] Score desde Python:', score);
+    console.log('[SCORING] ✅ Score recibido de Python:', score);
     return score;
   } catch (e) {
-    console.error('[SCORING] Error llamando a Python:', e);
-    return 20; // Score por defecto si falla la conexión
+    console.error('[SCORING] ❌ EXCEPTION en Python:', e);
+    return 20;
   }
 }
 
