@@ -12,38 +12,39 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-async function scoreCVWithPython(cvText: string, plazaTitulo: string, plazaDesc: string): Promise<number> {
-  console.log('[SCORING] INICIANDO - Llamando a Python...');
-  console.log('[SCORING] CV length:', cvText?.length || 0);
-  console.log('[SCORING] Plaza:', plazaTitulo);
+function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string): number {
+  console.log('[SCORING] Calculando score localmente...');
 
-  try {
-    console.log('[SCORING] Enviando request a Railway...');
-    const response = await fetch('https://web-production-7eec0.up.railway.app/score', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cv_text: cvText,
-        plaza_titulo: plazaTitulo,
-        plaza_descripcion: plazaDesc
-      })
-    });
-
-    console.log('[SCORING] Response status:', response.status);
-
-    if (!response.ok) {
-      console.error('[SCORING] Error desde Python, status:', response.status);
-      return 20;
-    }
-
-    const data = await response.json();
-    const score = Math.round(data.score);
-    console.log('[SCORING] ✅ Score recibido de Python:', score);
-    return score;
-  } catch (e) {
-    console.error('[SCORING] ❌ EXCEPTION en Python:', e);
+  if (!cvText || cvText.trim().length < 10) {
+    console.log('[SCORING] CV muy corto');
     return 20;
   }
+
+  const cvLower = cvText.toLowerCase();
+  const plazaFull = (plazaTitulo + ' ' + plazaDesc).toLowerCase();
+
+  // Extraer palabras (4+ caracteres)
+  const cvWords = new Set(cvLower.match(/\b\w{4,}\b/g) || []);
+  const plazaWords = new Set(plazaFull.match(/\b\w{4,}\b/g) || []);
+
+  if (plazaWords.size === 0) return 20;
+
+  // Calcular coincidencias
+  let matches = 0;
+  for (const word of plazaWords) {
+    if (cvWords.has(word)) matches++;
+  }
+
+  const coverage = matches / plazaWords.size;
+  let score = 30 + (coverage * 50);
+
+  // Bonos
+  if (/\b(años|years|experiencia|experience)\b/.test(cvLower)) score += 10;
+  if (/\b(licenciatura|degree|carrera|bachelor)\b/.test(cvLower)) score += 10;
+
+  const finalScore = Math.min(100, Math.max(20, Math.round(score)));
+  console.log(`[SCORING] Score final: ${finalScore} (matches: ${matches}/${plazaWords.size})`);
+  return finalScore;
 }
 
 function extractTextFromBuffer(buffer: Buffer): string {
@@ -163,8 +164,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Analizar y generar score llamando a Python en Railway
-    const score_ia = await scoreCVWithPython(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
+    // Calcular score
+    const score_ia = calculateScore(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
     console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
