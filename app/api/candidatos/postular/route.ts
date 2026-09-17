@@ -93,6 +93,7 @@ export async function POST(request: NextRequest) {
     const nombre = formData.get('nombre') as string;
     const email = formData.get('email') as string;
     const telefono = formData.get('telefono') as string;
+    const experiencia_anos = formData.get('experiencia_anos') as string;
     const vacante_id = formData.get('vacante_id') as string;
     const cvText = formData.get('cvText') as string;
     const habilidades = formData.get('habilidades') as string;
@@ -194,6 +195,7 @@ export async function POST(request: NextRequest) {
         nombre: nombre,
         email: extractedEmail,
         telefono: telefono,
+        experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : null,
         cv_url: cvUrl,
         estado: estado,
         score_ia: score_ia,

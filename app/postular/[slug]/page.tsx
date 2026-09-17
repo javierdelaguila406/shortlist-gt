@@ -14,6 +14,7 @@ interface FormData {
   nombre: string;
   email: string;
   telefono: string;
+  experiencia_anos: string;
   cv: File | null;
   cvText: string;
   consentimiento: boolean;
@@ -123,6 +124,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     nombre: '',
     email: '',
     telefono: '',
+    experiencia_anos: '',
     cv: null,
     cvText: '',
     consentimiento: false,
@@ -224,6 +226,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       formDataToSend.append('nombre', formData.nombre);
       formDataToSend.append('email', formData.email);
       formDataToSend.append('telefono', formData.telefono);
+      formDataToSend.append('experiencia_anos', formData.experiencia_anos);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
       formDataToSend.append('cvText', formData.cvText);
       if (formData.cv) formDataToSend.append('cv', formData.cv);
@@ -276,11 +279,8 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
         <Card className="w-full max-w-md">
           <CardContent className="pt-12 pb-12 text-center">
             <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">¡Solicitud Enviada!</h2>
-            <p className="text-zinc-400 mb-6">Tu CV fue compartido con Forniture City</p>
-            <Link href={`/dashboard/reclutador?vacante=${params.slug}`}>
-              <Button>Ver en Dashboard</Button>
-            </Link>
+            <h2 className="text-2xl font-bold text-white mb-2">¡Gracias por Aplicar!</h2>
+            <p className="text-zinc-400">Nos estaremos contactando contigo pronto.</p>
           </CardContent>
         </Card>
       </div>
@@ -328,6 +328,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
               <div>
                 <label className="block text-sm font-medium text-white mb-2">Teléfono *</label>
                 <input type="tel" name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white mb-2">Años de Experiencia *</label>
+                <input type="number" name="experiencia_anos" value={formData.experiencia_anos} onChange={handleInputChange} placeholder="Ej: 5" min="0" max="70" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
               </div>
 
               <div>
