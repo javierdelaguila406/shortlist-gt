@@ -3,12 +3,12 @@ import { supabase } from '@/lib/supabase';
 
 /**
  * Endpoint: POST /api/evaluaciones/generar-preguntas
- * Genera preguntas de evaluación usando OpenAI basadas en la descripción de la vacante
+ * Genera preguntas de evaluación usando Claude API basadas en la descripción de la vacante
  */
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
-async function generarPreguntasConOpenAI(
+async function generarPreguntasConClaude(
   titulo: string,
   descripcion: string,
   nivel: string
@@ -109,39 +109,35 @@ IMPORTANTE:
 - Responde SOLO con el JSON, sin explicaciones adicionales`;
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'x-api-key': ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo',
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
         messages: [
-          {
-            role: 'system',
-            content: 'Eres un experto en Recursos Humanos. Genera preguntas de evaluación en formato JSON válido.',
-          },
           {
             role: 'user',
             content: prompt,
           },
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
       }),
     });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error('OpenAI error:', data);
-      throw new Error(data.error?.message || 'Error calling OpenAI');
+      console.error('Claude API error:', data);
+      throw new Error(data.error?.message || 'Error calling Claude API');
     }
 
-    const content = data.choices[0]?.message?.content;
+    const content = data.content[0]?.text;
     if (!content) {
-      throw new Error('No response from OpenAI');
+      throw new Error('No response from Claude API');
     }
 
     // Limpiar respuesta (en caso de que incluya markdown)
@@ -169,17 +165,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!OPENAI_API_KEY) {
+    if (!ANTHROPIC_API_KEY) {
       return NextResponse.json(
-        { error: 'OPENAI_API_KEY no configurado' },
+        { error: 'ANTHROPIC_API_KEY no configurado' },
         { status: 500 }
       );
     }
 
     console.log('[GENERAR-PREGUNTAS] Generando preguntas para vacante:', vacante_id);
 
-    // Generar preguntas con OpenAI
-    const preguntas = await generarPreguntasConOpenAI(titulo, descripcion, nivel || 'No especificado');
+    // Generar preguntas con Claude
+    const preguntas = await generarPreguntasConClaude(titulo, descripcion, nivel || 'No especificado');
 
     // Guardar en Supabase
     const { data: savedPreguntas, error: saveError } = await supabase
@@ -190,7 +186,7 @@ export async function POST(request: NextRequest) {
         prueba_tecnica: preguntas.prueba_tecnica,
         preguntas_video: preguntas.preguntas_video,
         nivel_requerido: nivel || 'No especificado',
-        generado_por: 'openai',
+        generado_por: 'claude',
       })
       .select()
       .single();
