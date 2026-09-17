@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import pdfParse from 'pdf-parse';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -13,20 +13,11 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-// Función para extraer texto del PDF usando pdfjs
+// Función para extraer texto del PDF
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   try {
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    let text = '';
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item: any) => item.str || '')
-        .join(' ');
-      text += pageText + ' ';
-    }
+    const data = await pdfParse(buffer);
+    const text = data.text || '';
 
     if (text.trim().length > 0) {
       console.log('[PDF] Texto extraído correctamente, length:', text.length);
