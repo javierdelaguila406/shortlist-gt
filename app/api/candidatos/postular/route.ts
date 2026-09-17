@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
       nombre: nombre,
       email: extractedEmail,
       telefono: telefono,
+      experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : null,
       cv_url: cvUrl,
       estado: estado,
       score_ia: score_ia,

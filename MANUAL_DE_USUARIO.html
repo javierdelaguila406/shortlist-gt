@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual de Usuario - SHORTLIST.GT</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            color: #1f2937;
+            background: #f9fafb;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 210mm;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* BOTÓN FLOTANTE */
+        .btn-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .btn-print:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        @media print {
+            .btn-print { display: none; }
+        }
+
+        @page {
+            size: A4;
+            margin: 1.5cm;
+        }
+
+        /* PORTADA */
+        .portada {
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            color: white;
+            padding: 80px 60px;
+            text-align: center;
+            page-break-after: always;
+            min-height: 297mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .portada h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+        }
+
+        .portada-logo {
+            font-size: 48px;
+            margin-bottom: 24px;
+            letter-spacing: 2px;
+        }
+
+        .portada-logo span {
+            color: #10b981;
+        }
+
+        .portada h2 {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 48px;
+            line-height: 1.4;
+            color: #d1d5db;
+        }
+
+        .portada-meta {
+            margin-top: 80px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        /* TABLA DE CONTENIDO */
+        .toc {
+            page-break-after: always;
+            padding: 60px;
+        }
+
+        .toc h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 32px;
+            color: #1f2937;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 16px;
+        }
+
+        .toc-item {
+            margin-bottom: 12px;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+
+        .toc-item a {
+            color: #1f2937;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        /* SECCIONES */
+        .seccion {
+            page-break-after: always;
+            padding: 60px;
+            min-height: 297mm;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .seccion h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
+            border-bottom: 3px solid #10b981;
+            padding-bottom: 16px;
+        }
+
+        .seccion-numero {
+            font-size: 12px;
+            color: #10b981;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .seccion-contenido {
+            font-size: 14px;
+            line-height: 1.7;
+            color: #374151;
+        }
+
+        .paso {
+            background: #f3f4f6;
+            border-left: 4px solid #10b981;
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 4px;
+        }
+
+        .paso strong {
+            color: #1f2937;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .paso p {
+            margin: 4px 0;
+            font-size: 13px;
+        }
+
+        /* TABLAS */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 13px;
+        }
+
+        th {
+            background: #1f2937;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border: none;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+
+        tr:hover {
+            background: #f3f4f6;
+        }
+
+        /* ESPACIOS PARA IMÁGENES */
+        .imagen-espacio {
+            border: 2px dashed #d1d5db;
+            background: #f9fafb;
+            padding: 40px;
+            text-align: center;
+            margin: 24px 0;
+            border-radius: 6px;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .imagen-espacio p {
+            color: #6b7280;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        /* FAQ */
+        .faq-item {
+            margin: 20px 0;
+            padding: 16px;
+            background: #f9fafb;
+            border-radius: 4px;
+        }
+
+        .faq-item strong {
+            color: #10b981;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .faq-item p {
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.6;
+        }
+
+        /* IMPRESIÓN */
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+                max-width: 100%;
+            }
+            .seccion {
+                padding: 40px 30px;
+                min-height: auto;
+                page-break-inside: avoid;
+            }
+            table {
+                page-break-inside: avoid;
+            }
+            .paso {
+                page-break-inside: avoid;
+            }
+        }
+
+        .footer-pagina {
+            font-size: 11px;
+            color: #9ca3af;
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <button class="btn-print" onclick="window.print()">⬇️ Descargar / Imprimir PDF</button>
+
+    <div class="container">
+        <!-- PORTADA -->
+        <div class="portada">
+            <div class="portada-logo">SHORTLIST<span>.GT</span></div>
+            <h1>MANUAL DE OPERACIÓN</h1>
+            <h2>Sistema Automatizado de Atracción,<br>Filtrado Inteligente y Preselección de Talento</h2>
+            <div class="portada-meta">
+                <p><strong>Versión:</strong> 1.0</p>
+                <p><strong>Fecha de entrega:</strong> Septiembre 2026</p>
+                <p><strong>Confidencial</strong> • Documento corporativo para equipo de RRHH</p>
+            </div>
+        </div>
+
+        <!-- TABLA DE CONTENIDO -->
+        <div class="toc">
+            <h2>Tabla de Contenido</h2>
+            <div class="toc-item">1. Publicación y Generación de Enlaces</div>
+            <div class="toc-item">2. Experiencia del Postulante (Formulario de Aplicación)</div>
+            <div class="toc-item">3. Evaluación Automatizada con IA y WhatsApp Bot</div>
+            <div class="toc-item">4. Diccionario de Funciones del Dashboard</div>
+            <div class="toc-item">5. Exportación de Informes y Gestión de Datos</div>
+            <div class="toc-item">6. Preguntas Frecuentes (FAQ) y Soporte</div>
+        </div>
+
+        <!-- MÓDULO 1 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 1</div>
+            <h2>Publicación y Generación de Enlaces</h2>
+            <div class="seccion-contenido">
+                <p>SHORTLIST.GT permite crear plazas vacantes con apenas unos clics y distribuir el enlace de aplicación a través de múltiples canales, incluyendo LinkedIn.</p>
+
+                <div class="paso">
+                    <strong>Paso 1: Crear una Vacante</strong>
+                    <p>1. Accede al Dashboard de Reclutador</p>
+                    <p>2. Haz clic en el botón <strong>"+ Crear Vacante"</strong></p>
+                    <p>3. Completa los campos: Título de la plaza, Descripción, Departamento</p>
+                    <p>4. El sistema genera automáticamente un ID único para la vacante</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Paso 2: Copiar Enlace para LinkedIn</strong>
+                    <p>1. En el Dashboard, selecciona la vacante que deseas compartir</p>
+                    <p>2. Haz clic en el botón <strong>"Ver Link"</strong></p>
+                    <p>3. Se abrirá una ventana con dos opciones:</p>
+                    <p style="margin-left: 16px;">• <strong>Enlace de Aplicación Directo:</strong> copia el URL y comparte en redes</p>
+                    <p style="margin-left: 16px;">• <strong>Enlace para LinkedIn:</strong> genera un URL preformateado para LinkedIn Empleos</p>
+                    <p>4. Copia el enlace y dirígete a tu página de empresa en LinkedIn</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Paso 3: Pegar en LinkedIn Empleos</strong>
+                    <p>1. En LinkedIn, ve a <strong>"Empleos"</strong> → <strong>"Publicar un empleo"</strong></p>
+                    <p>2. Completa la descripción del puesto</p>
+                    <p>3. En la sección <strong>"Sitio web externo"</strong>, pega el enlace generado por SHORTLIST.GT</p>
+                    <p>4. Los candidatos serán dirigidos automáticamente a tu formulario de aplicación</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Rastreo de Fuente</strong>
+                    <p>• SHORTLIST.GT identifica automáticamente si el candidato proviene de LinkedIn, redes sociales o acceso directo</p>
+                    <p>• Esta información aparece en el Dashboard para análisis de efectividad de canales</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 2 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 2</div>
+            <h2>Experiencia del Postulante</h2>
+            <div class="seccion-contenido">
+                <p>El formulario de aplicación es la interfaz principal donde los candidatos envían su información.</p>
+
+                <div class="paso">
+                    <strong>Campos del Formulario</strong>
+                    <p>• <strong>Nombre Completo</strong> (requerido)</p>
+                    <p>• <strong>Email</strong> (requerido, se extrae automáticamente del CV si está disponible)</p>
+                    <p>• <strong>Teléfono WhatsApp</strong> (requerido, formato: +502 XXXX XXXX)</p>
+                    <p>• <strong>Años de Experiencia</strong> (requerido, se muestra en el Dashboard)</p>
+                    <p>• <strong>Currículum Vitae (PDF)</strong> (requerido, máx. 5MB)</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Consentimiento Legal</strong>
+                    <p>Los candidatos deben aceptar una casilla de consentimiento que establece:</p>
+                    <p style="margin-left: 16px;">✓ Autorización para compartir su nombre, teléfono y CV con la empresa</p>
+                    <p style="margin-left: 16px;">✓ Cumplimiento de normativas de privacidad (GDPR/LCDP)</p>
+                    <p style="margin-left: 16px;">✓ Derecho al olvido y eliminación de datos bajo solicitud</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Mensaje de Éxito</strong>
+                    <p>Al completar la aplicación, el candidato ve: <strong>"¡Gracias por Aplicar! Nos estaremos contactando contigo pronto."</strong></p>
+                    <p>El sistema envía un email de confirmación automáticamente</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 3 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 3</div>
+            <h2>Evaluación Automatizada con IA y WhatsApp Bot</h2>
+            <div class="seccion-contenido">
+                <p>SHORTLIST.GT utiliza Inteligencia Artificial para analizar CVs y un bot de WhatsApp para recopilar respuestas situacionales en video.</p>
+
+                <div class="paso">
+                    <strong>1. Análisis Inteligente del CV (Match Score)</strong>
+                    <p>El motor de IA extrae automáticamente:</p>
+                    <p style="margin-left: 16px;">• <strong>Años de experiencia</strong> detectados en el documento</p>
+                    <p style="margin-left: 16px;">• <strong>Nivel educativo</strong> (Licenciatura, Máster, etc.)</p>
+                    <p style="margin-left: 16px;">• <strong>Palabras clave</strong> que coinciden con la descripción de la plaza (Liderazgo, Gestión, Análisis, etc.)</p>
+                    <p style="margin-left: 16px;">• <strong>Contacto profesional</strong> (Email, LinkedIn, teléfono)</p>
+                    <p><strong>Rango de puntuación:</strong> 25 a 100 puntos</p>
+                    <p><strong>Estado automático:</strong></p>
+                    <p style="margin-left: 16px;">• Precalificado (Score ≥ 70)</p>
+                    <p style="margin-left: 16px;">• Pendiente (Score < 70)</p>
+                </div>
+
+                <div class="paso">
+                    <strong>2. Interacción por WhatsApp Bot</strong>
+                    <p><strong>Paso 1 - Confirmación:</strong> El bot envía un mensaje inicial. El candidato responde "Sí" para proceder</p>
+                    <p><strong>Paso 2 - Preguntas en Video:</strong> Se envían 2 preguntas situacionales. El candidato graba videos cortos (máx. 1 min)</p>
+                    <p><strong>Paso 3 - Test Escrito:</strong> 3 preguntas de opción múltiple sobre competencias técnicas</p>
+                    <p><strong>Resultado Final:</strong> El sistema genera un Score Total combinando CV, video y test</p>
+                </div>
+
+                <div class="imagen-espacio">
+                    <p>📸 [ESPACIO PARA CAPTURA: Conversación WhatsApp Bot mostrando flujo de preguntas y respuestas en video]</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 4 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 4</div>
+            <h2>Diccionario de Funciones del Dashboard</h2>
+            <div class="seccion-contenido">
+                <p>Explicación detallada de cada elemento de la interfaz de reclutador.</p>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Elemento</th>
+                            <th>Función</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Selector de Vacante</strong></td>
+                            <td>Cambiar entre plazas activas</td>
+                            <td>Selecciona de dropdown para ver candidatos por vacante</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Top 3 Candidatos</strong></td>
+                            <td>Medallas 🥇 🥈 🥉 por score de IA</td>
+                            <td>Haz clic para ver análisis detallado</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Radial Gauge</strong></td>
+                            <td>Visualización de scores (CV, Video, Test)</td>
+                            <td>Muestra % de coincidencia en tiempo real</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contactar por WhatsApp</strong></td>
+                            <td>Enviar mensaje a candidato precalificado</td>
+                            <td>Inicia automáticamente la evaluación por chat</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ver Link</strong></td>
+                            <td>Generar URL para compartir vacante</td>
+                            <td>Copia el enlace para LinkedIn o redes sociales</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Crear Vacante</strong></td>
+                            <td>Agregar nueva plaza al sistema</td>
+                            <td>Abre formulario para crear vacante</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exportar Reporte</strong></td>
+                            <td>Generar PDF/Excel con resultados</td>
+                            <td>Descarga reporte ejecutivo filtrado por fecha</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Eliminar (Derecho al Olvido)</strong></td>
+                            <td>Borrar candidato permanentemente</td>
+                            <td>Elimina datos y archivos en cumplimiento GDPR/LCDP</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="imagen-espacio">
+                    <p>📸 [ESPACIO PARA CAPTURA: Dashboard completo con Top 3, Radial Gauges y botones destacados]</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 5 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 5</div>
+            <h2>Exportación de Informes y Gestión de Datos</h2>
+            <div class="seccion-contenido">
+                <div class="paso">
+                    <strong>Botón "Exportar Informe"</strong>
+                    <p>• Genera un reporte ejecutivo en <strong>PDF</strong> y <strong>Excel</strong></p>
+                    <p>• Opciones de filtrado temporal: <strong>Diario, Semanal, Mensual, Anual</strong></p>
+                    <p>• Incluye: listado de candidatos, scores IA, videos, test results</p>
+                    <p>• Formato profesional listo para compartir con gerencia</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Derecho al Olvido (GDPR/LCDP Compliance)</strong>
+                    <p>• Botón <strong>"Eliminar Candidato"</strong> en el Dashboard</p>
+                    <p>• Al hacer clic, se eliminan <strong>permanentemente</strong>:</p>
+                    <p style="margin-left: 16px;">✓ Nombre, email, teléfono del candidato</p>
+                    <p style="margin-left: 16px;">✓ Archivo PDF del CV en la nube</p>
+                    <p style="margin-left: 16px;">✓ Transcripción de videos y respuestas</p>
+                    <p style="margin-left: 16px;">✓ Todos los registros de evaluación</p>
+                    <p>• La operación es <strong>irreversible</strong> y genera un log de auditoría</p>
+                </div>
+
+                <div class="paso">
+                    <strong>Seguridad de Datos y Backups</strong>
+                    <p>• Todos los datos están respaldados automáticamente en servidores en la nube</p>
+                    <p>• Encriptación end-to-end para PDFs y videos</p>
+                    <p>• Backups diarios programados (retención: 90 días)</p>
+                    <p>• Acceso de auditoría: logs de quién descargó/eliminó cada candidato</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MÓDULO 6 -->
+        <div class="seccion">
+            <div class="seccion-numero">Módulo 6</div>
+            <h2>Preguntas Frecuentes y Soporte</h2>
+            <div class="seccion-contenido">
+                <div class="faq-item">
+                    <strong>¿Qué sucede si un candidato no responde el mensaje de WhatsApp?</strong>
+                    <p>El sistema mantiene la evaluación en estado "en proceso" durante 72 horas. Después, puedes enviar un recordatorio manual o cambiar el estado a "no responsivo". El candidato siempre puede reactivar su participación respondiendo el chat.</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿Cómo sé si el mensaje de WhatsApp se envió correctamente?</strong>
+                    <p>El Dashboard mostrará un estado "✅ Mensaje enviado a [número]. Esperando respuesta...". Si ves un error, verifica que: (1) el número sea válido, (2) el candidato tenga WhatsApp instalado, (3) la cuenta de WhatsApp Business esté activa.</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿Puedo descargar los videos de las respuestas?</strong>
+                    <p>Sí. En la sección "Análisis Detallado" de cada candidato, verás un reproductor integrado. Cada video puede descargarse haciendo clic en el ícono "descargar". Los videos se almacenan en la nube hasta que elimines al candidato (Derecho al Olvido).</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿Cómo cierro una plaza vacante?</strong>
+                    <p>En el Dashboard, haz clic en el botón "Eliminar" junto a la vacante. Esto archiva la plaza (los candidatos siguen siendo consultables en historial) pero deja de aceptar nuevas aplicaciones.</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿Qué significa "Precalificado" vs "Pendiente"?</strong>
+                    <p><strong>Precalificado (Score ≥ 70):</strong> El CV cumple con al menos 70% de los requisitos. Se puede enviar automáticamente la evaluación por WhatsApp. | <strong>Pendiente (Score < 70):</strong> El candidato será contactado manualmente para revisar si hay habilidades que no se detectaron en el CV.</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿El sistema es compatible con dispositivos móviles?</strong>
+                    <p>Sí. El Dashboard es completamente responsive. Los candidatos pueden aplicar desde cualquier dispositivo y completar videos por WhatsApp en móvil. Los reclutadores pueden revisar desde desktop o tablet.</p>
+                </div>
+
+                <div class="faq-item">
+                    <strong>¿Dónde está el soporte técnico?</strong>
+                    <p>Para soporte 24/7, contacta a: <strong>soporte@shortlist.gt</strong> | <strong>WhatsApp: +502 XXXX XXXX</strong> | Respuesta garantizada en máximo 2 horas.</p>
+                </div>
+            </div>
+
+            <div class="footer-pagina">
+                <p><strong>SHORTLIST.GT</strong> © 2026. Todos los derechos reservados.</p>
+                <p>Manual versión 1.0 — Documento confidencial para uso interno de RRHH</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
