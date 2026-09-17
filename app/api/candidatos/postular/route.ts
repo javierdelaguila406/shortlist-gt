@@ -211,7 +211,11 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[API] Error guardando candidato:', error);
-      return NextResponse.json({ error: 'Error al guardar candidato', success: false }, { status: 500 });
+      return NextResponse.json({
+        error: `Error al guardar candidato: ${error.message}`,
+        details: error.details,
+        success: false
+      }, { status: 500 });
     }
 
     console.log('[API] Candidato guardado exitosamente:', candidato.id);

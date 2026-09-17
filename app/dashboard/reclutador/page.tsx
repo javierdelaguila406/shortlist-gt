@@ -331,22 +331,20 @@ export default function DemoDashboard() {
               <Plus className="w-4 h-4" /> Crear Vacante
             </button>
 
-            {selectedVacante?.aplicarLink && (
-              <button
-                onClick={() => {
-                  setLinkedinData({
-                    aplicarLink: selectedVacante.aplicarLink,
-                    linkedInText: `Vacante: ${selectedVacante.titulo}\n\n${selectedVacante.descripcion || 'Únete a nuestro equipo'}`,
-                    linkedinShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(selectedVacante.aplicarLink || '')}`,
-                  });
-                  setShowLinkedinLink(true);
-                }}
-                className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
-              >
-                <Link2 className="w-4 h-4" />
-                Ver Link
-              </button>
-            )}
+            <button
+              onClick={() => {
+                setLinkedinData({
+                  aplicarLink: selectedVacante?.aplicarLink || '',
+                  linkedInText: `Vacante: ${selectedVacante?.titulo}\n\n${selectedVacante?.descripcion || 'Únete a nuestro equipo'}`,
+                  linkedinShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(selectedVacante?.aplicarLink || '')}`,
+                });
+                setShowLinkedinLink(true);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+            >
+              <Link2 className="w-4 h-4" />
+              Ver Link
+            </button>
 
             <button
               onClick={() => handleDeleteVacante(selectedVacanteId)}
