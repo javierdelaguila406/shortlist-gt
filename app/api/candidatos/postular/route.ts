@@ -187,19 +187,25 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
 
+    const candidatoData: any = {
+      id: candidato_id,
+      vacante_id: vacante_id,
+      nombre: nombre,
+      email: extractedEmail,
+      telefono: telefono,
+      cv_url: cvUrl,
+      estado: estado,
+      score_ia: score_ia,
+    };
+
+    // Agregar experiencia_anos solo si existe la columna
+    if (experiencia_anos) {
+      candidatoData.experiencia_anos = parseInt(experiencia_anos);
+    }
+
     const { data: candidato, error } = await supabase
       .from('candidatos')
-      .insert({
-        id: candidato_id,
-        vacante_id: vacante_id,
-        nombre: nombre,
-        email: extractedEmail,
-        telefono: telefono,
-        experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : null,
-        cv_url: cvUrl,
-        estado: estado,
-        score_ia: score_ia,
-      })
+      .insert(candidatoData)
       .select()
       .single();
 
