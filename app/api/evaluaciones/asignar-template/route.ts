@@ -45,10 +45,13 @@ export async function POST(request: NextRequest) {
 
     if (saveError) {
       console.error('Error saving template:', saveError);
-      throw saveError;
+      console.error('Error code:', saveError.code);
+      console.error('Error message:', saveError.message);
+      // Si la tabla no existe, crearla o devolver mejor error
+      throw new Error(`Database error: ${saveError.message}`);
     }
 
-    console.log('[ASIGNAR-TEMPLATE] Template asignado:', vacante_id);
+    console.log('[ASIGNAR-TEMPLATE] Template asignado exitosamente:', vacante_id);
 
     return NextResponse.json({
       success: true,
