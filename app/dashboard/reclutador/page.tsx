@@ -57,6 +57,8 @@ export default function DemoDashboard() {
   const [userLicense, setUserLicense] = useState<UserLicense | null>(null);
   const [supabaseCandidates, setSupabaseCandidates] = useState<Candidate[]>([]);
   const [deletingVacante, setDeletingVacante] = useState<string | null>(null);
+  const [generandoPreguntas, setGenerandoPreguntas] = useState(false);
+  const [preguntasGeneradas, setPreguntasGeneradas] = useState<any>(null);
 
   useEffect(() => {
     const loadVacantes = async () => {
@@ -282,6 +284,41 @@ export default function DemoDashboard() {
     }
   };
 
+  const handleGenerarPreguntas = async (vacanteId: string) => {
+    const vacante = vacantes.find(v => v.id === vacanteId);
+    if (!vacante) return;
+
+    setGenerandoPreguntas(true);
+    try {
+      const response = await fetch('/api/evaluaciones/generar-preguntas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vacante_id: vacanteId,
+          titulo: vacante.titulo,
+          descripcion: vacante.descripcion,
+          nivel: vacante.departamento || 'No especificado',
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setPreguntasGeneradas(data.data);
+        alert('✅ Preguntas generadas exitosamente\n\n' +
+              `Pre-entrevista: ${data.data.pre_entrevista?.length || 0} preguntas\n` +
+              `Prueba técnica: ${data.data.prueba_tecnica?.length || 0} preguntas\n` +
+              `Preguntas video: ${data.data.preguntas_video?.length || 0} preguntas`);
+      } else {
+        alert('❌ Error generando preguntas: ' + (data.error || 'Error desconocido'));
+      }
+    } catch (error) {
+      console.error('[GENERAR-PREGUNTAS] Error:', error);
+      alert('❌ Error generando preguntas');
+    } finally {
+      setGenerandoPreguntas(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950">
       {/* Header */}
@@ -344,6 +381,14 @@ export default function DemoDashboard() {
             >
               <Link2 className="w-4 h-4" />
               Ver Link
+            </button>
+
+            <button
+              onClick={() => handleGenerarPreguntas(selectedVacanteId)}
+              disabled={generandoPreguntas}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+            >
+              {generandoPreguntas ? '⏳ Generando...' : '🤖 Generar Preguntas'}
             </button>
 
             <button
