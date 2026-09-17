@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { spawn } from 'child_process';
+import { writeFileSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { tmpdir } from 'os';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -12,57 +16,120 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
+// Función para extraer texto del PDF usando Python
+async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const tmpFile = join(tmpdir(), `cv_${Date.now()}.pdf`);
+      writeFileSync(tmpFile, buffer);
+
+      const python = spawn('python', [join(process.cwd(), 'extract_pdf.py'), tmpFile]);
+      let output = '';
+      let error = '';
+
+      python.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        error += data.toString();
+      });
+
+      python.on('close', (code) => {
+        try {
+          unlinkSync(tmpFile);
+        } catch (e) {
+          console.error('[PDF] Error limpiando archivo temporal:', e);
+        }
+
+        if (code === 0 && output) {
+          console.log('[PDF] Texto extraído correctamente, length:', output.length);
+          resolve(output.trim());
+        } else {
+          console.error('[PDF] Error extrayendo PDF:', error);
+          resolve('');
+        }
+      });
+    } catch (e) {
+      console.error('[PDF] Error en extracción:', e);
+      resolve('');
+    }
+  });
+}
+
 function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string): number {
-  console.log('[SCORING] Calculando score localmente...');
+  console.log('[SCORING] Calculando score inteligente...');
 
-  if (!cvText || cvText.trim().length < 10) {
-    console.log('[SCORING] CV muy corto');
-    return 20;
+  if (!cvText || cvText.trim().length < 20) {
+    console.log('[SCORING] CV muy corto, score mínimo');
+    return 25;
   }
 
-  const cvLower = cvText.toLowerCase();
-  const plazaFull = (plazaTitulo + ' ' + plazaDesc).toLowerCase();
+  const cv = cvText.toLowerCase();
+  const plaza = (plazaTitulo + ' ' + plazaDesc).toLowerCase();
 
-  // Extraer palabras (4+ caracteres)
-  const cvWords = new Set(cvLower.match(/\b\w{4,}\b/g) || []);
-  const plazaWords = new Set(plazaFull.match(/\b\w{4,}\b/g) || []);
+  let score = 30; // Base
 
-  if (plazaWords.size === 0) return 20;
-
-  // Calcular coincidencias
-  let matches = 0;
-  for (const word of plazaWords) {
-    if (cvWords.has(word)) matches++;
+  // 1. ANÁLISIS DE EXPERIENCIA (20 puntos max)
+  const expMatch = cv.match(/(\d+)\s*(?:años|years|experience|años de experiencia)/gi);
+  if (expMatch) {
+    const years = parseInt(expMatch[0]) || 0;
+    if (years >= 5) score += 20;
+    else if (years >= 3) score += 15;
+    else if (years >= 1) score += 10;
+    else score += 5;
+  } else if (/\b(experiencia|experience|trabajé|worked|desarrollé|developed)\b/i.test(cv)) {
+    score += 8;
   }
 
-  const coverage = matches / plazaWords.size;
-  let score = 30 + (coverage * 50);
+  // 2. EDUCACIÓN (15 puntos max)
+  if (/\b(licenciatura|licenciado|degree|bachelor|ingeniero|engineer|máster|master)\b/i.test(cv)) {
+    score += 15;
+  } else if (/\b(técnico|técnica|diploma|certificado|certified)\b/i.test(cv)) {
+    score += 8;
+  }
 
-  // Bonos
-  if (/\b(años|years|experiencia|experience)\b/.test(cvLower)) score += 10;
-  if (/\b(licenciatura|degree|carrera|bachelor)\b/.test(cvLower)) score += 10;
+  // 3. COINCIDENCIA CON VACANTE (35 puntos max)
+  const keywords = plaza.match(/\b\w{4,}\b/g) || [];
+  const uniqueKeywords = new Set(keywords);
 
-  const finalScore = Math.min(100, Math.max(20, Math.round(score)));
-  console.log(`[SCORING] Score final: ${finalScore} (matches: ${matches}/${plazaWords.size})`);
+  let keywordMatches = 0;
+  for (const kw of uniqueKeywords) {
+    if (cv.includes(kw)) keywordMatches++;
+  }
+
+  if (uniqueKeywords.size > 0) {
+    const keywordScore = (keywordMatches / uniqueKeywords.size) * 35;
+    score += Math.min(35, keywordScore);
+  }
+
+  // 4. PALABRAS CLAVE DE ALTO PESO (10 puntos bonus)
+  const highValueKeywords = [
+    'liderazgo', 'leadership', 'gestión', 'management',
+    'análisis', 'analysis', 'diseño', 'design',
+    'implementación', 'implementation', 'éxito', 'success',
+    'proyecto', 'project', 'equipo', 'team', 'cliente', 'client'
+  ];
+
+  let highValueMatches = 0;
+  for (const kw of highValueKeywords) {
+    if (cv.includes(kw)) highValueMatches++;
+  }
+
+  if (highValueMatches > 0) {
+    score += Math.min(10, highValueMatches * 2);
+  }
+
+  // 5. FORMATOS PROFESIONALES (5 puntos bonus)
+  if (cv.includes('email') || cv.includes('linkedin') || cv.includes('teléfono') || cv.includes('phone')) {
+    score += 5;
+  }
+
+  const finalScore = Math.min(100, Math.max(25, Math.round(score)));
+  console.log(`[SCORING] Score final: ${finalScore} (experiencia: ${expMatch ? 'si' : 'no'}, educación: ${/licenciatura|degree/i.test(cv) ? 'si' : 'no'}, keywords: ${keywordMatches}/${uniqueKeywords.size})`);
   return finalScore;
 }
 
-function extractTextFromBuffer(buffer: Buffer): string {
-  let text = '';
-  
-  // Intentar extraer texto legible del buffer
-  for (let i = 0; i < buffer.length - 1; i++) {
-    const byte = buffer[i];
-    // Caracteres imprimibles ASCII y UTF-8
-    if ((byte >= 32 && byte <= 126) || byte >= 192) {
-      text += String.fromCharCode(byte);
-    } else if (byte === 10 || byte === 13) {
-      text += ' ';
-    }
-  }
-  
-  return text;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -107,10 +174,27 @@ export async function POST(request: NextRequest) {
     if (!finalCVText && cv) {
       try {
         const buffer = await cv.arrayBuffer();
-        finalCVText = extractTextFromBuffer(Buffer.from(buffer));
-        console.log('[API] Texto extraído del PDF:', finalCVText.substring(0, 100) + '...');
+        finalCVText = await extractTextFromPDF(Buffer.from(buffer));
+        if (finalCVText) {
+          console.log('[API] Texto extraído del PDF:', finalCVText.substring(0, 100) + '...');
+        } else {
+          console.warn('[API] No se pudo extraer texto del PDF');
+        }
       } catch (e) {
-        console.error('[API] Error extrayendo PDF buffer:', e);
+        console.error('[API] Error extrayendo PDF:', e);
+      }
+    } else if (finalCVText && finalCVText.length < 20 && cv) {
+      // Si cvText es muy corto, el frontend probablemente falló - intentar con Python
+      console.warn('[API] cvText muy corto (' + finalCVText.length + '), intentando con Python...');
+      try {
+        const buffer = await cv.arrayBuffer();
+        const pythonText = await extractTextFromPDF(Buffer.from(buffer));
+        if (pythonText && pythonText.length > finalCVText.length) {
+          finalCVText = pythonText;
+          console.log('[API] Mejorado con Python:', pythonText.substring(0, 100) + '...');
+        }
+      } catch (e) {
+        console.error('[API] Error con respaldo Python:', e);
       }
     }
 
@@ -123,11 +207,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Agregar habilidades al final (para scoring, NO para extraction)
+    // Usar solo el CV extraído para scoring (no incluir habilidades manuales)
     let textForScoring = finalCVText.trim();
-    if (habilidades) {
+    // Solo agregar habilidades si el CV está muy vacío
+    if (textForScoring.length < 50 && habilidades) {
       textForScoring = (textForScoring + ' ' + habilidades).trim();
-      console.log('[API] Agregando habilidades para scoring');
+      console.log('[API] Completando con habilidades porque CV es muy corto');
     }
 
     // Validar que tenemos email (REQUERIDO)
