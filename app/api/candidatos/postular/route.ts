@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import pdfParse from 'pdf-parse';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -13,24 +12,6 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-// Función para extraer texto del PDF
-async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  try {
-    const data = await pdfParse(buffer);
-    const text = data.text || '';
-
-    if (text.trim().length > 0) {
-      console.log('[PDF] Texto extraído correctamente, length:', text.length);
-      return text.trim();
-    } else {
-      console.error('[PDF] No se extrajo texto del PDF');
-      return '';
-    }
-  } catch (e) {
-    console.error('[PDF] Error extrayendo PDF:', e);
-    return '';
-  }
-}
 
 function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string): number {
   console.log('[SCORING] Calculando score inteligente...');
@@ -145,33 +126,8 @@ export async function POST(request: NextRequest) {
     let cvUrl = '';
     let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
 
-    // Si no hay cvText del frontend, intentar extraer del PDF
-    if (!finalCVText && cv) {
-      try {
-        const buffer = await cv.arrayBuffer();
-        finalCVText = await extractTextFromPDF(Buffer.from(buffer));
-        if (finalCVText) {
-          console.log('[API] Texto extraído del PDF:', finalCVText.substring(0, 100) + '...');
-        } else {
-          console.warn('[API] No se pudo extraer texto del PDF');
-        }
-      } catch (e) {
-        console.error('[API] Error extrayendo PDF:', e);
-      }
-    } else if (finalCVText && finalCVText.length < 20 && cv) {
-      // Si cvText es muy corto, el frontend probablemente falló - intentar con Python
-      console.warn('[API] cvText muy corto (' + finalCVText.length + '), intentando con Python...');
-      try {
-        const buffer = await cv.arrayBuffer();
-        const pythonText = await extractTextFromPDF(Buffer.from(buffer));
-        if (pythonText && pythonText.length > finalCVText.length) {
-          finalCVText = pythonText;
-          console.log('[API] Mejorado con Python:', pythonText.substring(0, 100) + '...');
-        }
-      } catch (e) {
-        console.error('[API] Error con respaldo Python:', e);
-      }
-    }
+    // El frontend extrae el PDF con pdfjs - confiamos en eso
+    console.log('[API] cvText recibido del frontend:', finalCVText.substring(0, 100) + '...');
 
     // Extraer email del PDF si no vino en formulario (ANTES de agregar habilidades)
     if (finalCVText && !email) {
