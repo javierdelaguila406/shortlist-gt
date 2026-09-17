@@ -388,35 +388,44 @@ export default function DemoDashboard() {
             </div>
           </div>
 
-          {/* Vacancy Selector */}
-          <div className="flex items-center gap-3 mb-3">
-            <Briefcase className="w-4 h-4 text-zinc-400" />
-            <select
-              value={selectedVacanteId}
-              onChange={(e) => {
-                setSelectedVacanteId(e.target.value);
-                setSelectedCandidate(null);
-              }}
-              className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500 flex-1"
-            >
-              {vacantes.map(vacante => (
-                <option key={vacante.id} value={vacante.id}>
-                  {vacante.titulo}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-zinc-500 whitespace-nowrap">({filteredCandidates.length} candidatos)</span>
+          {/* Vacancy Selector & Info */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 flex-1">
+              <Briefcase className="w-4 h-4 text-zinc-400" />
+              <select
+                value={selectedVacanteId}
+                onChange={(e) => {
+                  setSelectedVacanteId(e.target.value);
+                  setSelectedCandidate(null);
+                }}
+                className="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500"
+              >
+                {vacantes.map(vacante => (
+                  <option key={vacante.id} value={vacante.id}>
+                    {vacante.titulo}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-zinc-500">({filteredCandidates.length} candidatos)</span>
+            </div>
           </div>
+        </div>
+      </div>
 
-          {/* Action Buttons - Row 1 */}
-          <div className="flex flex-wrap gap-2 mb-2">
+      {/* Quick Actions Bar */}
+      <div className="border-b border-zinc-800/40 bg-zinc-900/50">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+            {/* Crear Vacante */}
             <button
               onClick={() => setShowCreateVacante(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[140px] justify-center"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500 transition-colors"
             >
-              <Plus className="w-4 h-4" /> Crear Vacante
+              <Plus className="w-5 h-5 text-emerald-500" />
+              <span className="text-xs font-medium text-zinc-300">Crear Vacante</span>
             </button>
 
+            {/* Ver Link */}
             <button
               onClick={() => {
                 setLinkedinData({
@@ -426,47 +435,51 @@ export default function DemoDashboard() {
                 });
                 setShowLinkedinLink(true);
               }}
-              className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[100px] justify-center"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-blue-600/20 border border-zinc-700 hover:border-blue-500 transition-colors"
             >
-              <Link2 className="w-4 h-4" />
-              Ver Link
+              <Link2 className="w-5 h-5 text-blue-400" />
+              <span className="text-xs font-medium text-zinc-300">Ver Link</span>
             </button>
 
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="bg-green-600 hover:bg-green-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[150px] justify-center"
-            >
-              <Download className="w-4 h-4" /> Exportar Reporte
-            </button>
-          </div>
-
-          {/* Action Buttons - Row 2 */}
-          <div className="flex flex-wrap gap-2">
+            {/* Asignar Template */}
             <button
               onClick={() => {
                 loadTemplates();
                 setShowTemplateModal(true);
               }}
-              className="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[150px] justify-center"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-purple-600/20 border border-zinc-700 hover:border-purple-500 transition-colors"
             >
-              📋 Asignar Template
+              <span className="text-lg">📋</span>
+              <span className="text-xs font-medium text-zinc-300">Template</span>
             </button>
 
+            {/* Generar Preguntas */}
             <button
               onClick={() => handleGenerarPreguntas(selectedVacanteId)}
               disabled={generandoPreguntas}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-900 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[150px] justify-center"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-indigo-600/20 border border-zinc-700 hover:border-indigo-500 transition-colors disabled:opacity-50"
             >
-              {generandoPreguntas ? '⏳ Generando...' : '🤖 Generar Preguntas'}
+              <span className="text-lg">{generandoPreguntas ? '⏳' : '🤖'}</span>
+              <span className="text-xs font-medium text-zinc-300">{generandoPreguntas ? 'Generando...' : 'Preguntas'}</span>
             </button>
 
+            {/* Exportar Reporte */}
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-green-600/20 border border-zinc-700 hover:border-green-500 transition-colors"
+            >
+              <Download className="w-5 h-5 text-green-400" />
+              <span className="text-xs font-medium text-zinc-300">Reporte</span>
+            </button>
+
+            {/* Eliminar */}
             <button
               onClick={() => handleDeleteVacante(selectedVacanteId)}
               disabled={deletingVacante === selectedVacanteId}
-              className="bg-red-600 hover:bg-red-700 disabled:bg-red-900 px-3 py-2 rounded text-white text-sm flex items-center gap-2 flex-1 min-w-[120px] justify-center"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-red-600/20 border border-zinc-700 hover:border-red-500 transition-colors disabled:opacity-50"
             >
-              <X className="w-4 h-4" />
-              {deletingVacante === selectedVacanteId ? 'Eliminando...' : 'Eliminar'}
+              <X className="w-5 h-5 text-red-400" />
+              <span className="text-xs font-medium text-zinc-300">{deletingVacante === selectedVacanteId ? 'Eliminando' : 'Eliminar'}</span>
             </button>
           </div>
         </div>
