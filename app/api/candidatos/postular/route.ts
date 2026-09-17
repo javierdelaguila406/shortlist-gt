@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { spawn } from 'child_process';
-import { writeFileSync, unlinkSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -16,45 +13,32 @@ function extractEmailFromText(text: string): string | null {
   return null;
 }
 
-// Función para extraer texto del PDF usando Python
+// Función para extraer texto del PDF usando pdfjs
 async function extractTextFromPDF(buffer: Buffer): Promise<string> {
-  return new Promise((resolve) => {
-    try {
-      const tmpFile = join(tmpdir(), `cv_${Date.now()}.pdf`);
-      writeFileSync(tmpFile, buffer);
+  try {
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let text = '';
 
-      const python = spawn('python', [join(process.cwd(), 'extract_pdf.py'), tmpFile]);
-      let output = '';
-      let error = '';
-
-      python.stdout.on('data', (data) => {
-        output += data.toString();
-      });
-
-      python.stderr.on('data', (data) => {
-        error += data.toString();
-      });
-
-      python.on('close', (code) => {
-        try {
-          unlinkSync(tmpFile);
-        } catch (e) {
-          console.error('[PDF] Error limpiando archivo temporal:', e);
-        }
-
-        if (code === 0 && output) {
-          console.log('[PDF] Texto extraído correctamente, length:', output.length);
-          resolve(output.trim());
-        } else {
-          console.error('[PDF] Error extrayendo PDF:', error);
-          resolve('');
-        }
-      });
-    } catch (e) {
-      console.error('[PDF] Error en extracción:', e);
-      resolve('');
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str || '')
+        .join(' ');
+      text += pageText + ' ';
     }
-  });
+
+    if (text.trim().length > 0) {
+      console.log('[PDF] Texto extraído correctamente, length:', text.length);
+      return text.trim();
+    } else {
+      console.error('[PDF] No se extrajo texto del PDF');
+      return '';
+    }
+  } catch (e) {
+    console.error('[PDF] Error extrayendo PDF:', e);
+    return '';
+  }
 }
 
 function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string): number {
