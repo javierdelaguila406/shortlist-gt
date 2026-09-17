@@ -198,11 +198,6 @@ export async function POST(request: NextRequest) {
       score_ia: score_ia,
     };
 
-    // Agregar experiencia_anos solo si existe la columna
-    if (experiencia_anos) {
-      candidatoData.experiencia_anos = parseInt(experiencia_anos);
-    }
-
     const { data: candidato, error } = await supabase
       .from('candidatos')
       .insert(candidatoData)
