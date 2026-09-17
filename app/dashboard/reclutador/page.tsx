@@ -59,6 +59,9 @@ export default function DemoDashboard() {
   const [deletingVacante, setDeletingVacante] = useState<string | null>(null);
   const [generandoPreguntas, setGenerandoPreguntas] = useState(false);
   const [preguntasGeneradas, setPreguntasGeneradas] = useState<any>(null);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [asignandoTemplate, setAsignandoTemplate] = useState(false);
 
   useEffect(() => {
     const loadVacantes = async () => {
@@ -284,6 +287,49 @@ export default function DemoDashboard() {
     }
   };
 
+  const loadTemplates = async () => {
+    try {
+      const response = await fetch('/api/evaluaciones/asignar-template');
+      const data = await response.json();
+      if (data.categorias) {
+        setTemplates(data.categorias);
+      }
+    } catch (error) {
+      console.error('[TEMPLATES] Error loading:', error);
+    }
+  };
+
+  const handleAsignarTemplate = async (categoriaId: string) => {
+    setAsignandoTemplate(true);
+    try {
+      const response = await fetch('/api/evaluaciones/asignar-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vacante_id: selectedVacanteId,
+          categoria_template: categoriaId,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        const template = templates.find(t => t.id === categoriaId);
+        alert(`✅ Template "${template?.nombre}" asignado exitosamente\n\n` +
+              `Pre-entrevista: ${data.data.preguntas.pre_entrevista} preguntas\n` +
+              `Prueba técnica: ${data.data.preguntas.prueba_tecnica} preguntas\n` +
+              `Preguntas video: ${data.data.preguntas.preguntas_video} preguntas`);
+        setShowTemplateModal(false);
+      } else {
+        alert('❌ Error: ' + (data.error || 'Error desconocido'));
+      }
+    } catch (error) {
+      console.error('[ASIGNAR-TEMPLATE] Error:', error);
+      alert('❌ Error asignando template');
+    } finally {
+      setAsignandoTemplate(false);
+    }
+  };
+
   const handleGenerarPreguntas = async (vacanteId: string) => {
     const vacante = vacantes.find(v => v.id === vacanteId);
     if (!vacante) return;
@@ -381,6 +427,16 @@ export default function DemoDashboard() {
             >
               <Link2 className="w-4 h-4" />
               Ver Link
+            </button>
+
+            <button
+              onClick={() => {
+                loadTemplates();
+                setShowTemplateModal(true);
+              }}
+              className="bg-purple-600 hover:bg-purple-700 px-3 py-2 rounded text-white text-sm flex items-center gap-2"
+            >
+              📋 Asignar Template
             </button>
 
             <button
@@ -910,6 +966,53 @@ export default function DemoDashboard() {
         candidates={filteredCandidates}
         company="FORNITURE CITY"
       />
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[80vh] overflow-auto">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Seleccionar Template de Preguntas</CardTitle>
+                  <CardDescription>Elige una categoría para asignar preguntas predefinidas</CardDescription>
+                </div>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="text-zinc-500 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {templates.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-zinc-400">Cargando categorías...</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {templates.map((template) => (
+                    <div
+                      key={template.id}
+                      onClick={() => handleAsignarTemplate(template.id)}
+                      className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                    >
+                      <h3 className="font-semibold text-white mb-1">{template.nombre}</h3>
+                      <p className="text-xs text-zinc-400 mb-3">{template.descripcion}</p>
+                      <div className="flex gap-3 text-xs text-zinc-500">
+                        <span>📝 {template.preguntas.pre_entrevista} pre</span>
+                        <span>🧪 {template.preguntas.prueba_tecnica} técnicas</span>
+                        <span>📹 {template.preguntas.preguntas_video} videos</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
