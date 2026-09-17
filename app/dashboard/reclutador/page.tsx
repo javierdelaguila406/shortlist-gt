@@ -494,7 +494,27 @@ export default function DemoDashboard() {
                         {candidate.estado}
                       </span>
                       {candidate.estado === 'precalificado' && (
-                        <Button size="sm" variant="secondary" className="ml-auto">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          className="ml-auto"
+                          onClick={() => {
+                            fetch('/api/evaluaciones/iniciar-whatsapp', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ candidatoId: candidate.id })
+                            })
+                              .then(r => r.json())
+                              .then(data => {
+                                if (data.success) {
+                                  alert(`✅ ${data.message}`);
+                                } else {
+                                  alert(`❌ Error: ${data.message}`);
+                                }
+                              })
+                              .catch(e => alert(`❌ Error: ${e.message}`));
+                          }}
+                        >
                           Contactar por WhatsApp
                         </Button>
                       )}
