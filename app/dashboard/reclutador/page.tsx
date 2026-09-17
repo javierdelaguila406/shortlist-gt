@@ -62,9 +62,9 @@ export default function DemoDashboard() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
   const [asignandoTemplate, setAsignandoTemplate] = useState(false);
-  const [showViewPreguntas, setShowViewPreguntas] = useState(false);
-  const [preguntasActuales, setPreguntasActuales] = useState<any>(null);
-  const [editingPregunta, setEditingPregunta] = useState<any>(null);
+  const [selectedTemplatePreview, setSelectedTemplatePreview] = useState<any>(null);
+  const [editandoPreguntas, setEditandoPreguntas] = useState<any>(null);
+  const [guardandoPreguntas, setGuardandoPreguntas] = useState(false);
 
   useEffect(() => {
     const loadVacantes = async () => {
@@ -302,50 +302,75 @@ export default function DemoDashboard() {
     }
   };
 
-  const loadPreguntasActuales = async () => {
-    try {
-      const response = await fetch(`/api/evaluaciones/personalizar-preguntas?vacante_id=${selectedVacanteId}`);
-      const data = await response.json();
-      if (data.success && data.data) {
-        setPreguntasActuales(data.data);
-        setShowViewPreguntas(true);
-      } else {
-        alert('No hay preguntas asignadas para esta vacante. Asigna un template primero.');
+  const handlePreviewTemplate = (categoriaId: string) => {
+    const template = templates.find(t => t.id === categoriaId);
+    if (template) {
+      // Obtener el template completo con todas las preguntas
+      const { TEMPLATES_PREGUNTAS } = require('@/lib/templates-preguntas');
+      const fullTemplate = TEMPLATES_PREGUNTAS[categoriaId];
+      if (fullTemplate) {
+        setSelectedTemplatePreview({
+          id: categoriaId,
+          nombre: fullTemplate.nombre,
+          pre_entrevista: JSON.parse(JSON.stringify(fullTemplate.pre_entrevista)),
+          prueba_tecnica: JSON.parse(JSON.stringify(fullTemplate.prueba_tecnica)),
+          preguntas_video: JSON.parse(JSON.stringify(fullTemplate.preguntas_video)),
+        });
+        setEditandoPreguntas({
+          pre_entrevista: JSON.parse(JSON.stringify(fullTemplate.pre_entrevista)),
+          prueba_tecnica: JSON.parse(JSON.stringify(fullTemplate.prueba_tecnica)),
+          preguntas_video: JSON.parse(JSON.stringify(fullTemplate.preguntas_video)),
+        });
       }
-    } catch (error) {
-      console.error('[PREGUNTAS] Error loading:', error);
-      alert('Error cargando preguntas');
     }
   };
 
-  const handleAsignarTemplate = async (categoriaId: string) => {
-    setAsignandoTemplate(true);
+  const guardarYAsignarTemplate = async () => {
+    if (!selectedTemplatePreview) return;
+
+    setGuardandoPreguntas(true);
     try {
-      const response = await fetch('/api/evaluaciones/asignar-template', {
+      // 1. Asignar template primero
+      const assignResponse = await fetch('/api/evaluaciones/asignar-template', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vacante_id: selectedVacanteId,
-          categoria_template: categoriaId,
+          categoria_template: selectedTemplatePreview.id,
         }),
       });
 
-      const data = await response.json();
-      if (response.ok) {
-        const template = templates.find(t => t.id === categoriaId);
-        alert(`✅ Template "${template?.nombre}" asignado exitosamente\n\n` +
-              `Pre-entrevista: ${data.data.preguntas.pre_entrevista} preguntas\n` +
-              `Prueba técnica: ${data.data.preguntas.prueba_tecnica} preguntas\n` +
-              `Preguntas video: ${data.data.preguntas.preguntas_video} preguntas`);
-        setShowTemplateModal(false);
-      } else {
-        alert('❌ Error: ' + (data.error || 'Error desconocido'));
+      if (!assignResponse.ok) {
+        throw new Error('Error asignando template');
       }
+
+      // 2. Si hay cambios, guardar las preguntas personalizadas
+      if (editandoPreguntas && JSON.stringify(editandoPreguntas) !== JSON.stringify(selectedTemplatePreview)) {
+        const updateResponse = await fetch('/api/evaluaciones/personalizar-preguntas', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            vacante_id: selectedVacanteId,
+            pre_entrevista: editandoPreguntas.pre_entrevista,
+            prueba_tecnica: editandoPreguntas.prueba_tecnica,
+            preguntas_video: editandoPreguntas.preguntas_video,
+          }),
+        });
+
+        if (!updateResponse.ok) {
+          console.warn('Error guardando cambios en preguntas');
+        }
+      }
+
+      alert(`✅ Template "${selectedTemplatePreview.nombre}" asignado y personalizado`);
+      setShowTemplateModal(false);
+      setSelectedTemplatePreview(null);
+      setEditandoPreguntas(null);
     } catch (error) {
-      console.error('[ASIGNAR-TEMPLATE] Error:', error);
-      alert('❌ Error asignando template');
+      console.error('[GUARDAR-TEMPLATE] Error:', error);
+      alert('❌ Error: ' + (error instanceof Error ? error.message : 'Error desconocido'));
     } finally {
-      setAsignandoTemplate(false);
+      setGuardandoPreguntas(false);
     }
   };
 
@@ -470,15 +495,6 @@ export default function DemoDashboard() {
             >
               <span className="text-lg">📋</span>
               <span className="text-xs font-medium text-zinc-300">Template</span>
-            </button>
-
-            {/* Ver Preguntas */}
-            <button
-              onClick={loadPreguntasActuales}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-cyan-600/20 border border-zinc-700 hover:border-cyan-500 transition-colors"
-            >
-              <span className="text-lg">👁️</span>
-              <span className="text-xs font-medium text-zinc-300">Preguntas</span>
             </button>
 
             {/* Generar Preguntas */}
@@ -1001,133 +1017,15 @@ export default function DemoDashboard() {
         company="FORNITURE CITY"
       />
 
-      {/* View/Edit Preguntas Modal */}
-      {showViewPreguntas && preguntasActuales && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <Card className="w-full max-w-3xl my-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>📝 Preguntas Asignadas</CardTitle>
-                  <CardDescription>{preguntasActuales.categoria_template || 'Template'}</CardDescription>
-                </div>
-                <button
-                  onClick={() => setShowViewPreguntas(false)}
-                  className="text-zinc-500 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Pre-Entrevista */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span>💬</span> Pre-Entrevista ({preguntasActuales.pre_entrevista?.length || 0})
-                </h3>
-                <div className="space-y-3">
-                  {preguntasActuales.pre_entrevista?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-zinc-300">Pregunta {p.numero}</p>
-                          <p className="text-white mt-1">{p.pregunta}</p>
-                          <p className="text-xs text-zinc-500 mt-2">📌 {p.criterio}</p>
-                        </div>
-                        <button
-                          onClick={() => setEditingPregunta({ ...p, tipo: 'pre_entrevista', idx })}
-                          className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Prueba Técnica */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span>🧪</span> Prueba Técnica ({preguntasActuales.prueba_tecnica?.length || 0})
-                </h3>
-                <div className="space-y-3">
-                  {preguntasActuales.prueba_tecnica?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-zinc-300">Pregunta {p.numero}</p>
-                          <p className="text-white mt-1">{p.pregunta}</p>
-                          {p.opciones && (
-                            <div className="mt-2 space-y-1">
-                              {p.opciones.map((opt: string, i: number) => (
-                                <p key={i} className={`text-xs ${i === p.respuesta_correcta ? 'text-green-400 font-bold' : 'text-zinc-400'}`}>
-                                  {i + 1}. {opt} {i === p.respuesta_correcta && '✓'}
-                                </p>
-                              ))}
-                            </div>
-                          )}
-                          <p className="text-xs text-zinc-500 mt-2">📌 {p.criterio}</p>
-                        </div>
-                        <button
-                          onClick={() => setEditingPregunta({ ...p, tipo: 'prueba_tecnica', idx })}
-                          className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded whitespace-nowrap"
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Preguntas Video */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                  <span>📹</span> Preguntas Video ({preguntasActuales.preguntas_video?.length || 0})
-                </h3>
-                <div className="space-y-3">
-                  {preguntasActuales.preguntas_video?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-zinc-300">Pregunta {p.numero}</p>
-                          <p className="text-white mt-1">{p.pregunta}</p>
-                          <p className="text-xs text-zinc-500 mt-2">⏱️ {p.tiempo_maximo}</p>
-                          <p className="text-xs text-zinc-500">📌 {p.criterio}</p>
-                        </div>
-                        <button
-                          onClick={() => setEditingPregunta({ ...p, tipo: 'preguntas_video', idx })}
-                          className="px-2 py-1 text-xs bg-blue-600 hover:bg-blue-700 text-white rounded"
-                        >
-                          Editar
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                onClick={() => setShowViewPreguntas(false)}
-                className="w-full mt-6"
-              >
-                Cerrar
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
       {/* Template Selection Modal */}
-      {showTemplateModal && (
+      {showTemplateModal && !selectedTemplatePreview && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[80vh] overflow-auto">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Seleccionar Template de Preguntas</CardTitle>
-                  <CardDescription>Elige una categoría para asignar preguntas predefinidas</CardDescription>
+                  <CardDescription>Elige una categoría para ver y personalizar las preguntas</CardDescription>
                 </div>
                 <button
                   onClick={() => setShowTemplateModal(false)}
@@ -1147,8 +1045,8 @@ export default function DemoDashboard() {
                   {templates.map((template) => (
                     <div
                       key={template.id}
-                      onClick={() => handleAsignarTemplate(template.id)}
-                      className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                      onClick={() => handlePreviewTemplate(template.id)}
+                      className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 hover:border-emerald-500 cursor-pointer transition-colors"
                     >
                       <h3 className="font-semibold text-white mb-1">{template.nombre}</h3>
                       <p className="text-xs text-zinc-400 mb-3">{template.descripcion}</p>
@@ -1162,6 +1060,176 @@ export default function DemoDashboard() {
                 </div>
               )}
             </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Template Preview & Edit Modal */}
+      {selectedTemplatePreview && editandoPreguntas && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card className="w-full max-w-4xl my-8">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>📝 {selectedTemplatePreview.nombre}</CardTitle>
+                  <CardDescription>Personaliza las preguntas si lo deseas</CardDescription>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedTemplatePreview(null);
+                    setEditandoPreguntas(null);
+                  }}
+                  className="text-zinc-500 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Pre-Entrevista */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">💬 Pre-Entrevista</h3>
+                <div className="space-y-3">
+                  {editandoPreguntas.pre_entrevista?.map((p: any, idx: number) => (
+                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                      <div className="space-y-2">
+                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
+                        <textarea
+                          value={p.pregunta}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.pre_entrevista];
+                            updated[idx].pregunta = e.target.value;
+                            setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                          rows={2}
+                        />
+                        <label className="text-xs text-zinc-400">Criterio de evaluación</label>
+                        <input
+                          type="text"
+                          value={p.criterio}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.pre_entrevista];
+                            updated[idx].criterio = e.target.value;
+                            setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Prueba Técnica */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">🧪 Prueba Técnica</h3>
+                <div className="space-y-3">
+                  {editandoPreguntas.prueba_tecnica?.map((p: any, idx: number) => (
+                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                      <div className="space-y-2">
+                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
+                        <textarea
+                          value={p.pregunta}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.prueba_tecnica];
+                            updated[idx].pregunta = e.target.value;
+                            setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                          rows={2}
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          {p.opciones?.map((opt: string, i: number) => (
+                            <div key={i}>
+                              <label className="text-xs text-zinc-400">Opción {i + 1}</label>
+                              <input
+                                type="text"
+                                value={opt}
+                                onChange={(e) => {
+                                  const updated = [...editandoPreguntas.prueba_tecnica];
+                                  updated[idx].opciones[i] = e.target.value;
+                                  setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
+                                }}
+                                className="w-full px-2 py-1 bg-zinc-700 border border-zinc-600 rounded text-white text-xs"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                        <label className="text-xs text-zinc-400">Respuesta correcta (número)</label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="3"
+                          value={p.respuesta_correcta}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.prueba_tecnica];
+                            updated[idx].respuesta_correcta = parseInt(e.target.value);
+                            setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Preguntas Video */}
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">📹 Preguntas Video</h3>
+                <div className="space-y-3">
+                  {editandoPreguntas.preguntas_video?.map((p: any, idx: number) => (
+                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
+                      <div className="space-y-2">
+                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
+                        <textarea
+                          value={p.pregunta}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.preguntas_video];
+                            updated[idx].pregunta = e.target.value;
+                            setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                          rows={2}
+                        />
+                        <label className="text-xs text-zinc-400">Criterio de evaluación</label>
+                        <input
+                          type="text"
+                          value={p.criterio}
+                          onChange={(e) => {
+                            const updated = [...editandoPreguntas.preguntas_video];
+                            updated[idx].criterio = e.target.value;
+                            setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
+                          }}
+                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+            <CardHeader>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setSelectedTemplatePreview(null);
+                    setEditandoPreguntas(null);
+                  }}
+                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarYAsignarTemplate}
+                  disabled={guardandoPreguntas}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-900 text-white rounded flex items-center gap-2"
+                >
+                  {guardandoPreguntas ? '⏳ Guardando...' : '✅ Guardar y Asignar'}
+                </button>
+              </div>
+            </CardHeader>
           </Card>
         </div>
       )}
