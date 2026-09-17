@@ -8,7 +8,7 @@ import { mockVacantes } from '@/lib/mock-data';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/6.3.289/pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.worker.min.js`;
 
 interface FormData {
   nombre: string;
