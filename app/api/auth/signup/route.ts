@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
+import { syncCreateUser } from '@/lib/dual-sync';
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,30 +74,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear registro de empresa en plan DEMO
+    // Crear registro de empresa en plan DEMO (sincronizar con Supabase y Godaddy)
     if (authData.user) {
       try {
-        const supabaseService = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-        );
-
-        await supabaseService
-          .from('companies')
-          .insert({
-            user_id: authData.user.id,
-            email: email,
-            nombre: nombre,
-            plan: 'demo',
-            created_at: new Date().toISOString(),
-          });
+        await syncCreateUser({
+          id: authData.user.id,
+          email: email,
+          nombre: nombre,
+          plan: 'demo',
+        });
       } catch (dbError) {
         console.error('[SECURITY] Error creating company record:', {
           error: dbError instanceof Error ? dbError.message : 'Unknown error',
           userId: authData.user.id,
           timestamp: new Date().toISOString(),
         });
-        // No impedir el registro si hay error en companies, solo loguear
+        // No impedir el registro si hay error, solo loguear
       }
     }
 

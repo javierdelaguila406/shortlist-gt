@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { syncUpdatePlan } from '@/lib/dual-sync';
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,19 +74,8 @@ export async function POST(request: NextRequest) {
 
     // Actualizar el plan del usuario a premium (solo si userId existe)
     if (userId) {
-      const { error: userUpdateError } = await supabase
-        .from('companies')
-        .update({
-          plan: 'premium',
-          license_code_used: codigo.trim().toUpperCase(),
-          plan_upgraded_at: new Date().toISOString(),
-        })
-        .eq('user_id', userId);
-
-      if (userUpdateError) {
-        console.error('[SECURITY] Error updating user plan:', userUpdateError);
-        // No fallar si no se puede actualizar el plan, el código ya está marcado como usado
-      }
+      // Sincronizar con ambas bases de datos
+      await syncUpdatePlan(userId, 'premium', codigo.trim().toUpperCase());
     }
 
     console.log('[API] License code used successfully:', {
