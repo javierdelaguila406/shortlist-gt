@@ -1,8 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Verificar token de autenticación
+async function verifyAuth(request: NextRequest): Promise<boolean> {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return false;
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+    const { data, error } = await supabase.auth.getUser(token);
+    return !error && !!data.user;
+  } catch {
+    return false;
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   try {
+    // Verificar autenticación
+    const isAuthenticated = await verifyAuth(request);
+    if (!isAuthenticated) {
+      return NextResponse.json(
+        { error: 'No autorizado. Debes estar autenticado.' },
+        { status: 401 }
+      );
+    }
+
     const { candidatoId } = await request.json();
 
     if (!candidatoId) {
