@@ -34,11 +34,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Si no es un ID, buscar por título (para slugs como "contador")
-    // Limpiamos el slug para comparar con título
+    // 2. Si no es un ID, buscar por título
     const { data, error } = await supabase
       .from('vacantes')
-      .select('id, titulo')
+      .select('id')
       .ilike('titulo', `%${slug}%`)
       .limit(1);
 
