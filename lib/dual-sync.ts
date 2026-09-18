@@ -1,6 +1,6 @@
 /**
  * Dual Sync - Sincroniza datos entre Supabase y Godaddy
- * Guarda en ambas bases simultáneamente
+ * Solo para lesters@furniturecity.com.gt
  */
 
 import { createClient } from '@supabase/supabase-js';
@@ -15,8 +15,14 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 );
 
+const SYNC_EMAIL = 'lesters@furniturecity.com.gt';
+
+function shouldSync(email: string): boolean {
+  return email?.toLowerCase() === SYNC_EMAIL.toLowerCase();
+}
+
 /**
- * Crear usuario en ambas bases de datos
+ * Crear usuario en ambas bases de datos (solo si es lesters@furniturecity.com.gt)
  */
 export async function syncCreateUser(userData: {
   id: string;
@@ -25,7 +31,7 @@ export async function syncCreateUser(userData: {
   plan: 'demo' | 'premium';
 }) {
   try {
-    // Supabase
+    // Siempre guardar en Supabase
     const supabaseResult = await supabase
       .from('companies')
       .insert({
@@ -37,25 +43,27 @@ export async function syncCreateUser(userData: {
       })
       .select();
 
-    // Godaddy
-    const godaddyResult = await insertGodaddyRecord('companies', {
-      id: `cmp_${userData.id.substring(0, 8)}`,
-      user_id: userData.id,
-      email: userData.email,
-      nombre: userData.nombre,
-      plan: userData.plan,
-      created_at: new Date().toISOString(),
-    });
+    let godaddyResult = true;
 
-    console.log('[SYNC] User created in both databases:', {
-      supabase: !!supabaseResult.data,
-      godaddy: godaddyResult,
-    });
+    // Solo sincronizar con Godaddy si es el usuario específico
+    if (shouldSync(userData.email)) {
+      godaddyResult = await insertGodaddyRecord('companies', {
+        id: `cmp_${userData.id.substring(0, 8)}`,
+        user_id: userData.id,
+        email: userData.email,
+        nombre: userData.nombre,
+        plan: userData.plan,
+        created_at: new Date().toISOString(),
+      });
+      console.log('[SYNC] User created in Godaddy:', userData.email);
+    } else {
+      console.log('[SYNC] User skipped Godaddy (not target user):', userData.email);
+    }
 
     return {
       supabase: !!supabaseResult.data,
       godaddy: godaddyResult,
-      success: !!supabaseResult.data && godaddyResult,
+      success: !!supabaseResult.data,
     };
   } catch (error) {
     console.error('[SYNC] Error creating user:', error);
@@ -69,7 +77,7 @@ export async function syncCreateUser(userData: {
 }
 
 /**
- * Crear vacante en ambas bases de datos
+ * Crear vacante en ambas bases de datos (solo si pertenece a lesters@furniturecity.com.gt)
  */
 export async function syncCreateVacante(vacanteData: {
   id: string;
@@ -77,9 +85,10 @@ export async function syncCreateVacante(vacanteData: {
   titulo: string;
   descripcion?: string;
   departamento?: string;
+  userEmail?: string;
 }) {
   try {
-    // Supabase
+    // Siempre guardar en Supabase
     const supabaseResult = await supabase
       .from('vacantes')
       .insert({
@@ -93,26 +102,28 @@ export async function syncCreateVacante(vacanteData: {
       })
       .select();
 
-    // Godaddy
-    const godaddyResult = await insertGodaddyRecord('vacantes', {
-      id: vacanteData.id,
-      user_id: vacanteData.user_id,
-      titulo: vacanteData.titulo,
-      descripcion: vacanteData.descripcion,
-      departamento: vacanteData.departamento,
-      estado: 'abierta',
-      created_at: new Date().toISOString(),
-    });
+    let godaddyResult = true;
 
-    console.log('[SYNC] Vacante created in both databases:', {
-      supabase: !!supabaseResult.data,
-      godaddy: godaddyResult,
-    });
+    // Solo sincronizar con Godaddy si es el usuario específico
+    if (vacanteData.userEmail && shouldSync(vacanteData.userEmail)) {
+      godaddyResult = await insertGodaddyRecord('vacantes', {
+        id: vacanteData.id,
+        user_id: vacanteData.user_id,
+        titulo: vacanteData.titulo,
+        descripcion: vacanteData.descripcion,
+        departamento: vacanteData.departamento,
+        estado: 'abierta',
+        created_at: new Date().toISOString(),
+      });
+      console.log('[SYNC] Vacante created in Godaddy:', vacanteData.id);
+    } else {
+      console.log('[SYNC] Vacante skipped Godaddy (not target user)');
+    }
 
     return {
       supabase: !!supabaseResult.data,
       godaddy: godaddyResult,
-      success: !!supabaseResult.data && godaddyResult,
+      success: !!supabaseResult.data,
     };
   } catch (error) {
     console.error('[SYNC] Error creating vacante:', error);
@@ -126,7 +137,7 @@ export async function syncCreateVacante(vacanteData: {
 }
 
 /**
- * Crear candidato en ambas bases de datos
+ * Crear candidato en ambas bases de datos (solo si pertenece a lesters@furniturecity.com.gt)
  */
 export async function syncCreateCandidato(candidatoData: {
   id: string;
@@ -137,9 +148,10 @@ export async function syncCreateCandidato(candidatoData: {
   cv_url?: string;
   score_ia: number;
   experiencia_anos?: number;
+  recruiterEmail?: string;
 }) {
   try {
-    // Supabase
+    // Siempre guardar en Supabase
     const supabaseResult = await supabase
       .from('candidatos')
       .insert({
@@ -156,29 +168,31 @@ export async function syncCreateCandidato(candidatoData: {
       })
       .select();
 
-    // Godaddy
-    const godaddyResult = await insertGodaddyRecord('candidatos', {
-      id: candidatoData.id,
-      vacante_id: candidatoData.vacante_id,
-      nombre: candidatoData.nombre,
-      email: candidatoData.email,
-      telefono: candidatoData.telefono,
-      cv_url: candidatoData.cv_url,
-      estado: candidatoData.score_ia >= 70 ? 'precalificado' : 'pendiente',
-      score_ia: candidatoData.score_ia,
-      experiencia_anos: candidatoData.experiencia_anos,
-      created_at: new Date().toISOString(),
-    });
+    let godaddyResult = true;
 
-    console.log('[SYNC] Candidato created in both databases:', {
-      supabase: !!supabaseResult.data,
-      godaddy: godaddyResult,
-    });
+    // Solo sincronizar con Godaddy si es el usuario específico
+    if (candidatoData.recruiterEmail && shouldSync(candidatoData.recruiterEmail)) {
+      godaddyResult = await insertGodaddyRecord('candidatos', {
+        id: candidatoData.id,
+        vacante_id: candidatoData.vacante_id,
+        nombre: candidatoData.nombre,
+        email: candidatoData.email,
+        telefono: candidatoData.telefono,
+        cv_url: candidatoData.cv_url,
+        estado: candidatoData.score_ia >= 70 ? 'precalificado' : 'pendiente',
+        score_ia: candidatoData.score_ia,
+        experiencia_anos: candidatoData.experiencia_anos,
+        created_at: new Date().toISOString(),
+      });
+      console.log('[SYNC] Candidato created in Godaddy:', candidatoData.id);
+    } else {
+      console.log('[SYNC] Candidato skipped Godaddy (not target user)');
+    }
 
     return {
       supabase: !!supabaseResult.data,
       godaddy: godaddyResult,
-      success: !!supabaseResult.data && godaddyResult,
+      success: !!supabaseResult.data,
     };
   } catch (error) {
     console.error('[SYNC] Error creating candidato:', error);
@@ -192,15 +206,16 @@ export async function syncCreateCandidato(candidatoData: {
 }
 
 /**
- * Actualizar plan en ambas bases de datos
+ * Actualizar plan en ambas bases de datos (solo si es lesters@furniturecity.com.gt)
  */
 export async function syncUpdatePlan(
   userId: string,
+  userEmail: string,
   plan: 'demo' | 'premium',
   licenseCode?: string
 ) {
   try {
-    // Supabase
+    // Siempre actualizar en Supabase
     const supabaseResult = await supabase
       .from('companies')
       .update({
@@ -210,27 +225,27 @@ export async function syncUpdatePlan(
       })
       .eq('user_id', userId);
 
-    // Godaddy - buscar por user_id
-    const godaddyRecord = await getGodaddyRecord('companies', userId);
-
     let godaddyResult = true;
-    if (godaddyRecord) {
-      godaddyResult = await updateGodaddyRecord('companies', godaddyRecord.id, {
-        plan: plan,
-        license_code_used: licenseCode,
-        plan_upgraded_at: new Date().toISOString(),
-      });
-    }
 
-    console.log('[SYNC] Plan updated in both databases:', {
-      supabase: !supabaseResult.error,
-      godaddy: godaddyResult,
-    });
+    // Solo sincronizar con Godaddy si es el usuario específico
+    if (shouldSync(userEmail)) {
+      const godaddyRecord = await getGodaddyRecord('companies', userId);
+      if (godaddyRecord) {
+        godaddyResult = await updateGodaddyRecord('companies', godaddyRecord.id, {
+          plan: plan,
+          license_code_used: licenseCode,
+          plan_upgraded_at: new Date().toISOString(),
+        });
+        console.log('[SYNC] Plan updated in Godaddy:', userEmail);
+      }
+    } else {
+      console.log('[SYNC] Plan update skipped Godaddy (not target user):', userEmail);
+    }
 
     return {
       supabase: !supabaseResult.error,
       godaddy: godaddyResult,
-      success: !supabaseResult.error && godaddyResult,
+      success: !supabaseResult.error,
     };
   } catch (error) {
     console.error('[SYNC] Error updating plan:', error);
