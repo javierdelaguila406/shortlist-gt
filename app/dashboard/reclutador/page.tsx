@@ -158,19 +158,20 @@ export default function DemoDashboard() {
 
     // Configurar escucha en tiempo real de Supabase
     const subscription = supabase
-      .from('candidatos')
-      .on('*', (payload) => {
-        console.log('[REALTIME] Cambio detectado:', payload);
-        // Recargar candidatos cuando hay cambios
-        loadCandidates();
-      })
+      .channel('candidatos-channel')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'candidatos' },
+        (payload) => {
+          console.log('[REALTIME] Cambio detectado:', payload);
+          loadCandidates();
+        }
+      )
       .subscribe();
 
     // Limpiar suscripción al desmontar
     return () => {
-      if (subscription) {
-        supabase.removeSubscription(subscription);
-      }
+      supabase.removeChannel(subscription);
     };
   }, [selectedVacanteId]);
 
