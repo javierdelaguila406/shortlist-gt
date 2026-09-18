@@ -1,39 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-interface License {
-  tipo: 'DEMO' | 'TRIAL' | 'PREMIUM';
-  empresa: string;
-  activo: boolean;
-  maxVacantes: number;
-  maxUsers: number;
-  fechaExpiracion?: string;
-}
-
-const VALID_LICENSES: Record<string, License> = {
-  'DEMO-2024': {
-    tipo: 'DEMO',
-    empresa: 'Demo SHORTLIST',
-    activo: true,
-    maxVacantes: 999,
-    maxUsers: 999,
-  },
-  'FORNITURE-CITY-2024': {
-    tipo: 'PREMIUM',
-    empresa: 'Forniture City',
-    activo: true,
-    maxVacantes: 999,
-    maxUsers: 10,
-    fechaExpiracion: '2027-09-08',
-  },
-  'TRIAL-2024': {
-    tipo: 'TRIAL',
-    empresa: 'Trial User',
-    activo: true,
-    maxVacantes: 1,
-    maxUsers: 1,
-    fechaExpiracion: '2027-09-15',
-  },
-};
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,43 +9,57 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Código requerido' }, { status: 400 });
     }
 
-    const license = VALID_LICENSES[codigo.trim().toUpperCase()];
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-    if (!license) {
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json(
+        { error: 'Configuración faltante', valid: false },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Buscar el código en la BD
+    const { data: licenseCode, error: fetchError } = await supabase
+      .from('license_codes')
+      .select('*')
+      .eq('code', codigo.trim().toUpperCase())
+      .single();
+
+    if (fetchError || !licenseCode) {
       return NextResponse.json({
         error: 'Código de licencia inválido',
         valid: false
       }, { status: 401 });
     }
 
-    if (!license.activo) {
+    // Validar estado
+    if (licenseCode.status === 'inactive') {
       return NextResponse.json({
         error: 'Licencia desactivada',
         valid: false
       }, { status: 401 });
     }
 
-    if (license.fechaExpiracion) {
-      const hoy = new Date();
-      const expira = new Date(license.fechaExpiracion);
-      if (hoy > expira) {
-        return NextResponse.json({
-          error: 'Licencia expirada',
-          valid: false
-        }, { status: 401 });
-      }
+    if (licenseCode.status === 'used') {
+      return NextResponse.json({
+        error: 'Este código ya ha sido utilizado',
+        valid: false
+      }, { status: 401 });
     }
 
+    // Retornar datos del código
     return NextResponse.json({
       valid: true,
-      tipo: license.tipo,
-      empresa: license.empresa,
-      maxVacantes: license.maxVacantes,
-      maxUsers: license.maxUsers,
-      fechaExpiracion: license.fechaExpiracion,
+      tipo: 'PREMIUM',
+      empresa: 'SHORTLIST Premium',
+      maxVacantes: 999,
+      maxUsers: 999,
     });
   } catch (error) {
     console.error('Error validando licencia:', error);
-    return NextResponse.json({ error: 'Error validando licencia' }, { status: 500 });
+    return NextResponse.json({ error: 'Error validando licencia', valid: false }, { status: 500 });
   }
 }
