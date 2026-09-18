@@ -13,7 +13,7 @@ function verifyAdminAccess(request: NextRequest): boolean {
   }
 
   // Comparar tokens de forma segura (timing-safe comparison)
-  const isValid = adminToken && adminToken === expectedToken;
+  const isValid = !!adminToken && adminToken === expectedToken;
 
   if (!isValid) {
     console.warn('[SECURITY] Invalid admin token attempt:', {
@@ -22,7 +22,7 @@ function verifyAdminAccess(request: NextRequest): boolean {
     });
   }
 
-  return isValid;
+  return isValid as boolean;
 }
 
 export async function DELETE(request: NextRequest) {
