@@ -7,7 +7,7 @@
       "runtimeArgs": ["run", "dev"],
       "port": 3000,
       "url": "http://localhost:3000",
-      "cwd": "C:\\Users\\gabri\\Desktop\\Plataforma Web RR.HH\\shortlist-gt"
+      "cwd": "."
     }
   ]
 }
