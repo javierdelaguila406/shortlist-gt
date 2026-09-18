@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
+import { syncCreateCandidato } from '@/lib/dual-sync';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -286,6 +287,23 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API] Candidato guardado exitosamente:', candidato.id);
+
+    // Sincronizar con Godaddy
+    try {
+      await syncCreateCandidato({
+        id: candidato.id,
+        vacante_id: vacante_id,
+        nombre: nombre,
+        email: extractedEmail,
+        telefono: telefono,
+        cv_url: cvUrl,
+        score_ia: score_ia,
+        experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
+      });
+    } catch (syncError) {
+      console.error('[SYNC] Error sincronizando candidato con Godaddy:', syncError);
+      // No fallar si hay error en sync
+    }
 
     // ========== AUDIT LOG ==========
     logAuditEvent(
