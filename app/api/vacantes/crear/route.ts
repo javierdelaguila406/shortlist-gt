@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
       descripcion: descripcion || '',
       departamento: departamento || '',
       usuario_id: userId,
-      user_id: userId,
       created_at: new Date().toISOString(),
     };
 
