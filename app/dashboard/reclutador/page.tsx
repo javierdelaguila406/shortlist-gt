@@ -612,7 +612,7 @@ export default function DemoDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-white">{stats.total}</p>
-              <p className="text-sm text-zinc-500 mt-1">Para {selectedVacante.titulo}</p>
+              <p className="text-sm text-zinc-500 mt-1">Para {selectedVacante?.titulo || 'Sin vacante'}</p>
             </CardContent>
           </Card>
 
