@@ -63,10 +63,9 @@
         .portada {
             background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
             color: white;
-            padding: 80px 60px;
+            padding: 40px 60px;
             text-align: center;
-            page-break-after: always;
-            min-height: 297mm;
+            page-break-after: avoid;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -138,7 +137,6 @@
         .seccion {
             page-break-after: always;
             padding: 60px;
-            min-height: 297mm;
             display: flex;
             flex-direction: column;
         }
@@ -262,20 +260,39 @@
         @media print {
             body {
                 background: white;
+                margin: 0;
+                padding: 0;
             }
             .container {
                 box-shadow: none;
                 max-width: 100%;
+                margin: 0;
+            }
+            .portada {
+                page-break-inside: avoid;
+                page-break-after: always;
+            }
+            .toc {
+                page-break-after: always;
+                page-break-inside: avoid;
             }
             .seccion {
                 padding: 40px 30px;
-                min-height: auto;
-                page-break-inside: avoid;
+                page-break-inside: auto;
+                page-break-after: always;
+                margin: 0;
+            }
+            .seccion-contenido {
+                page-break-inside: auto;
             }
             table {
                 page-break-inside: avoid;
+                margin: 10px 0;
             }
             .paso {
+                page-break-inside: avoid;
+            }
+            .faq-item {
                 page-break-inside: avoid;
             }
         }
