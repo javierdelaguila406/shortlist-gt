@@ -72,7 +72,7 @@ export default function AccesoPage() {
               <p className="text-zinc-400">Elige cómo deseas acceder</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
               {/* Demo Card */}
               <Card className="bg-blue-950/20 border-blue-800/40 cursor-pointer hover:border-blue-800/60 transition-all">
                 <CardHeader>
@@ -80,14 +80,14 @@ export default function AccesoPage() {
                     <Zap className="w-6 h-6 text-blue-400" />
                     <CardTitle>Acceso Demo</CardTitle>
                   </div>
-                  <CardDescription>Gratuito y sin restricciones</CardDescription>
+                  <CardDescription>Prueba gratuita limitada</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-sm text-zinc-300">✓ Acceso completo a todas las features</p>
-                    <p className="text-sm text-zinc-300">✓ Vacantes ilimitadas</p>
-                    <p className="text-sm text-zinc-300">✓ Análisis IA completo</p>
-                    <p className="text-sm text-zinc-300">✓ Reportes profesionales</p>
+                    <p className="text-sm text-zinc-300">✓ Ver plantilla de preguntas</p>
+                    <p className="text-sm text-zinc-300">✓ Crear 1 vacante máximo</p>
+                    <p className="text-sm text-zinc-300">✓ Ver 1 candidato máximo</p>
+                    <p className="text-sm text-zinc-300">• 1 evaluación máximo</p>
                   </div>
                   <Button onClick={handleDemoAccess} className="w-full bg-blue-600 hover:bg-blue-700">
                     Acceso Demo Gratuito
@@ -102,14 +102,14 @@ export default function AccesoPage() {
                     <Lock className="w-6 h-6 text-emerald-400" />
                     <CardTitle>Código de Licencia</CardTitle>
                   </div>
-                  <CardDescription>Premium o Trial</CardDescription>
+                  <CardDescription>Acceso Premium ilimitado</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-sm text-zinc-300">✓ Acceso Premium ilimitado</p>
-                    <p className="text-sm text-zinc-300">✓ Soporte dedicado</p>
-                    <p className="text-sm text-zinc-300">✓ Planes empresariales</p>
-                    <p className="text-sm text-zinc-300">✓ Integración personalizada</p>
+                    <p className="text-sm text-zinc-300">✓ Vacantes ilimitadas</p>
+                    <p className="text-sm text-zinc-300">✓ Candidatos ilimitados</p>
+                    <p className="text-sm text-zinc-300">✓ Evaluaciones ilimitadas</p>
+                    <p className="text-sm text-zinc-300">✓ Todas las features</p>
                   </div>
                   <Button
                     onClick={() => setStep('license')}
@@ -120,30 +120,6 @@ export default function AccesoPage() {
                   </Button>
                 </CardContent>
               </Card>
-
-              {/* Create Vacancy Card */}
-              <Link href="/vacantes/crear">
-                <Card className="bg-amber-950/20 border-amber-800/40 cursor-pointer hover:border-amber-800/60 transition-all h-full">
-                  <CardHeader>
-                    <div className="flex items-center gap-2 mb-2">
-                      <Plus className="w-6 h-6 text-amber-400" />
-                      <CardTitle>Crear Vacante</CardTitle>
-                    </div>
-                    <CardDescription>Crea una nueva posición</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <p className="text-sm text-zinc-300">✓ Completa el formulario</p>
-                      <p className="text-sm text-zinc-300">✓ Genera link automático</p>
-                      <p className="text-sm text-zinc-300">✓ Compartir en redes</p>
-                      <p className="text-sm text-zinc-300">✓ Gestionar candidatos</p>
-                    </div>
-                    <Button variant="secondary" className="w-full border-amber-800 hover:bg-amber-800/20">
-                      Crear Nueva Vacante
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Link>
             </div>
 
             <div className="bg-zinc-900/50 border border-zinc-800/40 rounded-lg p-6 text-center">
