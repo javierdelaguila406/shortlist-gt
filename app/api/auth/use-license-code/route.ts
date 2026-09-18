@@ -74,8 +74,17 @@ export async function POST(request: NextRequest) {
 
     // Actualizar el plan del usuario a premium (solo si userId existe)
     if (userId) {
-      // Sincronizar con ambas bases de datos
-      await syncUpdatePlan(userId, 'premium', codigo.trim().toUpperCase());
+      // Obtener email del usuario para validar si debe sincronizar con Godaddy
+      const { data: user } = await supabase
+        .from('companies')
+        .select('email')
+        .eq('user_id', userId)
+        .single();
+
+      const userEmail = user?.email || '';
+
+      // Sincronizar con ambas bases de datos (solo Godaddy si es lesters@furniturecity.com.gt)
+      await syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase());
     }
 
     console.log('[API] License code used successfully:', {
