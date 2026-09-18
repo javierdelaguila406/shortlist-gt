@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     const { data: vacanteData } = await supabase
       .from('vacantes')
-      .select('titulo, descripcion, estado')
+      .select('titulo, descripcion, estado, usuario_id')
       .eq('id', vacante_id)
       .single();
 
