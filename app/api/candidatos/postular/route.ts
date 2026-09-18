@@ -114,12 +114,20 @@ export async function POST(request: NextRequest) {
 
     const { data: vacanteData } = await supabase
       .from('vacantes')
-      .select('titulo, descripcion')
+      .select('titulo, descripcion, estado')
       .eq('id', vacante_id)
       .single();
 
     if (!vacanteData) {
       return NextResponse.json({ error: 'Vacante no encontrada', success: false }, { status: 404 });
+    }
+
+    // Verificar que la vacante está abierta (no cerrada)
+    if (vacanteData.estado === 'cerrada' || vacanteData.estado === 'closed') {
+      return NextResponse.json({
+        error: 'La vacante está cerrada y no acepta más aplicaciones',
+        success: false
+      }, { status: 410 }); // 410 Gone - El recurso ya no está disponible
     }
 
     // Usar cvText + habilidades para análisis

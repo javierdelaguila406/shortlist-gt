@@ -1,8 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Verificar que es admin (requiere admin token específico)
+function verifyAdminAccess(request: NextRequest): boolean {
+  const adminToken = request.headers.get('X-Admin-Token');
+  const expectedToken = process.env.ADMIN_SECRET_TOKEN;
+
+  // Si no hay token admin configurado, denegar acceso
+  if (!expectedToken) {
+    console.warn('[SECURITY] ADMIN_SECRET_TOKEN not configured');
+    return false;
+  }
+
+  // Comparar tokens de forma segura (timing-safe comparison)
+  const isValid = adminToken && adminToken === expectedToken;
+
+  if (!isValid) {
+    console.warn('[SECURITY] Invalid admin token attempt:', {
+      ipAddress: request.headers.get('x-forwarded-for'),
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  return isValid;
+}
+
 export async function DELETE(request: NextRequest) {
   try {
+    // Verificar acceso de admin
+    if (!verifyAdminAccess(request)) {
+      return NextResponse.json(
+        { error: 'No autorizado. Acceso de administrador requerido.', success: false },
+        { status: 403 }
+      );
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 

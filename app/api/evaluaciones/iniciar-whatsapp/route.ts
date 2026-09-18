@@ -6,10 +6,38 @@ import { supabase } from '@/lib/supabase';
  * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
  * Inicia una evaluación WhatsApp para un candidato específico
  * Llamado por: Reclutador desde el dashboard
+ * SEGURIDAD: Requiere token Bearer válido
  */
+
+// Verificar token de autenticación
+async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId?: string}> {
+  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
+  if (!token) return { valid: false };
+
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    const supabaseClient = require('@supabase/supabase-js').createClient(supabaseUrl, supabaseAnonKey);
+
+    const { data, error } = await supabaseClient.auth.getUser(token);
+    if (error || !data.user) return { valid: false };
+    return { valid: true, userId: data.user.id };
+  } catch {
+    return { valid: false };
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticación
+    const auth = await verifyAuth(request);
+    if (!auth.valid) {
+      return NextResponse.json(
+        { error: 'No autorizado. Debes estar autenticado.' },
+        { status: 401 }
+      );
+    }
+
     const { candidatoId } = await request.json();
 
     if (!candidatoId) {
