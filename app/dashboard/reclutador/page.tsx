@@ -277,20 +277,22 @@ export default function DemoDashboard() {
   };
 
   const handleDeleteVacante = async (vacanteId: string) => {
+    if (!window.confirm('¿Cerrar esta plaza? El enlace de aplicación será bloqueado, pero podrás consultarla en el historial.')) {
+      return;
+    }
+
     setDeletingVacante(vacanteId);
     try {
-      const response = await fetch('/api/vacantes/eliminar', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vacante_id: vacanteId }),
-      });
+      // Crear lista de vacan tes cerradas
+      const cerradasLS = localStorage.getItem('vacantesCerradas') || '[]';
+      const cerradas = JSON.parse(cerradasLS);
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        console.error('[DELETE] Error:', data.error);
-        return;
+      if (!cerradas.includes(vacanteId)) {
+        cerradas.push(vacanteId);
+        localStorage.setItem('vacantesCerradas', JSON.stringify(cerradas));
       }
 
+      // Quitar de la lista visible
       const updatedVacantes = vacantes.filter(v => v.id !== vacanteId);
       setVacantes(updatedVacantes);
       localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
@@ -300,8 +302,10 @@ export default function DemoDashboard() {
       }
 
       setSelectedCandidate(null);
+      alert('✅ Plaza cerrada. El enlace de aplicación ha sido bloqueado.');
     } catch (error) {
-      console.error('[DELETE] Error:', error);
+      console.error('[CERRAR-VACANTE] Error:', error);
+      alert('❌ Error cerrando la plaza');
     } finally {
       setDeletingVacante(null);
     }
@@ -537,10 +541,10 @@ export default function DemoDashboard() {
             <button
               onClick={() => handleDeleteVacante(selectedVacanteId)}
               disabled={deletingVacante === selectedVacanteId}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-red-600/20 border border-zinc-700 hover:border-red-500 transition-colors disabled:opacity-50"
+              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-orange-600/20 border border-zinc-700 hover:border-orange-500 transition-colors disabled:opacity-50"
             >
-              <X className="w-5 h-5 text-red-400" />
-              <span className="text-xs font-medium text-zinc-300">{deletingVacante === selectedVacanteId ? 'Eliminando' : 'Eliminar'}</span>
+              <span className="text-lg">🔒</span>
+              <span className="text-xs font-medium text-zinc-300">{deletingVacante === selectedVacanteId ? 'Cerrando...' : 'Cerrar Plaza'}</span>
             </button>
           </div>
         </div>
@@ -684,6 +688,31 @@ export default function DemoDashboard() {
                           Contactar por WhatsApp
                         </Button>
                       )}
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar a ${candidate.nombre}? Esta acción es irreversible.`)) {
+                            fetch('/api/candidatos/eliminar', {
+                              method: 'DELETE',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ candidatoId: candidate.id })
+                            })
+                              .then(r => r.json())
+                              .then(data => {
+                                if (data.success) {
+                                  alert('✅ Candidato eliminado');
+                                  window.location.reload();
+                                } else {
+                                  alert(`❌ Error: ${data.error}`);
+                                }
+                              })
+                              .catch(e => alert(`❌ Error: ${e.message}`));
+                          }
+                        }}
+                      >
+                        Eliminar
+                      </Button>
                     </div>
                   </div>
                   ))
