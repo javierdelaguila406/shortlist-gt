@@ -288,30 +288,27 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] Candidato guardado exitosamente:', candidato.id);
 
-    // Sincronizar con Godaddy (solo si pertenece a lesters@furniturecity.com.gt)
-    try {
-      // Obtener email del reclutador (dueño de la vacante)
-      const { data: vacanteOwner } = await supabase
-        .from('companies')
-        .select('email')
-        .eq('user_id', vacanteData.user_id)
-        .single();
+    // Sincronizar con Godaddy en background (sin bloquear respuesta)
+    // Obtener email del reclutador (dueño de la vacante)
+    const { data: vacanteOwner } = await supabase
+      .from('companies')
+      .select('email')
+      .eq('user_id', vacanteData.user_id)
+      .single();
 
-      await syncCreateCandidato({
-        id: candidato.id,
-        vacante_id: vacante_id,
-        nombre: nombre,
-        email: extractedEmail,
-        telefono: telefono,
-        cv_url: cvUrl,
-        score_ia: score_ia,
-        experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
-        recruiterEmail: vacanteOwner?.email,
-      });
-    } catch (syncError) {
-      console.error('[SYNC] Error sincronizando candidato:', syncError);
-      // No fallar si hay error en sync
-    }
+    syncCreateCandidato({
+      id: candidato.id,
+      vacante_id: vacante_id,
+      nombre: nombre,
+      email: extractedEmail,
+      telefono: telefono,
+      cv_url: cvUrl,
+      score_ia: score_ia,
+      experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
+      recruiterEmail: vacanteOwner?.email,
+    }).catch(err => {
+      console.error('[SYNC] Background sync error for candidato:', err);
+    });
 
     // ========== AUDIT LOG ==========
     logAuditEvent(

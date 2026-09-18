@@ -83,8 +83,10 @@ export async function POST(request: NextRequest) {
 
       const userEmail = user?.email || '';
 
-      // Sincronizar con ambas bases de datos (solo Godaddy si es lesters@furniturecity.com.gt)
-      await syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase());
+      // Sincronizar en background (sin bloquear respuesta)
+      syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase()).catch(err => {
+        console.error('[SYNC] Background sync error updating plan:', err);
+      });
     }
 
     console.log('[API] License code used successfully:', {
