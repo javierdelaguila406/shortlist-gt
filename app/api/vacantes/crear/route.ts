@@ -70,20 +70,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sincronizar con Godaddy (solo si es lesters@furniturecity.com.gt)
-    try {
-      await syncCreateVacante({
-        id: newId,
-        user_id: userId,
-        titulo: titulo.trim(),
-        descripcion: descripcion || '',
-        departamento: departamento || '',
-        userEmail: userEmail,
-      });
-    } catch (syncError) {
-      console.error('[SYNC] Error sincronizando vacante:', syncError);
-      // No fallar si hay error en sync
-    }
+    // Sincronizar con Godaddy en background (sin bloquear respuesta)
+    syncCreateVacante({
+      id: newId,
+      user_id: userId,
+      titulo: titulo.trim(),
+      descripcion: descripcion || '',
+      departamento: departamento || '',
+      userEmail: userEmail,
+    }).catch(err => {
+      console.error('[SYNC] Background sync error:', err);
+    });
 
     console.log('[API] Vacante creada en Supabase:', newId);
     return NextResponse.json({
