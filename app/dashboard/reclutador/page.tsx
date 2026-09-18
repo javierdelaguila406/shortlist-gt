@@ -155,6 +155,23 @@ export default function DemoDashboard() {
     };
 
     loadCandidates();
+
+    // Configurar escucha en tiempo real de Supabase
+    const subscription = supabase
+      .from('candidatos')
+      .on('*', (payload) => {
+        console.log('[REALTIME] Cambio detectado:', payload);
+        // Recargar candidatos cuando hay cambios
+        loadCandidates();
+      })
+      .subscribe();
+
+    // Limpiar suscripción al desmontar
+    return () => {
+      if (subscription) {
+        supabase.removeSubscription(subscription);
+      }
+    };
   }, [selectedVacanteId]);
 
   const getFilteredCandidates = () => {
