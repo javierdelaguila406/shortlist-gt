@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit } from '@/lib/rate-limit';
+import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -89,15 +91,40 @@ function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string):
 
 export async function POST(request: NextRequest) {
   try {
+    // ========== RATE LIMITING ==========
+    const ipAddress = request.headers.get('x-forwarded-for') ||
+                     request.headers.get('x-real-ip') ||
+                     '127.0.0.1';
+    const rateLimitResult = rateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
+
+    if (!rateLimitResult.success) {
+      console.warn('[SECURITY] Postular rate limit exceeded:', { ipAddress });
+      return NextResponse.json(
+        { error: 'Demasiadas postulaciones. Intenta más tarde.', success: false },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 3600),
+          }
+        }
+      );
+    }
+
     const formData = await request.formData();
-    const nombre = formData.get('nombre') as string;
-    const email = formData.get('email') as string;
-    const telefono = formData.get('telefono') as string;
+    const nombre = sanitizeInput(formData.get('nombre') as string);
+    const email = sanitizeInput(formData.get('email') as string);
+    const telefono = sanitizeInput(formData.get('telefono') as string);
     const experiencia_anos = formData.get('experiencia_anos') as string;
     const vacante_id = formData.get('vacante_id') as string;
     const cvText = formData.get('cvText') as string;
     const habilidades = formData.get('habilidades') as string;
     const cv = formData.get('cv') as File;
+
+    // ========== VALIDACIÓN DE SEGURIDAD ==========
+    if (!validateEmail(email)) {
+      logAuditEvent('postular', 'candidato', 'N/A', 'failure', { reason: 'invalid_email' }, undefined, ipAddress);
+      return NextResponse.json({ error: 'Email inválido', success: false }, { status: 400 });
+    }
 
     // Generar candidato_id al inicio (necesario para Storage)
     // Usar timestamp + random para evitar colisiones
@@ -223,6 +250,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API] Candidato guardado exitosamente:', candidato.id);
+
+    // ========== AUDIT LOG ==========
+    logAuditEvent(
+      'postular',
+      'candidato',
+      candidato.id,
+      'success',
+      { vacante_id, score: score_ia, estado },
+      undefined,
+      ipAddress
+    );
 
     return NextResponse.json({
       success: true,
