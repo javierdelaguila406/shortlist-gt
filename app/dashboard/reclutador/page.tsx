@@ -278,13 +278,15 @@ export default function DemoDashboard() {
   };
 
   const handleDeleteVacante = async (vacanteId: string) => {
-    if (!window.confirm('¿Cerrar esta plaza? El enlace de aplicación será bloqueado, pero podrás consultarla en el historial.')) {
+    const vacante = vacantes.find(v => v.id === vacanteId);
+    if (!window.confirm(`¿Cerrar la plaza "${vacante?.titulo || 'Sin título'}"?\n\n✓ El enlace de aplicación será bloqueado\n✓ Podrás consultarla en el historial\n✗ No podrás recibir más aplicaciones para esta plaza`)) {
       return;
     }
 
     setDeletingVacante(vacanteId);
+
     try {
-      // Crear lista de vacan tes cerradas
+      // Crear/actualizar lista de vacantes cerradas
       const cerradasLS = localStorage.getItem('vacantesCerradas') || '[]';
       const cerradas = JSON.parse(cerradasLS);
 
@@ -293,20 +295,43 @@ export default function DemoDashboard() {
         localStorage.setItem('vacantesCerradas', JSON.stringify(cerradas));
       }
 
+      // También guardar en Supabase si es posible
+      try {
+        await supabase
+          .from('vacantes')
+          .update({ estado: 'cerrada' })
+          .eq('id', vacanteId);
+        console.log('[CERRAR-VACANTE] Actualizado en Supabase:', vacanteId);
+      } catch (e) {
+        console.warn('[CERRAR-VACANTE] No se pudo actualizar en Supabase:', e);
+      }
+
       // Quitar de la lista visible
       const updatedVacantes = vacantes.filter(v => v.id !== vacanteId);
       setVacantes(updatedVacantes);
       localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
 
+      // Cambiar a otra vacante si la cerrada estaba seleccionada
       if (selectedVacanteId === vacanteId) {
-        setSelectedVacanteId(updatedVacantes[0]?.id || 'demo-1');
+        const nextVacante = updatedVacantes[0]?.id || 'demo-1';
+        setSelectedVacanteId(nextVacante);
       }
 
       setSelectedCandidate(null);
-      alert('✅ Plaza cerrada. El enlace de aplicación ha sido bloqueado.');
+
+      // Mostrar éxito con detalles
+      alert(`✅ Plaza Cerrada Exitosamente\n\n` +
+            `Plaza: "${vacante?.titulo || 'Sin título'}"\n` +
+            `Enlace de aplicación: BLOQUEADO\n` +
+            `Historial: Conservado para consultas futuras`);
+
+      console.log('[CERRAR-VACANTE] Plaza cerrada exitosamente:', {
+        vacanteId,
+        titulo: vacante?.titulo
+      });
     } catch (error) {
       console.error('[CERRAR-VACANTE] Error:', error);
-      alert('❌ Error cerrando la plaza');
+      alert(`❌ Error cerrando la plaza\n\n${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setDeletingVacante(null);
     }

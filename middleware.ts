@@ -27,13 +27,44 @@ const publicRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Crear respuesta base
+  const response = NextResponse.next();
+
+  // ========== SEGURIDAD: CORS ==========
+  const origin = request.headers.get('origin');
+  const allowedOrigins = [
+    'https://shortlist-gt.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:3001'
+  ];
+
+  if (origin && allowedOrigins.includes(origin)) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+  }
+
+  // ========== SEGURIDAD: Security Headers ==========
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+
+  // ========== SEGURIDAD: Content Security Policy ==========
+  response.headers.set(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://supabase.co"
+  );
+
   // Verificar si es ruta pública PRIMERO (tiene prioridad)
   const isPublicRoute = publicRoutes.some(route =>
     pathname === route || pathname.startsWith(route)
   );
 
   if (isPublicRoute) {
-    return NextResponse.next();
+    return response;
   }
 
   // Verificar si es ruta protegida
@@ -56,7 +87,7 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 function isValidToken(token: string): boolean {
