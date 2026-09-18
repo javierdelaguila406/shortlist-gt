@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
+// Removed mockData imports - using only Supabase data
 import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
 import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
@@ -50,7 +50,7 @@ export default function DemoDashboard() {
   const [showCreateVacante, setShowCreateVacante] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
-  const [vacantes, setVacantes] = useState<Vacante[]>(mockVacantes);
+  const [vacantes, setVacantes] = useState<Vacante[]>([]);
   const [showLinkedinLink, setShowLinkedinLink] = useState(false);
   const [linkedinData, setLinkedinData] = useState<any>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -68,17 +68,9 @@ export default function DemoDashboard() {
 
   useEffect(() => {
     const loadVacantes = async () => {
-      // 1. Load mock vacantes
-      let allVacantes: Vacante[] = mockVacantes as Vacante[];
+      // Only load from Supabase (no mock data)
+      let allVacantes: Vacante[] = [];
 
-      // 2. Load from localStorage
-      const savedVacantes = localStorage.getItem('vacantes');
-      if (savedVacantes) {
-        const parsed = JSON.parse(savedVacantes);
-        allVacantes = [...allVacantes, ...parsed];
-      }
-
-      // 3. Load from Supabase
       try {
         const { data, error } = await supabase
           .from('vacantes')
@@ -91,7 +83,7 @@ export default function DemoDashboard() {
             descripcion: v.descripcion,
             departamento: v.departamento,
           }));
-          allVacantes = [...allVacantes, ...supabaseVacantes];
+          allVacantes = supabaseVacantes;
         }
       } catch (e) {
         console.error('[DASHBOARD] Error loading vacantes from Supabase:', e);
@@ -101,8 +93,40 @@ export default function DemoDashboard() {
       const uniqueVacantes = Array.from(new Map(allVacantes.map(v => [v.id, v])).values());
       setVacantes(uniqueVacantes);
 
-      const license = getUserLicenseFromStorage();
-      setUserLicense(license);
+      // Load user plan from Supabase (not localStorage)
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: company } = await supabase
+            .from('companies')
+            .select('plan')
+            .eq('user_id', user.id)
+            .single();
+
+          if (company) {
+            // Map plan to legacy license format for compatibility
+            const planType = company.plan === 'premium' ? 'PREMIUM' : 'DEMO';
+            setUserLicense({
+              codigo: planType,
+              tipo: planType as 'DEMO' | 'TRIAL' | 'PREMIUM',
+              maxVacantes: planType === 'PREMIUM' ? 999 : 1,
+              vacantesCreadoras: 0,
+              activo: true,
+            });
+            console.log('[DASHBOARD] Plan cargado desde BD:', planType);
+          }
+        }
+      } catch (e) {
+        console.error('[DASHBOARD] Error loading user plan:', e);
+        // Fallback to DEMO if error
+        setUserLicense({
+          codigo: 'DEMO',
+          tipo: 'DEMO',
+          maxVacantes: 1,
+          vacantesCreadoras: 0,
+          activo: true,
+        });
+      }
 
       // Check if coming back from postulation
       if (typeof window !== 'undefined') {
@@ -176,10 +200,9 @@ export default function DemoDashboard() {
   }, [selectedVacanteId]);
 
   const getFilteredCandidates = () => {
-    // Use candidates from Supabase + mock candidates
-    const allCandidates = [...mockCandidates, ...supabaseCandidates];
-    console.log('[DASHBOARD] Candidatos totales (mock + supabase):', allCandidates);
-    return allCandidates;
+    // Use only Supabase candidates (no mock data)
+    console.log('[DASHBOARD] Candidatos desde Supabase:', supabaseCandidates.length);
+    return supabaseCandidates;
   };
 
   const selectedVacante = useMemo(

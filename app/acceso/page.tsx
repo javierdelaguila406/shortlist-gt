@@ -58,10 +58,13 @@ export default function AccesoPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-4">
       <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2">
+        <button
+          onClick={() => router.back()}
+          className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2"
+        >
           <ArrowLeft className="w-4 h-4" />
-          Volver al inicio
-        </Link>
+          Volver
+        </button>
 
         {step === 'choose' && (
           <div className="space-y-6">

@@ -1,0 +1,73 @@
+📋 INFORMACIÓN NECESARIA DE TU GODADDY
+
+Hola! Para conectar SHORTLIST.GT con tu servidor de Godaddy, necesito que me proporciones estos datos:
+
+═══════════════════════════════════════════════════
+
+🔐 DATOS DE BASE DE DATOS MySQL
+
+1. HOST/SERVIDOR
+   (Ejemplo: mysql123.godaddy.com)
+https://account.godaddy.com/products
+2. USUARIO DE BASE DE DATOS
+   (Ejemplo: empresa_user)
+lesters@furniturecity.com.gt
+3. CONTRASEÑA DE BASE DE DATOS
+   (Ejemplo: ••••••••••)
+pass: s?Pmw+sH6];:Q$5
+4. NOMBRE DE LA BASE DE DATOS
+   (Ejemplo: empresa_db)
+
+5. PUERTO
+   (Generalmente: 3306)
+
+═══════════════════════════════════════════════════
+
+🔑 DATOS DE FTP/SSH
+
+6. HOST FTP/SSH
+   (Ejemplo: ftp.tudominio.com)
+
+7. USUARIO FTP/SSH
+   (Ejemplo: empresa_ftp)
+
+8. CONTRASEÑA FTP/SSH
+   (Ejemplo: ••••••••••)
+
+9. PUERTO SSH
+   (Generalmente: 22)
+
+═══════════════════════════════════════════════════
+
+📍 INFORMACIÓN ADICIONAL
+
+10. TU DOMINIO
+    (Ejemplo: tuempresa.com)
+https://account.godaddy.com/products
+11. TIPO DE SERVIDOR
+    (¿Linux o Windows?)
+windows
+═══════════════════════════════════════════════════
+
+❓ ¿DÓNDE LO ENCUENTRO?
+
+Entra a tu panel de Godaddy → cPanel
+- Base de datos: busca "MySQL Databases"
+- FTP/SSH: busca "FTP Accounts" o "SSH Access"
+
+Si no lo encuentras, puedes:
+1. Contactar al chat de soporte de Godaddy
+2. Decirles: "Necesito las credenciales de MySQL y FTP para mi aplicación web"
+3. Te lo envían en 5 minutos
+
+═══════════════════════════════════════════════════
+
+⚠️ IMPORTANTE
+
+- NO compartas esto en emails públicos
+- Usa WhatsApp o llamada
+- Estos datos son solo para conectar tu servidor
+
+═══════════════════════════════════════════════════
+
+Una vez que tengas todos estos datos, comparte conmigo y podemos conectar SHORTLIST.GT con tu servidor de Godaddy! 🚀
