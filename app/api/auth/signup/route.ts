@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
 
@@ -72,11 +73,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Crear registro de empresa en plan DEMO
+    if (authData.user) {
+      try {
+        const supabaseService = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        );
+
+        await supabaseService
+          .from('companies')
+          .insert({
+            user_id: authData.user.id,
+            email: email,
+            nombre: nombre,
+            plan: 'demo',
+            created_at: new Date().toISOString(),
+          });
+      } catch (dbError) {
+        console.error('[SECURITY] Error creating company record:', {
+          error: dbError instanceof Error ? dbError.message : 'Unknown error',
+          userId: authData.user.id,
+          timestamp: new Date().toISOString(),
+        });
+        // No impedir el registro si hay error en companies, solo loguear
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
         user: authData.user,
         message: 'Registro exitoso. Por favor confirma tu email.',
+        plan: 'demo',
       },
       { status: 201 }
     );

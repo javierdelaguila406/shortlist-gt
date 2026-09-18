@@ -157,6 +157,42 @@ export async function POST(request: NextRequest) {
       }, { status: 410 }); // 410 Gone - El recurso ya no está disponible
     }
 
+    // VALIDACIÓN DE PLAN: Verificar límite de candidatos en DEMO
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const token = authHeader.substring(7);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (user && !authError) {
+          // Obtener plan del usuario
+          const { data: company } = await supabase
+            .from('companies')
+            .select('plan')
+            .eq('user_id', user.id)
+            .single();
+
+          if (company?.plan === 'demo') {
+            // En DEMO: máximo 1 candidato TOTAL
+            const { count: candidatoCount } = await supabase
+              .from('candidatos')
+              .select('*', { count: 'exact', head: true });
+
+            if (candidatoCount && candidatoCount >= 1) {
+              return NextResponse.json({
+                error: 'Has alcanzado el límite de 1 candidato en el plan Demo. Actualiza a Premium para continuar.',
+                success: false,
+                plan: 'demo',
+              }, { status: 403 });
+            }
+          }
+        }
+      } catch (planCheckError) {
+        console.log('[API] Error checking plan (continuing):', planCheckError);
+        // Continuar sin validación si hay error
+      }
+    }
+
     // Usar cvText + habilidades para análisis
     let finalCVText = (cvText || '').trim();
     let cvUrl = '';

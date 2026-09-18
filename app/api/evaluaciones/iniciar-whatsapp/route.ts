@@ -38,6 +38,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // VALIDACIÓN DE PLAN: WhatsApp solo en PREMIUM
+    if (auth.userId) {
+      try {
+        const { createClient } = require('@supabase/supabase-js');
+        const supabaseService = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+        );
+
+        const { data: company } = await supabaseService
+          .from('companies')
+          .select('plan')
+          .eq('user_id', auth.userId)
+          .single();
+
+        if (company?.plan === 'demo') {
+          return NextResponse.json(
+            {
+              error: 'Las evaluaciones por WhatsApp solo están disponibles en el plan Premium.',
+              success: false,
+              plan: 'demo',
+            },
+            { status: 403 }
+          );
+        }
+      } catch (planCheckError) {
+        console.log('[API] Error checking plan for WhatsApp:', planCheckError);
+        // Continuar sin validación si hay error
+      }
+    }
+
     const { candidatoId } = await request.json();
 
     if (!candidatoId) {
