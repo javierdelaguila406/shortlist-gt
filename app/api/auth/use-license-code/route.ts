@@ -5,9 +5,9 @@ export async function POST(request: NextRequest) {
   try {
     const { codigo, userId } = await request.json();
 
-    if (!codigo || !userId) {
+    if (!codigo) {
       return NextResponse.json(
-        { error: 'Código y usuario requeridos', success: false },
+        { error: 'Código requerido', success: false },
         { status: 400 }
       );
     }
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       .from('license_codes')
       .update({
         status: 'used',
-        used_by_user_id: userId,
+        used_by_user_id: userId || null,
         used_at: new Date().toISOString(),
       })
       .eq('id', licenseCode.id);
@@ -71,22 +71,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Actualizar el plan del usuario a premium
-    const { error: userUpdateError } = await supabase
-      .from('companies')
-      .update({
-        plan: 'premium',
-        license_code_used: codigo.trim().toUpperCase(),
-        plan_upgraded_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId);
+    // Actualizar el plan del usuario a premium (solo si userId existe)
+    if (userId) {
+      const { error: userUpdateError } = await supabase
+        .from('companies')
+        .update({
+          plan: 'premium',
+          license_code_used: codigo.trim().toUpperCase(),
+          plan_upgraded_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
 
-    if (userUpdateError) {
-      console.error('[SECURITY] Error updating user plan:', userUpdateError);
-      return NextResponse.json(
-        { error: 'Error al activar premium', success: false },
-        { status: 500 }
-      );
+      if (userUpdateError) {
+        console.error('[SECURITY] Error updating user plan:', userUpdateError);
+        // No fallar si no se puede actualizar el plan, el código ya está marcado como usado
+      }
     }
 
     console.log('[API] License code used successfully:', {
