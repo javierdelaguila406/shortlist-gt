@@ -293,7 +293,7 @@ export async function POST(request: NextRequest) {
     const { data: vacanteOwner } = await supabase
       .from('companies')
       .select('email')
-      .eq('user_id', vacanteData.user_id)
+      .eq('user_id', vacanteData.usuario_id)
       .single();
 
     syncCreateCandidato({
