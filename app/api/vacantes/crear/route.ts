@@ -76,12 +76,15 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    console.log('[API] Insertando vacante:', { newId, userId, titulo: titulo.trim() });
+    console.log('[API] STEP 1 - Preparando insert:', { id: newId, usuario_id: userId, titulo });
+    console.log('[API] STEP 2 - Objeto vacante:', JSON.stringify(vacante));
 
     const { error: insertError, data: insertedData } = await supabase
       .from('vacantes')
       .insert([vacante])
       .select();
+
+    console.log('[API] STEP 3 - Respuesta del insert:', { error: insertError?.message, dataLength: insertedData?.length });
 
     if (insertError) {
       console.error('[API] ❌ ERROR inserting vacante:', {
@@ -95,7 +98,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[API] ✅ Vacante insertada:', { id: newId, titulo: titulo.trim() });
+    console.log('[API] ✅ VACANTE GUARDADA EN BD:', { id: newId, insertedRows: insertedData?.length });
 
     // Sincronizar con Godaddy en background (sin bloquear respuesta)
     syncCreateVacante({
