@@ -42,18 +42,18 @@ export async function POST(request: NextRequest) {
   console.log('✅ Email:', user.email);
 
   // Verificar si existe en companies
-  const { data: company } = await supabase
+  const { data: companies } = await supabase
     .from('companies')
     .select('*')
     .eq('user_id', user.id);
 
-  console.log('📋 En tabla companies:', company?.length > 0 ? 'SÍ' : 'NO');
+  console.log('📋 En tabla companies:', companies && companies.length > 0 ? 'SÍ' : 'NO');
 
   return NextResponse.json({
     success: true,
     user_id: user.id,
     email: user.email,
-    inCompanies: company && company.length > 0,
-    companyData: company && company[0],
+    inCompanies: companies && companies.length > 0,
+    companyData: companies && companies[0],
   });
 }
