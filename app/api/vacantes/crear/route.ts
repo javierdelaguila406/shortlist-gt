@@ -70,21 +70,22 @@ export async function POST(request: NextRequest) {
       descripcion: descripcion || '',
       departamento: departamento || '',
       usuario_id: userId,
+      estado: 'abierta',
       created_at: new Date().toISOString(),
     };
 
+    console.log('[API] Insertando vacante:', { newId, userId, titulo: titulo.trim() });
+
     const { error: insertError, data: insertedData } = await supabase
       .from('vacantes')
-      .insert([vacante]);
+      .insert([vacante])
+      .select();
 
     if (insertError) {
-      console.error('[API] Error inserting vacante:', {
-        error: insertError,
+      console.error('[API] ❌ ERROR inserting vacante:', {
         message: insertError.message,
         code: insertError.code,
         details: insertError.details,
-        hint: insertError.hint,
-        vacante: vacante
       });
       return NextResponse.json(
         { error: 'Error al crear vacante', details: insertError.message, success: false },
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[API] Vacante inserted successfully:', { id: newId, data: insertedData });
+    console.log('[API] ✅ Vacante insertada:', { id: newId, titulo: titulo.trim() });
 
     // Sincronizar con Godaddy en background (sin bloquear respuesta)
     syncCreateVacante({
