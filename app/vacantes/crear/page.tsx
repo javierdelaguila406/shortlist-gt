@@ -26,10 +26,27 @@ export default function CrearVacantePage() {
         return;
       }
 
+      // Obtener el token del localStorage o cookie de Supabase
+      let token = '';
+      try {
+        const authData = localStorage.getItem('supabase.auth.token');
+        if (authData) {
+          const parsed = JSON.parse(authData);
+          token = parsed.session?.access_token || '';
+        }
+      } catch (e) {
+        console.log('No token found in localStorage');
+      }
+
       // Call API to save to Supabase
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/vacantes/crear', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           titulo: titulo.trim(),
           descripcion,
