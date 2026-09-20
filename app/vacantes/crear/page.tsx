@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from 'react';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
 export default function CrearVacantePage() {
   // Force rebuild v2
@@ -26,23 +27,21 @@ export default function CrearVacantePage() {
         return;
       }
 
-      // Obtener el token del localStorage o cookie de Supabase
-      let token = '';
-      try {
-        const authData = localStorage.getItem('supabase.auth.token');
-        if (authData) {
-          const parsed = JSON.parse(authData);
-          token = parsed.session?.access_token || '';
-        }
-      } catch (e) {
-        console.log('No token found in localStorage');
+      // Obtener el token de la sesión de Supabase
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        setError('No estás autenticado. Por favor inicia sesión primero.');
+        setLoading(false);
+        return;
       }
 
+      const token = sessionData.session.access_token;
+
       // Call API to save to Supabase
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
 
       const response = await fetch('/api/vacantes/crear', {
         method: 'POST',
