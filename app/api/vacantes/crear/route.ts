@@ -46,14 +46,16 @@ export async function POST(request: NextRequest) {
 
       userId = user.id;
 
-      // Obtener email del usuario
-      const { data: company } = await supabase
+      // Obtener email del usuario (opcional - no requerido para crear vacante)
+      const { data: companies, error: companyError } = await supabase
         .from('companies')
         .select('email')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
-      userEmail = company?.email || '';
+      if (!companyError && companies && companies.length > 0) {
+        userEmail = companies[0].email;
+      }
+      console.log('[API] Usuario email obtenido:', userEmail || '(no encontrado)');
     } catch (authCheckError) {
       console.error('[API] Error verifying auth:', authCheckError);
       return NextResponse.json(
