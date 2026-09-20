@@ -19,31 +19,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener usuario autenticado del header
+    // Obtener usuario autenticado del header (REQUERIDO)
     const authHeader = request.headers.get('authorization');
-    let userId = 'public';
+    if (!authHeader?.startsWith('Bearer ')) {
+      console.error('[API] No authorization header provided');
+      return NextResponse.json(
+        { error: 'Se requiere autenticación', success: false },
+        { status: 401 }
+      );
+    }
+
+    let userId: string;
     let userEmail = '';
 
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.substring(7);
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    try {
+      const token = authHeader.substring(7);
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
-        if (user && !authError) {
-          userId = user.id;
-
-          // Obtener email del usuario
-          const { data: company } = await supabase
-            .from('companies')
-            .select('email')
-            .eq('user_id', user.id)
-            .single();
-
-          userEmail = company?.email || '';
-        }
-      } catch (authCheckError) {
-        console.log('[API] Error checking auth (continuing with public):', authCheckError);
+      if (!user || authError) {
+        console.error('[API] Invalid auth token:', authError);
+        return NextResponse.json(
+          { error: 'Token inválido', success: false },
+          { status: 401 }
+        );
       }
+
+      userId = user.id;
+
+      // Obtener email del usuario
+      const { data: company } = await supabase
+        .from('companies')
+        .select('email')
+        .eq('user_id', user.id)
+        .single();
+
+      userEmail = company?.email || '';
+    } catch (authCheckError) {
+      console.error('[API] Error verifying auth:', authCheckError);
+      return NextResponse.json(
+        { error: 'Error de autenticación', success: false },
+        { status: 401 }
+      );
     }
 
     const newId = `vacante-${Date.now()}`;
