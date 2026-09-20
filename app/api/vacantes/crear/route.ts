@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       descripcion: descripcion || '',
       departamento: departamento || '',
       usuario_id: userId,
-      estado: 'abierta',
+      estado: 'activa',
       created_at: new Date().toISOString(),
     };
 
