@@ -28,20 +28,29 @@ export default function CrearVacantePage() {
       }
 
       // Obtener el token de la sesión de Supabase
+      console.log('[FORM] Obteniendo sesión de Supabase...');
       const { data: sessionData } = await supabase.auth.getSession();
+      console.log('[FORM] sessionData:', sessionData?.session ? 'EXISTE' : 'NO EXISTE');
+
       if (!sessionData.session) {
+        console.error('[FORM] No hay sesión activa');
         setError('No estás autenticado. Por favor inicia sesión primero.');
         setLoading(false);
         return;
       }
 
       const token = sessionData.session.access_token;
+      console.log('[FORM] Token obtenido:', token ? 'SÍ' : 'NO');
 
       // Call API to save to Supabase
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       };
+
+      console.log('[FORM] Enviando POST a /api/vacantes/crear');
+      console.log('[FORM] Headers:', { Authorization: headers['Authorization'] ? 'Bearer <token>' : 'NO' });
+      console.log('[FORM] Body:', { titulo: titulo.trim(), descripcion, departamento });
 
       const response = await fetch('/api/vacantes/crear', {
         method: 'POST',
@@ -53,7 +62,9 @@ export default function CrearVacantePage() {
         }),
       });
 
+      console.log('[FORM] Respuesta status:', response.status);
       const data = await response.json();
+      console.log('[FORM] Respuesta data:', data);
 
       if (!response.ok || !data.success) {
         setError(data.error || 'Error al crear vacante');
