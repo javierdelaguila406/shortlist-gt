@@ -87,13 +87,22 @@ export async function POST(request: NextRequest) {
     console.log('[API] STEP 3 - Respuesta del insert:', { error: insertError?.message, dataLength: insertedData?.length });
 
     if (insertError) {
-      console.error('[API] ❌ ERROR inserting vacante:', {
+      const errorDetails = {
         message: insertError.message,
         code: insertError.code,
         details: insertError.details,
-      });
+        hint: insertError.hint,
+        fullError: JSON.stringify(insertError),
+      };
+      console.error('[API] ❌ ERROR inserting vacante:', errorDetails);
       return NextResponse.json(
-        { error: 'Error al crear vacante', details: insertError.message, success: false },
+        {
+          error: 'Error al crear vacante en BD',
+          details: insertError.message,
+          code: insertError.code,
+          hint: insertError.hint,
+          success: false
+        },
         { status: 500 }
       );
     }
