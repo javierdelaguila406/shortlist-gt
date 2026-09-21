@@ -32,11 +32,16 @@ export function middleware(request: NextRequest) {
 
   // ========== SEGURIDAD: CORS ==========
   const origin = request.headers.get('origin');
-  const allowedOrigins = [
-    'https://shortlist-gt.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:3001'
-  ];
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const allowedOrigins = isDevelopment
+    ? [
+        'https://shortlist-gt.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:3001'
+      ]
+    : [
+        'https://shortlist-gt.vercel.app'
+      ];
 
   if (origin && allowedOrigins.includes(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);

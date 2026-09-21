@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
 
@@ -8,12 +9,61 @@ import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
  */
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Configuración faltante' },
+        { status: 500 }
+      );
+    }
+
+    const authSupabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: userError } = await authSupabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { vacante_id, categoria_template } = await request.json();
 
     if (!vacante_id || !categoria_template) {
       return NextResponse.json(
         { error: 'Faltan datos: vacante_id, categoria_template' },
         { status: 400 }
+      );
+    }
+
+    const { data: vacante, error: vacanteError } = await authSupabase
+      .from('vacantes')
+      .select('usuario_id')
+      .eq('id', vacante_id)
+      .single();
+
+    if (vacanteError || !vacante) {
+      return NextResponse.json(
+        { error: 'Vacante no encontrada' },
+        { status: 404 }
+      );
+    }
+
+    if (vacante.usuario_id !== userData.user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
       );
     }
 

@@ -1,8 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        { error: 'Configuración faltante' },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { vacanteId, titulo, descripcion, departamento } = await request.json();
+
+    const { data: vacante, error: vacanteError } = await supabase
+      .from('vacantes')
+      .select('id')
+      .eq('id', vacanteId)
+      .single();
+
+    if (vacanteError || !vacante) {
+      return NextResponse.json(
+        { error: 'Vacante no encontrada' },
+        { status: 404 }
+      );
+    }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://shortlist-gt.vercel.app';
     const aplicarLink = `${baseUrl}/postular/${vacanteId}`;

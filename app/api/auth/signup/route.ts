@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { rateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
@@ -50,11 +51,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (authError) {
-      // Log interno
+      // Log interno (with hashed email for PII protection)
+      const emailHash = createHash('sha256').update(email).digest('hex');
       console.error('[SECURITY] Signup error:', {
         error: authError.message,
         code: authError.status,
-        email,
+        email: emailHash,
         timestamp: new Date().toISOString(),
         ipAddress,
       });
