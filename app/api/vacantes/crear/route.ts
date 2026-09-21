@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { syncCreateVacante } from '@/lib/dual-sync';
+import { logAuditEvent } from '@/lib/audit';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -117,6 +118,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[API] ✅ VACANTE GUARDADA EN BD:', { id: newId, insertedRows: insertedData?.length });
+    await logAuditEvent({ action: 'CREATE', userId, resourceId: newId, resourceType: 'vacante', changes: { estado: vacante.estado } });
 
     // Sincronizar con Godaddy en background (sin bloquear respuesta)
     syncCreateVacante({

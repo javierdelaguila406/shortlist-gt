@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { syncUpdatePlan } from '@/lib/dual-sync';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = userData.user.id;
-    const rateLimitResult = rateLimit(`license-code:${userId}`, 5, 3600000);
+    const rateLimitResult = await persistentRateLimit(`license-code:${userId}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Demasiados intentos. Intenta más tarde.', success: false },

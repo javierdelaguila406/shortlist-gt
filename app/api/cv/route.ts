@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { PDFParse } from 'pdf-parse';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024;
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
   const supabase = createClient(url, serviceRole);
   const { data: authData, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
   if (authError || !authData.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  if (!rateLimit(`cv-analysis:${authData.user.id}`, 10, 3600000).success) {
+  if (!(await persistentRateLimit(`cv-analysis:${authData.user.id}`, 10, 86400000)).success) {
     return NextResponse.json({ error: 'Demasiadas solicitudes' }, { status: 429 });
   }
 

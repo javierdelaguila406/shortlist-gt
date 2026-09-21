@@ -262,6 +262,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       formDataToSend.append('experiencia_anos', formData.experiencia_anos);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
       formDataToSend.append('cvText', formData.cvText);
+      formDataToSend.append('consentimiento', String(formData.consentimiento));
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
       const response = await fetch('/api/candidatos/postular', {

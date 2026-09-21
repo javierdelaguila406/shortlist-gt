@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
+import { logAuditEvent } from '@/lib/audit';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
 import { randomUUID } from 'node:crypto';
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const rateLimitResult = rateLimit(`candidate-export:${userData.user.id}`, 5, 3600000);
+    const rateLimitResult = await persistentRateLimit(`candidate-export:${userData.user.id}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Intenta más tarde.' },
@@ -77,6 +78,10 @@ export async function POST(request: NextRequest) {
       const startedAt = Date.now();
       const reportId = randomUUID();
       const rows = buildReportRows(candidatos || []);
+      await logAuditEvent({
+        action: 'READ', userId: userData.user.id, resourceId: reportId, resourceType: 'reporte',
+        changes: { vacante_id, formato, desde, hasta, registros: rows.length },
+      });
 
       console.log('[Report] Generated', {
         reportId, userId: userData.user.id, vacante_id, formato,

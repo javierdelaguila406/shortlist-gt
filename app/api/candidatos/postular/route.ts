@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 import { syncCreateCandidato } from '@/lib/dual-sync';
+import { logAuditEvent as persistAuditEvent } from '@/lib/audit';
 
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
@@ -120,6 +121,11 @@ export async function POST(request: NextRequest) {
     const cvText = formData.get('cvText') as string;
     const habilidades = formData.get('habilidades') as string;
     const cv = formData.get('cv') as File;
+    const consentimiento = formData.get('consentimiento') === 'true';
+
+    if (!consentimiento) {
+      return NextResponse.json({ error: 'Debes aceptar los términos de privacidad', success: false }, { status: 400 });
+    }
 
     // ========== VALIDACIÓN DE SEGURIDAD ==========
     if (!validateEmail(email)) {
@@ -143,6 +149,8 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const privacyClient = serviceRole ? createClient(supabaseUrl, serviceRole) : supabase;
 
     const { data: vacanteData } = await supabase
       .from('vacantes')
@@ -160,6 +168,26 @@ export async function POST(request: NextRequest) {
         error: 'La vacante está cerrada y no acepta más aplicaciones',
         success: false
       }, { status: 410 }); // 410 Gone - El recurso ya no está disponible
+    }
+
+    let consentUserId = candidato_id;
+    const consentAuthHeader = request.headers.get('authorization');
+    if (consentAuthHeader?.startsWith('Bearer ')) {
+      const { data: consentAuth } = await privacyClient.auth.getUser(consentAuthHeader.slice(7));
+      if (consentAuth.user) consentUserId = consentAuth.user.id;
+    }
+    const { error: consentError } = await privacyClient.from('consent_log').insert({
+      usuario_id: consentUserId,
+      vacante_id,
+      tipo: 'postulacion',
+      aceptado: true,
+      ip_address: ipAddress,
+      user_agent: request.headers.get('user-agent') || 'unknown',
+      timestamp: new Date().toISOString(),
+    });
+    if (consentError) {
+      console.error('[Consent] Persistent record failed', { userId: consentUserId, vacancyId: vacante_id });
+      return NextResponse.json({ error: 'No se pudo registrar el consentimiento', success: false }, { status: 500 });
     }
 
     // VALIDACIÓN DE PLAN: Verificar límite de candidatos en DEMO
@@ -326,6 +354,10 @@ export async function POST(request: NextRequest) {
       undefined,
       ipAddress
     );
+    await persistAuditEvent({
+      action: 'CREATE', userId: consentUserId, resourceId: candidato.id,
+      resourceType: 'candidato', changes: { vacante_id, estado },
+    });
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logAuditEvent } from '@/lib/audit';
+import { syncDeleteVacante } from '@/lib/dual-sync';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -91,6 +93,13 @@ export async function DELETE(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    const mirrorDeleted = await syncDeleteVacante(vacante_id);
+    if (!mirrorDeleted) console.error('[SYNC] Mirror deletion failed', { vacancyId: vacante_id });
+    await logAuditEvent({
+      action: 'DELETE', userId: userData.user.id, resourceId: vacante_id,
+      resourceType: 'vacante', changes: { reason: 'user_deletion' },
+    });
 
     console.log('[API] Vacante eliminada:', vacante_id);
     return NextResponse.json({
