@@ -5,7 +5,7 @@ import { persistentRateLimit } from '@/lib/rate-limit';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024;
 
-export function calculateCVScore(text: string) {
+function calculateCVScore(text: string) {
   const normalized = text.toLocaleLowerCase('es');
   const skills = ['typescript', 'react', 'nodejs', 'python', 'sql'];
   const keywordScore = skills.reduce((score, skill) => score + (normalized.includes(skill) ? 10 : 0), 0);
