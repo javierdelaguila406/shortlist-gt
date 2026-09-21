@@ -38,10 +38,6 @@ function DashboardContent() {
     candidatos: 0,
   });
 
-  useEffect(() => {
-    fetchVacantes();
-  }, []);
-
   const fetchVacantes = async () => {
     try {
       const { data: sessionData } = await (
@@ -65,8 +61,8 @@ function DashboardContent() {
       setVacantes(data.vacantes || []);
       setStats({
         total: data.vacantes?.length || 0,
-        activas: data.vacantes?.filter((v: any) => v.estado === 'activa').length || 0,
-        candidatos: data.vacantes?.reduce((sum: number, v: any) => sum + (v._candidatos_count || 0), 0) || 0,
+        activas: data.vacantes?.filter((v: Vacante) => v.estado === 'activa').length || 0,
+        candidatos: data.vacantes?.reduce((sum: number, v: Vacante) => sum + (v._candidatos_count || 0), 0) || 0,
       });
     } catch (error) {
       console.error('Error fetching vacantes:', error);
@@ -74,6 +70,10 @@ function DashboardContent() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchVacantes();
+  }, []);
 
   const handleLogout = async () => {
     await signOut();

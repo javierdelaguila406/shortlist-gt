@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEvaluationStart } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
@@ -17,7 +18,7 @@ async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    const supabaseClient = require('@supabase/supabase-js').createClient(supabaseUrl, supabaseAnonKey);
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     const { data, error } = await supabaseClient.auth.getUser(token);
     if (error || !data.user) return { valid: false };
@@ -41,7 +42,6 @@ export async function POST(request: NextRequest) {
     // VALIDACIÓN DE PLAN: WhatsApp solo en PREMIUM
     if (auth.userId) {
       try {
-        const { createClient } = require('@supabase/supabase-js');
         const supabaseService = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL || '',
           process.env.SUPABASE_SERVICE_ROLE_KEY || ''
