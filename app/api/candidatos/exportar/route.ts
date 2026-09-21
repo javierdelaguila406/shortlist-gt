@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/rate-limit';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
-
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+import { randomUUID } from 'node:crypto';
+import { buildReportRows, REPORT_HEADERS, validateReportRange } from '@/lib/reporting';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,19 +40,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, telefono, vacante_id, formato, desde, hasta } = await request.json();
+    const { email, telefono, vacante_id, formato, desde, hasta, estado } = await request.json();
 
     if (vacante_id) {
-      if (!['excel', 'pdf'].includes(formato) || !ISO_DATE.test(desde) || !ISO_DATE.test(hasta)) {
-        return NextResponse.json({ error: 'Parámetros de exportación inválidos' }, { status: 400 });
-      }
-
-      if (desde > hasta) {
-        return NextResponse.json(
-          { error: 'Fecha inicial debe ser anterior a final' },
-          { status: 400 }
-        );
-      }
+      if (!['excel', 'pdf'].includes(formato)) return NextResponse.json({ error: 'Formato inválido' }, { status: 400 });
+      const rangeError = validateReportRange(desde, hasta);
+      if (rangeError) return NextResponse.json({ error: rangeError }, { status: 400 });
 
       const { data: vacante } = await supabase
         .from('vacantes')
@@ -68,36 +61,37 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
 
-      const { data: candidatos, error: exportError } = await supabase
+      let candidateQuery = supabase
         .from('candidatos')
         .select('email, nombre, estado, score_total, score_ia, created_at')
         .eq('vacante_id', vacante_id)
         .gte('created_at', `${desde}T00:00:00.000Z`)
-        .lte('created_at', `${hasta}T23:59:59.999Z`)
-        .order('created_at', { ascending: true });
+        .lte('created_at', `${hasta}T23:59:59.999Z`);
+      if (estado) candidateQuery = candidateQuery.eq('estado', estado);
+      const { data: candidatos, error: exportError } = await candidateQuery.order('created_at', { ascending: true });
 
       if (exportError) {
         return NextResponse.json({ error: 'Error al consultar candidatos' }, { status: 500 });
       }
 
-      const rows = (candidatos || []).map((candidate) => ({
-        email: candidate.email || '',
-        nombre: candidate.nombre || '',
-        estado: candidate.estado || '',
-        score_total: candidate.score_total ?? candidate.score_ia ?? '',
-        fecha_postulacion: candidate.created_at || '',
-      }));
+      const startedAt = Date.now();
+      const reportId = randomUUID();
+      const rows = buildReportRows(candidatos || []);
 
-      console.log('[Export] Candidate rows exported', { count: rows.length, vacancyId: vacante_id });
+      console.log('[Report] Generated', {
+        reportId, userId: userData.user.id, vacante_id, formato,
+        startDate: desde, endDate: hasta, timestamp: new Date().toISOString(),
+      });
 
       if (formato === 'excel') {
         const worksheet = XLSX.utils.json_to_sheet(rows, {
-          header: ['email', 'nombre', 'estado', 'score_total', 'fecha_postulacion'],
+          header: [...REPORT_HEADERS],
         });
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidatos');
         const file = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
+        console.log('[Report] Completed', { reportId, candidatesCount: rows.length, durationMs: Date.now() - startedAt, fileSize: file.length });
         return new NextResponse(new Uint8Array(file), {
           status: 200,
           headers: {
@@ -109,16 +103,22 @@ export async function POST(request: NextRequest) {
 
       const document = new jsPDF();
       document.text(`Candidatos - ${vacante.titulo || vacante_id}`, 10, 15);
-      document.text('Email | Nombre | Estado | Puntaje | Fecha', 10, 25);
+      document.text(REPORT_HEADERS.join(' | '), 10, 25);
       rows.forEach((row, index) => {
+        const pageRow = index % 28;
+        if (index > 0 && pageRow === 0) {
+          document.addPage();
+          document.text(REPORT_HEADERS.join(' | '), 10, 15);
+        }
         document.text(
           `${row.email} | ${row.nombre} | ${row.estado} | ${row.score_total} | ${row.fecha_postulacion}`,
           10,
-          35 + index * 8,
+          35 + pageRow * 8,
           { maxWidth: 190 }
         );
       });
       const file = document.output('arraybuffer');
+      console.log('[Report] Completed', { reportId, candidatesCount: rows.length, durationMs: Date.now() - startedAt, fileSize: file.byteLength });
       return new NextResponse(file, {
         status: 200,
         headers: {

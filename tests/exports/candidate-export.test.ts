@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 import * as XLSX from 'xlsx';
+import { PDFParse } from 'pdf-parse';
 
 const fixtures = vi.hoisted(() => ({
   candidates: [] as Array<Record<string, unknown>>,
@@ -20,7 +21,12 @@ class QueryBuilder {
     }
     return Promise.resolve({ data: null, error: null });
   }
-  order() { return Promise.resolve({ data: fixtures.candidates, error: null }); }
+  order() {
+    const data = this.filters.estado
+      ? fixtures.candidates.filter((candidate) => candidate.estado === this.filters.estado)
+      : fixtures.candidates;
+    return Promise.resolve({ data, error: null });
+  }
   insert() { return Promise.resolve({ error: null }); }
 }
 
@@ -91,5 +97,52 @@ describe('exportación por vacante', () => {
       expect((await POST(makeRequest(validBody))).status).toBe(200);
     }
     expect((await POST(makeRequest(validBody))).status).toBe(429);
+  });
+
+  test('PDF y Excel contienen los mismos 20 registros, scores, fechas y estados', async () => {
+    fixtures.candidates = Array.from({ length: 20 }, (_, index) => ({
+      email: `compare${index}@example.com`, nombre: `José ${index}`, estado: index % 2 ? 'aceptado' : 'rechazado',
+      score_total: 50 + index, created_at: `2026-02-${String(index + 1).padStart(2, '0')}T12:00:00.000Z`,
+    }));
+    const excelResponse = await POST(makeRequest(validBody));
+    const pdfResponse = await POST(makeRequest({ ...validBody, formato: 'pdf' }));
+    const workbook = XLSX.read(await excelResponse.arrayBuffer());
+    const excelRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets.Candidatos);
+    const parser = new PDFParse({ data: Buffer.from(await pdfResponse.arrayBuffer()) });
+    const pdfText = (await parser.getText()).text;
+    await parser.destroy();
+
+    expect(excelRows).toHaveLength(20);
+    for (const row of excelRows) {
+      expect(pdfText).toContain(String(row.email));
+      expect(pdfText).toContain(String(row.estado));
+      expect(pdfText).toContain(String(row.score_total));
+      expect(pdfText).toContain(String(row.fecha_postulacion));
+    }
+  });
+
+  test('filtro de estado devuelve solo candidatos aceptados', async () => {
+    fixtures.candidates = [
+      { email: 'accepted@example.com', nombre: 'Accepted', estado: 'aceptado', created_at: '2026-02-01T00:00:00Z' },
+      { email: 'rejected@example.com', nombre: 'Rejected', estado: 'rechazado', created_at: '2026-02-02T00:00:00Z' },
+    ];
+    const response = await POST(makeRequest({ ...validBody, estado: 'aceptado' }));
+    const workbook = XLSX.read(await response.arrayBuffer());
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets.Candidatos);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].estado).toBe('aceptado');
+  });
+
+  test('cada reporte registra auditoría única sin datos personales', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    for (let index = 0; index < 5; index += 1) await POST(makeRequest(validBody));
+    const generated = log.mock.calls.filter(([message]) => message === '[Report] Generated');
+    expect(generated).toHaveLength(5);
+    expect(new Set(generated.map(([, metadata]) => (metadata as { reportId: string }).reportId)).size).toBe(5);
+    for (const [, metadata] of generated) {
+      expect(metadata).toMatchObject({ userId: 'user-a', vacante_id: 'vacante-a', formato: 'excel' });
+      expect(JSON.stringify(metadata)).not.toMatch(/candidate|authorization|bearer/i);
+    }
+    log.mockRestore();
   });
 });

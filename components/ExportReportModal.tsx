@@ -5,12 +5,24 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, X } from 'lucide-react';
 import jsPDF from 'jspdf';
+import { validateReportRange } from '@/lib/reporting';
 
 interface ExportReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   vacanteTitle: string;
-  candidates: any[];
+  candidates: ReportCandidate[];
+}
+
+interface ReportCandidate {
+  nombre: string;
+  email: string;
+  telefono?: string;
+  score_ia?: number | null;
+  experiencia_anos?: number | null;
+  estado: string;
+  habilidades?: string[];
+  fecha_aplicacion?: string;
 }
 
 type Period = 'today' | 'week' | 'month' | 'year' | 'custom';
@@ -22,6 +34,7 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState('');
 
   const getPeriodDates = (period: Period): [Date, Date] => {
     const today = new Date();
@@ -46,7 +59,7 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
     }
   };
 
-  const filterCandidatesByPeriod = (): any[] => {
+  const filterCandidatesByPeriod = (): ReportCandidate[] => {
     if (selectedPeriod === 'custom' && (!customStartDate || !customEndDate)) {
       return candidates;
     }
@@ -146,8 +159,6 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
     const xlsx = await import('xlsx');
     const filteredCandidates = filterCandidatesByPeriod();
     const [startDate, endDate] = getPeriodDates(selectedPeriod);
-    const periodLabel = getPeriodLabel();
-
     const wb = xlsx.utils.book_new();
 
     // Sheet 1: Resumen
@@ -180,9 +191,9 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
         candidates_data.push([
           c.nombre,
           c.email,
-          c.telefono,
-          c.score_ia || '-',
-          c.experiencia_anos || '-',
+          c.telefono || '',
+          String(c.score_ia ?? 'No evaluado'),
+          String(c.experiencia_anos ?? '-'),
           c.estado,
           (c.habilidades || []).join(', ')
         ]);
@@ -204,6 +215,14 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
   };
 
   const handleExport = async () => {
+    if (selectedPeriod === 'custom') {
+      const validationError = validateReportRange(customStartDate, customEndDate);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+    }
+    setError('');
     setIsExporting(true);
     try {
       if (selectedFormat === 'pdf') {
@@ -297,6 +316,7 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
               </div>
             </div>
           )}
+          {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
 
           {/* Format Selection */}
           <div>
@@ -325,7 +345,7 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
           <div className="flex gap-2 pt-4">
             <Button
               onClick={handleExport}
-              disabled={isExporting || (selectedPeriod === 'custom' && (!customStartDate || !customEndDate))}
+              disabled={isExporting}
               className="flex-1 gap-2"
             >
               <Download className="w-4 h-4" />
