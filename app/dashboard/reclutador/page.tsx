@@ -10,6 +10,7 @@ import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
+import { getPostulationPath } from '@/lib/ui';
 
 interface Candidate {
   id: string;
@@ -65,9 +66,29 @@ export default function DemoDashboard() {
   const [selectedTemplatePreview, setSelectedTemplatePreview] = useState<any>(null);
   const [editandoPreguntas, setEditandoPreguntas] = useState<any>(null);
   const [guardandoPreguntas, setGuardandoPreguntas] = useState(false);
+  const [vacantesLoading, setVacantesLoading] = useState(true);
+  const [vacantesError, setVacantesError] = useState<string | null>(null);
+  const [vacantesRetry, setVacantesRetry] = useState(0);
+  const [candidatesLoading, setCandidatesLoading] = useState(false);
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setShowCreateVacante(false);
+      setShowLinkedinLink(false);
+      setShowDetailModal(false);
+      setShowTemplateModal(false);
+      setShowExportModal(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, []);
 
   useEffect(() => {
     const loadVacantes = async () => {
+      setVacantesLoading(true);
+      setVacantesError(null);
       // Only load from Supabase (no mock data)
       let allVacantes: Vacante[] = [];
 
@@ -76,7 +97,8 @@ export default function DemoDashboard() {
           .from('vacantes')
           .select('id, titulo, descripcion, departamento');
 
-        if (!error && data) {
+        if (error) throw new Error(error.message);
+        if (data) {
           const supabaseVacantes: Vacante[] = data.map(v => ({
             id: v.id,
             titulo: v.titulo,
@@ -87,6 +109,7 @@ export default function DemoDashboard() {
         }
       } catch (e) {
         console.error('[DASHBOARD] Error loading vacantes from Supabase:', e);
+        setVacantesError(e instanceof Error ? e.message : 'No se pudieron cargar las vacantes');
       }
 
       // Remove duplicates by id
@@ -137,10 +160,11 @@ export default function DemoDashboard() {
           console.log('[DASHBOARD] Seleccionada vacante desde parámetro:', vacanteParam);
         }
       }
+      setVacantesLoading(false);
     };
 
     loadVacantes();
-  }, []);
+  }, [vacantesRetry]);
 
   useEffect(() => {
     const vacanteJson = JSON.stringify(vacantes);
@@ -157,13 +181,18 @@ export default function DemoDashboard() {
         return;
       }
 
+      setCandidatesLoading(true);
+      setCandidatesError(null);
+
       try {
         // Use API route to load candidates (server-side with service role key)
         const response = await fetch(`/api/candidatos/listar?vacante_id=${selectedVacanteId}`);
 
         if (!response.ok) {
+          const details = `Error ${response.status} al cargar candidatos`;
           console.warn('[DASHBOARD] API error:', response.status);
           setSupabaseCandidates([]);
+          setCandidatesError(details);
           return;
         }
 
@@ -175,6 +204,9 @@ export default function DemoDashboard() {
       } catch (e) {
         console.error('[DASHBOARD] Error loading candidates:', e);
         setSupabaseCandidates([]);
+        setCandidatesError(e instanceof Error ? e.message : 'No se pudieron cargar los candidatos');
+      } finally {
+        setCandidatesLoading(false);
       }
     };
 
@@ -480,7 +512,7 @@ export default function DemoDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="min-h-screen bg-zinc-950 overflow-x-hidden">
       {/* Header */}
       <div className="border-b border-zinc-800/40 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -507,6 +539,7 @@ export default function DemoDashboard() {
             <div className="flex items-center gap-3 flex-1">
               <Briefcase className="w-4 h-4 text-zinc-400" />
               <select
+                aria-label="Seleccionar vacante"
                 value={selectedVacanteId}
                 onChange={(e) => {
                   setSelectedVacanteId(e.target.value);
@@ -520,6 +553,16 @@ export default function DemoDashboard() {
                   </option>
                 ))}
               </select>
+              {vacantesLoading && <span role="status" className="text-sm text-zinc-400">Cargando vacantes...</span>}
+              {!vacantesLoading && vacantesError && (
+                <span role="alert" className="text-sm text-red-400">
+                  Error: {vacantesError}{' '}
+                  <button className="underline min-h-11 px-2" onClick={() => setVacantesRetry(value => value + 1)}>Reintentar</button>
+                </span>
+              )}
+              {!vacantesLoading && !vacantesError && vacantes.length === 0 && (
+                <span className="text-sm text-zinc-400">No hay vacantes disponibles</span>
+              )}
               <span className="text-xs text-zinc-500">({filteredCandidates.length} candidatos)</span>
             </div>
           </div>
@@ -533,7 +576,7 @@ export default function DemoDashboard() {
             {/* Crear Vacante */}
             <button
               onClick={() => setShowCreateVacante(true)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500 transition-colors"
+              className="flex min-h-11 flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500 transition-colors"
             >
               <Plus className="w-5 h-5 text-emerald-500" />
               <span className="text-xs font-medium text-zinc-300">Crear Vacante</span>
@@ -542,14 +585,16 @@ export default function DemoDashboard() {
             {/* Ver Link */}
             <button
               onClick={() => {
+                if (!selectedVacante) return;
+                const postulationLink = `${window.location.origin}${getPostulationPath(selectedVacante.id)}`;
                 setLinkedinData({
-                  aplicarLink: selectedVacante?.aplicarLink || '',
+                  aplicarLink: postulationLink,
                   linkedInText: `Vacante: ${selectedVacante?.titulo}\n\n${selectedVacante?.descripcion || 'Únete a nuestro equipo'}`,
-                  linkedinShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(selectedVacante?.aplicarLink || '')}`,
+                  linkedinShareUrl: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(postulationLink)}`,
                 });
                 setShowLinkedinLink(true);
               }}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-blue-600/20 border border-zinc-700 hover:border-blue-500 transition-colors"
+              className="flex min-h-11 flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-blue-600/20 border border-zinc-700 hover:border-blue-500 transition-colors"
             >
               <Link2 className="w-5 h-5 text-blue-400" />
               <span className="text-xs font-medium text-zinc-300">Ver Link</span>
@@ -666,7 +711,11 @@ export default function DemoDashboard() {
                 <CardDescription>Clasificados por Score IA y Fit Cultural</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {filteredCandidates.length === 0 ? (
+                {candidatesLoading ? (
+                  <p role="status" className="text-zinc-400 text-sm">Cargando candidatos...</p>
+                ) : candidatesError ? (
+                  <p role="alert" className="text-red-400 text-sm">Error: {candidatesError}</p>
+                ) : filteredCandidates.length === 0 ? (
                   <p className="text-zinc-400 text-sm">No hay candidatos para esta plaza</p>
                 ) : (
                   filteredCandidates.map((candidate) => (
@@ -871,29 +920,32 @@ export default function DemoDashboard() {
 
       {/* Create Vacante Modal */}
       {showCreateVacante && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <Card role="dialog" aria-modal="true" aria-labelledby="create-vacancy-title" className="w-full max-w-md bg-zinc-900 border-zinc-800 my-auto">
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Nueva Vacante</CardTitle>
-              <button onClick={() => setShowCreateVacante(false)} className="text-zinc-400 hover:text-white">
+              <CardTitle><span id="create-vacancy-title">Nueva Vacante</span></CardTitle>
+              <button aria-label="Cerrar creación de vacante" onClick={() => setShowCreateVacante(false)} className="text-zinc-400 hover:text-white min-w-11 min-h-11 flex items-center justify-center">
                 <X className="w-5 h-5" />
               </button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Título *</label>
+                <label htmlFor="vacancy-title" className="block text-sm font-medium text-white mb-2">Título *</label>
                 <input
+                  id="vacancy-title"
+                  autoFocus
                   type="text"
                   placeholder="Ej: Desarrollador Senior React"
                   value={newVacante.titulo}
                   onChange={(e) => setNewVacante({ ...newVacante, titulo: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-base placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Descripción</label>
+                <label htmlFor="vacancy-description" className="block text-sm font-medium text-white mb-2">Descripción</label>
                 <textarea
+                  id="vacancy-description"
                   placeholder="Descripción de la posición..."
                   value={newVacante.descripcion}
                   onChange={(e) => setNewVacante({ ...newVacante, descripcion: e.target.value })}
@@ -902,24 +954,26 @@ export default function DemoDashboard() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Departamento</label>
+                <label htmlFor="vacancy-department" className="block text-sm font-medium text-white mb-2">Departamento</label>
                 <input
+                  id="vacancy-department"
                   type="text"
                   placeholder="Ej: Tecnología"
                   value={newVacante.departamento}
                   onChange={(e) => setNewVacante({ ...newVacante, departamento: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-base placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Link LinkedIn (Opcional)</label>
+                <label htmlFor="vacancy-linkedin" className="block text-sm font-medium text-white mb-2">Link LinkedIn (Opcional)</label>
                 <input
+                  id="vacancy-linkedin"
                   type="url"
                   placeholder="Ej: https://linkedin.com/jobs/view/123456"
                   value={newVacante.linkedinLink}
                   onChange={(e) => setNewVacante({ ...newVacante, linkedinLink: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-xs"
+                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-base"
                 />
                 <p className="text-xs text-zinc-400 mt-1">Link de la vacante en LinkedIn para compartir</p>
               </div>
@@ -944,9 +998,9 @@ export default function DemoDashboard() {
       {/* LinkedIn Link Modal */}
       {showLinkedinLink && linkedinData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl bg-zinc-900 border-zinc-800">
+          <Card role="dialog" aria-modal="true" aria-labelledby="share-vacancy-title" className="w-full max-w-2xl bg-zinc-900 border-zinc-800">
             <CardHeader className="border-b border-zinc-800">
-              <CardTitle className="text-2xl">🔗 Link para LinkedIn</CardTitle>
+              <CardTitle className="text-2xl"><span id="share-vacancy-title">🔗 Link para LinkedIn</span></CardTitle>
               <CardDescription>Usa este link para compartir la vacante en LinkedIn</CardDescription>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">

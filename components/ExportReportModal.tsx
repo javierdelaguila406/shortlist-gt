@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, X } from 'lucide-react';
@@ -35,6 +35,17 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
   const [customEndDate, setCustomEndDate] = useState('');
   const [isExporting, setIsExporting] = useState(false);
   const [error, setError] = useState('');
+  const firstControlRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    firstControlRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [isOpen, onClose]);
 
   const getPeriodDates = (period: Period): [Date, Date] => {
     const today = new Date();
@@ -258,11 +269,11 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <Card role="dialog" aria-modal="true" aria-labelledby="export-report-title" className="w-full max-w-md bg-zinc-900 border-zinc-800 my-auto">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Exportar Informe</CardTitle>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">
+          <CardTitle><span id="export-report-title">Exportar Informe</span></CardTitle>
+          <button aria-label="Cerrar modal de exportación" onClick={onClose} className="text-zinc-400 hover:text-white min-w-11 min-h-11 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </CardHeader>
@@ -280,12 +291,13 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
               ].map(period => (
                 <label key={period.id} className="flex items-center gap-2 cursor-pointer">
                   <input
+                    ref={period.id === 'today' ? firstControlRef : undefined}
                     type="radio"
                     name="period"
                     value={period.id}
                     checked={selectedPeriod === period.id}
                     onChange={(e) => setSelectedPeriod(e.target.value as Period)}
-                    className="w-4 h-4"
+                    className="w-5 h-5"
                   />
                   <span className="text-sm text-zinc-300">{period.label}</span>
                 </label>
@@ -297,21 +309,23 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
           {selectedPeriod === 'custom' && (
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-zinc-400 mb-1">Fecha Inicio:</label>
+                <label htmlFor="report-start-date" className="block text-sm text-zinc-400 mb-1">Fecha Inicio:</label>
                 <input
+                  id="report-start-date"
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-sm"
+                  className="w-full px-3 py-3 bg-zinc-800 border border-zinc-700 rounded text-white text-base min-h-11"
                 />
               </div>
               <div>
-                <label className="block text-xs text-zinc-400 mb-1">Fecha Fin:</label>
+                <label htmlFor="report-end-date" className="block text-sm text-zinc-400 mb-1">Fecha Fin:</label>
                 <input
+                  id="report-end-date"
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-sm"
+                  className="w-full px-3 py-3 bg-zinc-800 border border-zinc-700 rounded text-white text-base min-h-11"
                 />
               </div>
             </div>
@@ -333,7 +347,7 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
                     value={format.id}
                     checked={selectedFormat === format.id}
                     onChange={(e) => setSelectedFormat(e.target.value as Format)}
-                    className="w-4 h-4"
+                    className="w-5 h-5"
                   />
                   <span className="text-sm text-zinc-300">{format.label}</span>
                 </label>
@@ -346,12 +360,12 @@ export function ExportReportModal({ isOpen, onClose, vacanteTitle, candidates }:
             <Button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex-1 gap-2"
+              className="flex-1 gap-2 min-h-11"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando...' : 'Descargar'}
             </Button>
-            <Button onClick={onClose} variant="secondary" className="flex-1">
+            <Button onClick={onClose} variant="secondary" className="flex-1 min-h-11">
               Cancelar
             </Button>
           </div>

@@ -25,14 +25,20 @@ interface Vacante {
   titulo: string;
   descripcion?: string;
   departamento?: string;
+  estado?: string;
 }
 
 export default function PostularPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
   const params = use(paramsPromise);
   const [vacante, setVacante] = useState<Vacante | null>(null);
+  const [vacanteLoading, setVacanteLoading] = useState(true);
+  const [vacanteError, setVacanteError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const fetchVacante = async () => {
+      setVacanteLoading(true);
+      setVacanteError(null);
       // 1. Try API route (backend Supabase call) first
       try {
         const response = await fetch(`/api/vacantes/buscar?id=${params.slug}`);
@@ -40,11 +46,15 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
           const data = await response.json();
           if (data.found && data.vacante) {
             setVacante(data.vacante);
+            setVacanteLoading(false);
             return;
           }
+        } else if (response.status >= 500) {
+          throw new Error(`Error ${response.status} al cargar la vacante`);
         }
       } catch (e) {
-        console.log('API search failed, trying fallback:', e);
+        console.error('API search failed:', e);
+        setVacanteError(e instanceof Error ? e.message : 'No se pudo cargar la vacante');
       }
 
       // 2. Construir lista de vacantes desde TODAS las fuentes
@@ -116,10 +126,11 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
       const found = allVacantes.find(v => v.id === params.slug);
       setVacante(found || null);
+      setVacanteLoading(false);
     };
 
     fetchVacante();
-  }, [params.slug]);
+  }, [params.slug, retryCount]);
   const [formData, setFormData] = useState<FormData>({
     nombre: '',
     email: '',
@@ -135,10 +146,21 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   const [submitError, setSubmitError] = useState('');
   const [extractingPDF, setExtractingPDF] = useState(false);
 
-  if (vacante === undefined) {
+  if (vacanteLoading) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <p className="text-zinc-400">Cargando...</p>
+        <p role="status" className="text-zinc-400">Cargando vacante...</p>
+      </div>
+    );
+  }
+
+  if (vacanteError) {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <Card><CardContent className="pt-6 text-center space-y-4">
+          <p role="alert" className="text-red-400">Error: {vacanteError}</p>
+          <Button onClick={() => setRetryCount(value => value + 1)}>Reintentar</Button>
+        </CardContent></Card>
       </div>
     );
   }
@@ -154,6 +176,17 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
             </Link>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (vacante.estado === 'cerrada') {
+    return (
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <Card><CardContent className="pt-6 text-center space-y-4">
+          <p className="text-zinc-200">Esta vacante cerró, no puedes postularte</p>
+          <Link href="/"><Button>Volver al inicio</Button></Link>
+        </CardContent></Card>
       </div>
     );
   }
@@ -288,7 +321,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4">
+    <div className="min-h-screen bg-zinc-950 p-4 overflow-x-hidden">
       <div className="max-w-2xl mx-auto">
         <Link href="/" className="text-zinc-400 hover:text-white mb-6 inline-block">
           ← Volver
@@ -316,29 +349,29 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
             )}
             <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>
-                <input type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+                <label htmlFor="candidate-name" className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>
+                <input id="candidate-name" type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Email *</label>
-                <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+                <label htmlFor="candidate-email" className="block text-sm font-medium text-white mb-2">Email *</label>
+                <input id="candidate-email" type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Teléfono *</label>
-                <input type="tel" name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+                <label htmlFor="candidate-phone" className="block text-sm font-medium text-white mb-2">Teléfono *</label>
+                <input id="candidate-phone" type="tel" name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Años de Experiencia *</label>
-                <input type="number" name="experiencia_anos" value={formData.experiencia_anos} onChange={handleInputChange} placeholder="Ej: 5" min="0" max="70" className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white" required />
+                <label htmlFor="candidate-experience" className="block text-sm font-medium text-white mb-2">Años de Experiencia *</label>
+                <input id="candidate-experience" type="number" name="experiencia_anos" value={formData.experiencia_anos} onChange={handleInputChange} placeholder="Ej: 5" min="0" max="70" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx 5MB</label>
-                <label className="flex flex-col items-center justify-center px-4 py-6 rounded-lg border-2 border-dashed border-zinc-700 hover:border-emerald-500 cursor-pointer transition-colors">
-                  <input type="file" onChange={handleFileChange} accept=".pdf" className="hidden" required />
+                <label htmlFor="candidate-document" className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx 5MB</label>
+                <label htmlFor="candidate-document" className="flex flex-col items-center justify-center min-h-11 px-4 py-6 rounded-lg border-2 border-dashed border-zinc-700 hover:border-emerald-500 cursor-pointer transition-colors">
+                  <input id="candidate-document" type="file" onChange={handleFileChange} accept=".pdf" className="sr-only" required />
                   <Upload className="w-8 h-8 text-zinc-400 mb-2" />
                   <p className="text-sm text-white">{cvFileName || 'Selecciona tu CV (PDF)'}</p>
                 </label>
@@ -350,6 +383,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
                   <div>
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input 
+                        id="candidate-consent"
                         type="checkbox" 
                         name="consentimiento" 
                         checked={formData.consentimiento} 
@@ -365,7 +399,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
                 </div>
               </div>
 
-              <Button type="submit" disabled={isSubmitting || !formData.consentimiento} className="w-full bg-emerald-600 hover:bg-emerald-700 py-2">
+              <Button type="submit" disabled={isSubmitting || !formData.consentimiento} className="w-full min-h-11 bg-emerald-600 hover:bg-emerald-700 py-2">
                 {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
               </Button>
             </form>

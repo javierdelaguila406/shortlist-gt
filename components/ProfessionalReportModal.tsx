@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, X } from 'lucide-react';
@@ -19,9 +19,22 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
   const [periodo, setPeriodo] = useState('mes');
   const [fechaDesde, setFechaDesde] = useState('');
   const [fechaHasta, setFechaHasta] = useState('');
+  const [reportError, setReportError] = useState('');
+  const firstControlRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    firstControlRef.current?.focus();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [isOpen, onClose]);
 
   const generateProfessionalPDF = async () => {
     setIsExporting(true);
+    setReportError('');
     try {
       const html2pdf = (await import('html2pdf.js')).default;
       const sorted = [...candidates].sort((a, b) => (b.score_ia || 0) - (a.score_ia || 0));
@@ -254,7 +267,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
       (html2pdf() as any).set(options).from(htmlContent).save();
     } catch (error) {
       console.error('Error:', error);
-      alert('Error generando PDF');
+      setReportError('Falló al generar reporte PDF');
     } finally {
       setIsExporting(false);
     }
@@ -262,6 +275,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
 
   const generateExcel = async () => {
     setIsExporting(true);
+    setReportError('');
     try {
       const xlsx = await import('xlsx');
       const sorted = [...candidates].sort((a, b) => (b.score_ia || 0) - (a.score_ia || 0));
@@ -320,7 +334,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
       xlsx.writeFile(wb, `Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (error) {
       console.error('Error:', error);
-      alert('Error generando Excel');
+      setReportError('Falló al generar reporte Excel');
     } finally {
       setIsExporting(false);
     }
@@ -329,11 +343,11 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md bg-zinc-900 border-zinc-800">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <Card role="dialog" aria-modal="true" aria-labelledby="professional-report-title" className="w-full max-w-md bg-zinc-900 border-zinc-800 my-auto">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Exportar Reporte Profesional</CardTitle>
-          <button onClick={onClose} className="text-zinc-400 hover:text-white">
+          <CardTitle><span id="professional-report-title">Exportar Reporte Profesional</span></CardTitle>
+          <button aria-label="Cerrar reporte profesional" onClick={onClose} className="text-zinc-400 hover:text-white min-w-11 min-h-11 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </CardHeader>
@@ -345,8 +359,9 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             <label className="text-sm font-medium text-white">Período del Reporte</label>
             <div className="grid grid-cols-2 gap-2">
               <button
+                ref={firstControlRef}
                 onClick={() => setPeriodo('hoy')}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
+                className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'hoy'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -356,7 +371,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               </button>
               <button
                 onClick={() => setPeriodo('semana')}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
+                className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'semana'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -366,7 +381,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               </button>
               <button
                 onClick={() => setPeriodo('mes')}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
+                className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'mes'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -376,7 +391,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               </button>
               <button
                 onClick={() => setPeriodo('ano')}
-                className={`px-3 py-2 rounded text-sm transition-colors ${
+                className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'ano'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -386,7 +401,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               </button>
               <button
                 onClick={() => setPeriodo('personalizado')}
-                className={`col-span-2 px-3 py-2 rounded text-sm transition-colors ${
+                className={`col-span-2 px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'personalizado'
                     ? 'bg-emerald-600 text-white'
                     : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
@@ -399,32 +414,36 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             {periodo === 'personalizado' && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Desde</label>
+                  <label htmlFor="professional-start-date" className="text-sm text-zinc-400 block mb-1">Desde</label>
                   <input
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
-                    className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+                    id="professional-start-date"
+                    className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white text-base min-h-11"
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-zinc-400 block mb-1">Hasta</label>
+                  <label htmlFor="professional-end-date" className="text-sm text-zinc-400 block mb-1">Hasta</label>
                   <input
+                    id="professional-end-date"
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
-                    className="w-full px-2 py-1 rounded bg-zinc-800 border border-zinc-700 text-white text-sm"
+                    className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white text-base min-h-11"
                   />
                 </div>
               </div>
             )}
           </div>
 
+          {reportError && <p role="alert" className="text-sm text-red-400">Error: {reportError}</p>}
+
           <div className="space-y-3">
             <button
               onClick={generateProfessionalPDF}
               disabled={isExporting}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-emerald-600 hover:bg-emerald-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando PDF...' : 'Descargar PDF Profesional'}
@@ -433,7 +452,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             <button
               onClick={generateExcel}
               disabled={isExporting}
-              className="w-full bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando Excel...' : 'Descargar Excel'}
@@ -441,7 +460,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
 
             <button
               onClick={onClose}
-              className="w-full bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded text-white"
+              className="w-full min-h-11 bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded text-white"
             >
               Cancelar
             </button>

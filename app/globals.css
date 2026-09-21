@@ -70,6 +70,23 @@ body {
   box-sizing: border-box;
 }
 
+button,
+a[role="button"] {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  font-size: 16px;
+}
+
+img,
+svg {
+  max-width: 100%;
+}
+
 *:not(svg) {
   @apply transition-colors duration-200;
 }

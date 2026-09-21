@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -15,11 +15,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SHORTLIST.GT - Recruitment Platform",
   description: "Smart recruitment platform powered by AI",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
   themeColor: "#0a0a0a",
 };
 
@@ -36,8 +41,6 @@ export default function RootLayout({ children }: LayoutProps) {
     >
       <head>
         <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
-        <meta name="theme-color" content="#0a0a0a" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
@@ -49,4 +52,3 @@ export default function RootLayout({ children }: LayoutProps) {
     </html>
   );
 }
-
