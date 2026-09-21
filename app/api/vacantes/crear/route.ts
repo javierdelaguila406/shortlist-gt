@@ -10,11 +10,19 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { titulo, descripcion, departamento } = body;
+    const { titulo, descripcion, departamento, estado } = body;
+    const estadosPermitidos = ['activa', 'pausada', 'cerrada'];
 
     if (!titulo || !titulo.trim()) {
       return NextResponse.json(
         { error: 'Título requerido', success: false },
+        { status: 400 }
+      );
+    }
+
+    if (estado !== undefined && !estadosPermitidos.includes(estado)) {
+      return NextResponse.json(
+        { error: 'Estado inválido', success: false },
         { status: 400 }
       );
     }
@@ -37,7 +45,7 @@ export async function POST(request: NextRequest) {
       const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
       if (!user || authError) {
-        console.error('[API] Invalid auth token:', authError);
+        console.error('[API] Authentication rejected');
         return NextResponse.json(
           { error: 'Token inválido', success: false },
           { status: 401 }
@@ -55,7 +63,8 @@ export async function POST(request: NextRequest) {
       if (!companyError && companies && companies.length > 0) {
         userEmail = companies[0].email;
       }
-      console.log('[API] Usuario email obtenido:', userEmail || '(no encontrado)');
+      const companyFound = Boolean(userEmail);
+      console.log('[API] Company lookup completed', { userId, found: companyFound });
     } catch (authCheckError) {
       console.error('[API] Error verifying auth:', authCheckError);
       return NextResponse.json(
@@ -72,7 +81,7 @@ export async function POST(request: NextRequest) {
       descripcion: descripcion || '',
       departamento: departamento || '',
       usuario_id: userId,
-      estado: 'activa',
+      estado: estado || 'activa',
       created_at: new Date().toISOString(),
     };
 

@@ -1,6 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/rate-limit';
+import * as XLSX from 'xlsx';
+import { jsPDF } from 'jspdf';
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +40,93 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, telefono } = await request.json();
+    const { email, telefono, vacante_id, formato, desde, hasta } = await request.json();
+
+    if (vacante_id) {
+      if (!['excel', 'pdf'].includes(formato) || !ISO_DATE.test(desde) || !ISO_DATE.test(hasta)) {
+        return NextResponse.json({ error: 'Parámetros de exportación inválidos' }, { status: 400 });
+      }
+
+      if (desde > hasta) {
+        return NextResponse.json(
+          { error: 'Fecha inicial debe ser anterior a final' },
+          { status: 400 }
+        );
+      }
+
+      const { data: vacante } = await supabase
+        .from('vacantes')
+        .select('id, usuario_id, titulo')
+        .eq('id', vacante_id)
+        .single();
+
+      if (!vacante) {
+        return NextResponse.json({ error: 'Vacante no encontrada' }, { status: 404 });
+      }
+
+      if (vacante.usuario_id !== userData.user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      const { data: candidatos, error: exportError } = await supabase
+        .from('candidatos')
+        .select('email, nombre, estado, score_total, score_ia, created_at')
+        .eq('vacante_id', vacante_id)
+        .gte('created_at', `${desde}T00:00:00.000Z`)
+        .lte('created_at', `${hasta}T23:59:59.999Z`)
+        .order('created_at', { ascending: true });
+
+      if (exportError) {
+        return NextResponse.json({ error: 'Error al consultar candidatos' }, { status: 500 });
+      }
+
+      const rows = (candidatos || []).map((candidate) => ({
+        email: candidate.email || '',
+        nombre: candidate.nombre || '',
+        estado: candidate.estado || '',
+        score_total: candidate.score_total ?? candidate.score_ia ?? '',
+        fecha_postulacion: candidate.created_at || '',
+      }));
+
+      console.log('[Export] Candidate rows exported', { count: rows.length, vacancyId: vacante_id });
+
+      if (formato === 'excel') {
+        const worksheet = XLSX.utils.json_to_sheet(rows, {
+          header: ['email', 'nombre', 'estado', 'score_total', 'fecha_postulacion'],
+        });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Candidatos');
+        const file = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        return new NextResponse(new Uint8Array(file), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="candidatos-${vacante_id}.xlsx"`,
+          },
+        });
+      }
+
+      const document = new jsPDF();
+      document.text(`Candidatos - ${vacante.titulo || vacante_id}`, 10, 15);
+      document.text('Email | Nombre | Estado | Puntaje | Fecha', 10, 25);
+      rows.forEach((row, index) => {
+        document.text(
+          `${row.email} | ${row.nombre} | ${row.estado} | ${row.score_total} | ${row.fecha_postulacion}`,
+          10,
+          35 + index * 8,
+          { maxWidth: 190 }
+        );
+      });
+      const file = document.output('arraybuffer');
+      return new NextResponse(file, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="candidatos-${vacante_id}.pdf"`,
+        },
+      });
+    }
 
     if (!email && !telefono) {
       return NextResponse.json(

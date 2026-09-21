@@ -81,8 +81,8 @@ export async function DELETE(request: NextRequest) {
             .from('cvs')
             .remove([fileName]);
         }
-      } catch (e) {
-        console.error('[ELIMINAR-CANDIDATO] Error borrando CV:', e);
+      } catch {
+        console.error('[ELIMINAR-CANDIDATO] Error borrando archivo');
       }
     }
 

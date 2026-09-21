@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      console.warn('[SECURITY] Password change failed:', {
+      console.warn('[SECURITY] Credential change failed', {
         error: error.message,
         ipAddress,
         timestamp: new Date().toISOString(),
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('[SECURITY] Critical password change error:', {
+    console.error('[SECURITY] Critical credential change error', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),

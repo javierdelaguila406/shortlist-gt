@@ -169,7 +169,7 @@ export async function handleIncomingMessage(
       .single();
 
     if (!candidato) {
-      console.log('Candidate not found for phone:', phoneNumber);
+      console.log('[Messaging] Candidate lookup returned no result');
       return;
     }
 

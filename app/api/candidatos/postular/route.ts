@@ -20,7 +20,7 @@ function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string):
   console.log('[SCORING] Calculando score inteligente...');
 
   if (!cvText || cvText.trim().length < 20) {
-    console.log('[SCORING] CV muy corto, score mínimo');
+    console.log('[SCORING] Candidate document too short');
     return 25;
   }
 
@@ -85,7 +85,7 @@ function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string):
   }
 
   const finalScore = Math.min(100, Math.max(25, Math.round(score)));
-  console.log(`[SCORING] Score final: ${finalScore} (experiencia: ${expMatch ? 'si' : 'no'}, educación: ${/licenciatura|degree/i.test(cv) ? 'si' : 'no'}, keywords: ${keywordMatches}/${uniqueKeywords.size})`);
+  console.log('[SCORING] Candidate score calculated', { score: finalScore, keywordMatches });
   return finalScore;
 }
 
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = rateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
 
     if (!rateLimitResult.success) {
-      console.warn('[SECURITY] Postular rate limit exceeded:', { ipAddress });
+      console.warn('[SECURITY] Application rate limit exceeded');
       return NextResponse.json(
         { error: 'Demasiadas postulaciones. Intenta más tarde.', success: false },
         {
@@ -204,14 +204,16 @@ export async function POST(request: NextRequest) {
     let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
 
     // El frontend extrae el PDF con pdfjs - confiamos en eso
-    console.log('[API] cvText recibido del frontend:', finalCVText.substring(0, 100) + '...');
+    const documentLength = finalCVText.length;
+    console.log('[API] Candidate document received', { length: documentLength });
 
     // Extraer email del PDF si no vino en formulario (ANTES de agregar habilidades)
     if (finalCVText && !email) {
       const pdfEmail = extractEmailFromText(finalCVText);
       if (pdfEmail) {
         extractedEmail = pdfEmail;
-        console.log('[API] Email extraído del PDF:', pdfEmail);
+        const contactFound = Boolean(pdfEmail);
+        console.log('[API] Contact field extracted from document', { found: contactFound });
       }
     }
 
@@ -220,7 +222,7 @@ export async function POST(request: NextRequest) {
     // Solo agregar habilidades si el CV está muy vacío
     if (textForScoring.length < 50 && habilidades) {
       textForScoring = (textForScoring + ' ' + habilidades).trim();
-      console.log('[API] Completando con habilidades porque CV es muy corto');
+      console.log('[API] Supplementing short candidate document');
     }
 
     // Validar que tenemos email (REQUERIDO)
@@ -248,9 +250,9 @@ export async function POST(request: NextRequest) {
             .from('cvs')
             .getPublicUrl(fileName);
           cvUrl = urlData.publicUrl;
-          console.log('[API] PDF guardado:', cvUrl);
+          console.log('[API] Candidate document stored');
         } else {
-          console.error('[API] Error guardando PDF:', uploadError);
+          console.error('[API] Candidate document storage failed');
         }
       } catch (e) {
         console.error('[API] Error en Storage:', e);
@@ -261,7 +263,7 @@ export async function POST(request: NextRequest) {
     const score_ia = calculateScore(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
     const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
 
-    console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
+    console.log('[API] Saving candidate', { score: score_ia, estado });
 
     const candidatoData = {
       id: candidato_id,

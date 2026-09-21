@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      console.warn('[SECURITY] Password reset failed:', {
+      console.warn('[SECURITY] Credential reset failed', {
         error: error.message,
         email,
         ipAddress,
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error('[SECURITY] Critical password reset error:', {
+    console.error('[SECURITY] Critical credential reset error', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),

@@ -8,6 +8,7 @@ import {
   insertGodaddyRecord,
   updateGodaddyRecord,
   getGodaddyRecord,
+  deleteGodaddyRecord,
 } from './godaddy-db';
 
 const supabase = createClient(
@@ -55,9 +56,9 @@ export async function syncCreateUser(userData: {
         plan: userData.plan,
         created_at: new Date().toISOString(),
       });
-      console.log('[SYNC] User created in Godaddy:', userData.email);
+      console.log('[SYNC] User created in Godaddy', { userId: userData.id });
     } else {
-      console.log('[SYNC] User skipped Godaddy (not target user):', userData.email);
+      console.log('[SYNC] User skipped Godaddy', { userId: userData.id });
     }
 
     return {
@@ -143,6 +144,25 @@ export async function syncCreateVacante(vacanteData: {
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
+}
+
+export async function syncDeleteVacante(vacanteId: string): Promise<boolean> {
+  const configured = [
+    process.env.GODADDY_MYSQL_HOST,
+    process.env.GODADDY_MYSQL_USER,
+    process.env.GODADDY_MYSQL_PASSWORD,
+    process.env.GODADDY_MYSQL_DATABASE,
+    process.env.GODADDY_MYSQL_PORT,
+  ].every(Boolean);
+
+  if (!configured) {
+    console.log('[SYNC] Mirror deletion skipped: integration not configured', {
+      correlationId: `vacante:${vacanteId}`,
+    });
+    return true;
+  }
+
+  return deleteGodaddyRecord('vacantes', vacanteId);
 }
 
 /**
@@ -245,10 +265,10 @@ export async function syncUpdatePlan(
           license_code_used: licenseCode,
           plan_upgraded_at: new Date().toISOString(),
         });
-        console.log('[SYNC] Plan updated in Godaddy:', userEmail);
+        console.log('[SYNC] Plan updated in Godaddy', { userId });
       }
     } else {
-      console.log('[SYNC] Plan update skipped Godaddy (not target user):', userEmail);
+      console.log('[SYNC] Plan update skipped Godaddy', { userId });
     }
 
     return {

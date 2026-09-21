@@ -165,7 +165,7 @@ export async function insertGodaddyRecord(
     await connection.execute(sql, queryValues);
     await connection.end();
 
-    console.log(`[GODADDY] Inserted into ${table}:`, data.id || data.email);
+    console.log(`[GODADDY] Inserted into ${table}`, { recordId: data.id || 'generated' });
     return true;
   } catch (error) {
     console.error(`[GODADDY] Error inserting into ${table}:`, error);
@@ -220,5 +220,18 @@ export async function getGodaddyRecord(
   } catch (error) {
     console.error(`[GODADDY] Error getting record from ${table}:`, error);
     return null;
+  }
+}
+
+export async function deleteGodaddyRecord(table: string, id: string): Promise<boolean> {
+  try {
+    const connection = await getGodaddyConnection();
+    await connection.execute(`DELETE FROM ${table} WHERE id = ?`, [id]);
+    await connection.end();
+    console.log(`[GODADDY] Deleted from ${table}`, { recordId: id });
+    return true;
+  } catch {
+    console.error(`[GODADDY] Delete failed for ${table}`);
+    return false;
   }
 }

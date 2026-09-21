@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 export async function POST(request: NextRequest) {
-  console.log('\n🧪 TEST ENDPOINT - Verificando token y usuario\n');
+  console.log('[Debug] Verifying authentication');
 
   const authHeader = request.headers.get('authorization');
 
@@ -24,22 +24,22 @@ export async function POST(request: NextRequest) {
   }
 
   const token = authHeader.substring(7);
-  console.log('✅ Token extraído:', token.substring(0, 20) + '...');
+  console.log('[Debug] Credential extracted');
 
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
   if (authError) {
-    console.log('❌ Error al verificar token:', authError.message);
+    console.log('[Debug] Authentication verification failed');
     return NextResponse.json({ error: authError.message }, { status: 401 });
   }
 
   if (!user) {
-    console.log('❌ Token válido pero no hay usuario');
+    console.log('[Debug] Valid credential without user');
     return NextResponse.json({ error: 'No user found' }, { status: 401 });
   }
 
   console.log('✅ Usuario encontrado:', user.id);
-  console.log('✅ Email:', user.email);
+  console.log('[Debug] User authenticated', { userId: user.id });
 
   // Verificar si existe en companies
   const { data: companies } = await supabase

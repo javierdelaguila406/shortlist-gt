@@ -49,12 +49,12 @@ export async function POST(request: NextRequest) {
     if (cvPath && !cvText) {
       try {
         const filePath = path.join(process.cwd(), 'public', cvPath);
-        console.log('[CV-ANALYSIS] Reading PDF from:', filePath);
+        console.log('[Document analysis] Reading uploaded file');
 
         if (fs.existsSync(filePath)) {
           try {
             const fileBuffer = fs.readFileSync(filePath);
-            console.log('[CV-ANALYSIS] PDF file size:', fileBuffer.length, 'bytes');
+            console.log('[Document analysis] File size', { bytes: fileBuffer.length });
 
             // Extraer texto del buffer (fallback simple pero efectivo)
             const extractedText = fileBuffer.toString('utf-8', 0, Math.min(50000, fileBuffer.length));
@@ -62,21 +62,21 @@ export async function POST(request: NextRequest) {
 
             if (cleanedText && cleanedText.length > 50) {
               textToAnalyze = cleanedText;
-              console.log('[CV-ANALYSIS] Extracted text length:', textToAnalyze.length);
+              console.log('[Document analysis] Extracted text length', { length: textToAnalyze.length });
             } else {
-              console.warn('[CV-ANALYSIS] Extracted text too short, may be binary PDF');
+              console.warn('[Document analysis] Extracted text is unexpectedly short');
               textToAnalyze = `[CV NOTICE] CV file received but appears to be image-based or encrypted PDF. Reclutador debe revisar manualmente el archivo.`;
             }
-          } catch (pdfError) {
-            console.error('[CV-ANALYSIS] Error reading PDF:', pdfError);
+          } catch {
+            console.error('[Document analysis] File read failed');
             textToAnalyze = `[ERROR] No se pudo leer el archivo PDF correctamente.`;
           }
         } else {
-          console.warn('[CV-ANALYSIS] CV file not found at:', filePath);
+          console.warn('[Document analysis] Uploaded file not found');
           textToAnalyze = `[ERROR] Archivo CV no encontrado en el servidor.`;
         }
       } catch (error) {
-        console.error('[CV-ANALYSIS] Critical error:', error);
+        console.error('[Document analysis] Critical processing error');
         textToAnalyze = `[ERROR] Error crítico leyendo archivo: ${error instanceof Error ? error.message : 'Unknown'}`;
       }
     }
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
       textToAnalyze = `[FALLBACK] No se pudo extraer texto del CV. El análisis será limitado.`;
     }
 
-    console.log('[CV-ANALYSIS] Final text length for OpenAI:', textToAnalyze.length);
+    console.log('[Document analysis] Final text length', { length: textToAnalyze.length });
 
     // Call OpenAI to analyze CV with structured output
     const response = await openai.chat.completions.create({
@@ -175,7 +175,7 @@ Provide a detailed analysis of how well this candidate matches the job requireme
     );
   } catch (error) {
     // Log interno - NUNCA expongas errores al cliente
-    console.error('[SECURITY] Error processing CV:', {
+    console.error('[SECURITY] Error processing candidate document', {
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
       timestamp: new Date().toISOString(),

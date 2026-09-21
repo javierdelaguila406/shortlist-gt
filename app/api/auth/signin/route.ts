@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResult = rateLimit(`auth-signin:${ipAddress}`, 10, 900000); // 15 min
 
     if (!rateLimitResult.success) {
-      console.warn('[SECURITY] Login rate limit exceeded:', { ipAddress, timestamp: new Date().toISOString() });
+      console.warn('[SECURITY] Login rate limit exceeded', { timestamp: new Date().toISOString() });
       return NextResponse.json(
         { error: 'Demasiados intentos de inicio de sesión. Intenta más tarde.' },
         {

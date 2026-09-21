@@ -8,7 +8,7 @@ function verifyAdminAccess(request: NextRequest): boolean {
 
   // Si no hay token admin configurado, denegar acceso
   if (!expectedToken) {
-    console.warn('[SECURITY] ADMIN_SECRET_TOKEN not configured');
+    console.warn('[SECURITY] Admin credential not configured');
     return false;
   }
 
@@ -16,7 +16,7 @@ function verifyAdminAccess(request: NextRequest): boolean {
   const isValid = !!adminToken && adminToken === expectedToken;
 
   if (!isValid) {
-    console.warn('[SECURITY] Invalid admin token attempt:', {
+    console.warn('[SECURITY] Invalid admin credential attempt', {
       ipAddress: request.headers.get('x-forwarded-for'),
       timestamp: new Date().toISOString()
     });
