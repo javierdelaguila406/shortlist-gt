@@ -8,6 +8,14 @@ import { supabase } from '@/lib/supabase';
 
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
+function sanitizeInput(input: string): string {
+  return input
+    .slice(0, 2000)
+    .replace(/[`\\]/g, '')
+    .replace(/\n\n+/g, '\n')
+    .trim();
+}
+
 async function generarPreguntasConClaude(
   titulo: string,
   descripcion: string,
@@ -19,9 +27,9 @@ async function generarPreguntasConClaude(
 }> {
   const prompt = `Eres un experto en Recursos Humanos y reclutamiento. Genera preguntas de evaluación precisas y profesionales para la siguiente vacante:
 
-TÍTULO: ${titulo}
-DESCRIPCIÓN: ${descripcion}
-NIVEL REQUERIDO: ${nivel}
+TÍTULO: ${sanitizeInput(titulo)}
+DESCRIPCIÓN: ${sanitizeInput(descripcion)}
+NIVEL REQUERIDO: ${sanitizeInput(nivel)}
 
 Genera EXACTAMENTE en formato JSON (sin markdown, solo JSON válido):
 {

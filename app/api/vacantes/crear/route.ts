@@ -65,9 +65,9 @@ export async function POST(request: NextRequest) {
         userEmail = companies[0].email;
       }
       const companyFound = Boolean(userEmail);
-      console.log('[API] Company lookup completed', { userId, found: companyFound });
+      console.log('[API] Company lookup completed');
     } catch (authCheckError) {
-      console.error('[API] Error verifying auth:', authCheckError);
+      console.error('[API] Error verifying auth');
       return NextResponse.json(
         { error: 'Error de autenticación', success: false },
         { status: 401 }
@@ -86,8 +86,7 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    console.log('[API] STEP 1 - Preparando insert:', { id: newId, usuario_id: userId, titulo });
-    console.log('[API] STEP 2 - Objeto vacante:', JSON.stringify(vacante));
+    console.log('[API] Creating new vacancy');
 
     const { error: insertError, data: insertedData } = await supabase
       .from('vacantes')

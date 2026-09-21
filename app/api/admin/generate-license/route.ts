@@ -1,9 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes, timingSafeEqual } from 'crypto';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: máx 30 requests por IP cada 15 minutos
+    const ipAddress = request.headers.get('x-forwarded-for') ||
+                      request.headers.get('x-real-ip') ||
+                      '127.0.0.1';
+    const rateLimitResult = rateLimit(`admin-generate-license:${ipAddress}`, 30, 900000);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', success: false },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimitResult.retryAfter || 900),
+          }
+        }
+      );
+    }
+
     // Verificar admin token
     const adminToken = request.headers.get('X-Admin-Token');
     const expectedToken = process.env.ADMIN_SECRET_TOKEN;

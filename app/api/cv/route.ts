@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
     });
     if (insertError) throw insertError;
 
-    console.log('[Document analysis] Processed for user', { userId: authData.user.id, evaluated });
+    console.log('[Document analysis] Processed successfully');
     return NextResponse.json({ score_total: score.total, score_keywords: score.keywords, score_experience: score.experience, evaluated });
   } catch {
-    console.error('[Document analysis] Processing failed', { userId: authData.user.id });
+    console.error('[Document analysis] Processing failed');
     return NextResponse.json({ error: 'Failed to analyze document', evaluated: false }, { status: 500 });
   }
 }
