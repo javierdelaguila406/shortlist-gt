@@ -3,6 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function DELETE(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized', success: false },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
     const body = await request.json();
     const { vacante_id } = body;
 
@@ -24,6 +34,35 @@ export async function DELETE(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', success: false },
+        { status: 401 }
+      );
+    }
+
+    const { data: vacante, error: vacanteError } = await supabase
+      .from('vacantes')
+      .select('usuario_id')
+      .eq('id', vacante_id)
+      .single();
+
+    if (vacanteError || !vacante) {
+      return NextResponse.json(
+        { error: 'Vacante no encontrada', success: false },
+        { status: 404 }
+      );
+    }
+
+    if (vacante.usuario_id !== userData.user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden', success: false },
+        { status: 403 }
+      );
+    }
 
     // Delete all candidates for this vacancy first
     const { error: candidatosError } = await supabase

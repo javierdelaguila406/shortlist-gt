@@ -1,10 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { syncUpdatePlan } from '@/lib/dual-sync';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
-    const { codigo, userId } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized', success: false },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const { codigo } = await request.json();
 
     if (!codigo) {
       return NextResponse.json(
@@ -24,6 +35,26 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', success: false },
+        { status: 401 }
+      );
+    }
+
+    const userId = userData.user.id;
+    const rateLimitResult = rateLimit(`license-code:${userId}`, 5, 3600000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Demasiados intentos. Intenta más tarde.', success: false },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimitResult.retryAfter || 3600) },
+        }
+      );
+    }
 
     // Buscar el código de licencia
     const { data: licenseCode, error: fetchError } = await supabase
@@ -55,39 +86,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Actualizar el código como usado
-    const { error: updateError } = await supabase
+    const { data: updatedCode, error: updateError } = await supabase
       .from('license_codes')
       .update({
         status: 'used',
         used_by_user_id: userId || null,
         used_at: new Date().toISOString(),
       })
-      .eq('id', licenseCode.id);
+      .eq('id', licenseCode.id)
+      .eq('status', licenseCode.status)
+      .select('id')
+      .single();
 
-    if (updateError) {
+    if (updateError || !updatedCode) {
       console.error('[SECURITY] Error updating license code:', updateError);
       return NextResponse.json(
-        { error: 'Error al procesar licencia', success: false },
-        { status: 500 }
+        { error: 'El código ya no está disponible', success: false },
+        { status: 409 }
       );
     }
 
-    // Actualizar el plan del usuario a premium (solo si userId existe)
-    if (userId) {
-      // Obtener email del usuario para validar si debe sincronizar con Godaddy
-      const { data: user } = await supabase
-        .from('companies')
-        .select('email')
-        .eq('user_id', userId)
-        .single();
+    // Obtener email del usuario para validar si debe sincronizar con Godaddy
+    const { data: user } = await supabase
+      .from('companies')
+      .select('email')
+      .eq('user_id', userId)
+      .single();
 
-      const userEmail = user?.email || '';
+    const userEmail = user?.email || '';
 
-      // Sincronizar en background (sin bloquear respuesta)
-      syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase()).catch(err => {
-        console.error('[SYNC] Background sync error updating plan:', err);
-      });
-    }
+    // Sincronizar en background (sin bloquear respuesta)
+    syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase()).catch(err => {
+      console.error('[SYNC] Background sync error updating plan:', err);
+    });
 
     console.log('[API] License code used successfully:', {
       codigo: codigo.trim().toUpperCase(),

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Verificar token de autenticación
-async function verifyAuth(request: NextRequest): Promise<boolean> {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return false;
+async function getAuthenticatedUserId(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const token = authHeader.slice('Bearer '.length);
 
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -12,17 +14,17 @@ async function verifyAuth(request: NextRequest): Promise<boolean> {
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     const { data, error } = await supabase.auth.getUser(token);
-    return !error && !!data.user;
+    return error ? null : data.user?.id || null;
   } catch {
-    return false;
+    return null;
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
     // Verificar autenticación
-    const isAuthenticated = await verifyAuth(request);
-    if (!isAuthenticated) {
+    const userId = await getAuthenticatedUserId(request);
+    if (!userId) {
       return NextResponse.json(
         { error: 'No autorizado. Debes estar autenticado.' },
         { status: 401 }
@@ -42,14 +44,36 @@ export async function DELETE(request: NextRequest) {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Obtener candidato para borrar el CV si existe
-    const { data: candidato } = await supabase
+    // Obtener candidato y verificar que su vacante pertenece al usuario.
+    const { data: candidato, error: candidatoError } = await supabase
       .from('candidatos')
-      .select('cv_url')
+      .select('cv_url, vacantes:vacante_id(usuario_id)')
       .eq('id', candidatoId)
       .single();
 
-    if (candidato && candidato.cv_url) {
+    if (candidatoError || !candidato) {
+      return NextResponse.json(
+        { error: 'Candidato no encontrado' },
+        { status: 404 }
+      );
+    }
+
+    const vacanteRelation = candidato.vacantes as
+      | { usuario_id: string }
+      | { usuario_id: string }[]
+      | null;
+    const ownerId = Array.isArray(vacanteRelation)
+      ? vacanteRelation[0]?.usuario_id
+      : vacanteRelation?.usuario_id;
+
+    if (ownerId !== userId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
+    }
+
+    if (candidato.cv_url) {
       try {
         const fileName = candidato.cv_url.split('/').pop();
         if (fileName) {

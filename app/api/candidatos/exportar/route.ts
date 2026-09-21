@@ -1,11 +1,41 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
+import { rateLimit } from '@/lib/rate-limit';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 export async function POST(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!supabaseUrl || !supabaseServiceRole) {
+      return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const supabase = createClient(supabaseUrl, supabaseServiceRole);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const rateLimitResult = rateLimit(`candidate-export:${userData.user.id}`, 10, 3600000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateLimitResult.retryAfter || 3600) },
+        }
+      );
+    }
+
     const { email, telefono } = await request.json();
 
     if (!email && !telefono) {
@@ -15,22 +45,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceRole);
-
     // Buscar candidato
     let candidatoData = null;
 
     if (email) {
       const { data } = await supabase
         .from('candidatos')
-        .select('*')
+        .select('*, vacantes:vacante_id(usuario_id)')
         .eq('email', email)
         .single();
       candidatoData = data;
     } else if (telefono) {
       const { data } = await supabase
         .from('candidatos')
-        .select('*')
+        .select('*, vacantes:vacante_id(usuario_id)')
         .eq('telefono', telefono)
         .single();
       candidatoData = data;
@@ -43,11 +71,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener datos de todas las aplicaciones
-    const { data: aplicaciones } = await supabase
-      .from('candidatos')
-      .select('*')
-      .eq('id', candidatoData.id);
+    const vacanteRelation = candidatoData.vacantes as
+      | { usuario_id: string }
+      | { usuario_id: string }[]
+      | null;
+    const ownerId = Array.isArray(vacanteRelation)
+      ? vacanteRelation[0]?.usuario_id
+      : vacanteRelation?.usuario_id;
+
+    if (ownerId !== userData.user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     // Compilar datos en formato JSON compatible con GDPR
     const exportedData = {

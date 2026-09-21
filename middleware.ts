@@ -55,15 +55,22 @@ export function middleware(request: NextRequest) {
   // ========== SEGURIDAD: Content Security Policy ==========
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://supabase.co"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co"
   );
 
   // Verificar si es ruta pública PRIMERO (tiene prioridad)
-  const isPublicRoute = publicRoutes.some(route =>
-    pathname === route || pathname.startsWith(route)
-  );
+  // Exactitud para rutas raíz
+  const isPublicRoute = publicRoutes.some(route => pathname === route);
 
-  if (isPublicRoute) {
+  // Exactitud para rutas con prefijos
+  const isPublicAPI = publicRoutes.some(route => {
+    if (route.includes('/api/')) {
+      return pathname.startsWith(route);
+    }
+    return false;
+  });
+
+  if (isPublicRoute || isPublicAPI) {
     return response;
   }
 
@@ -74,6 +81,19 @@ export function middleware(request: NextRequest) {
 
   // Si es ruta protegida, verificar autenticación
   if (isProtectedRoute) {
+    if (pathname.startsWith('/api/')) {
+      const authHeader = request.headers.get('Authorization');
+
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json(
+          { error: 'Unauthorized', success: false },
+          { status: 401 }
+        );
+      }
+
+      return response;
+    }
+
     const token = request.cookies.get('sb-auth-token')?.value;
 
     if (!token) {

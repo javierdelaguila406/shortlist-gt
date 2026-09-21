@@ -136,9 +136,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Configuración faltante', success: false }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
     const { data: vacanteData } = await supabase
       .from('vacantes')
@@ -195,7 +199,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Usar cvText + habilidades para análisis
-    let finalCVText = (cvText || '').trim();
+    const finalCVText = (cvText || '').trim();
     let cvUrl = '';
     let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
 
@@ -259,7 +263,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[API] Guardando candidato:', { nombre, email: extractedEmail, score_ia, estado });
 
-    const candidatoData: any = {
+    const candidatoData = {
       id: candidato_id,
       vacante_id: vacante_id,
       nombre: nombre,

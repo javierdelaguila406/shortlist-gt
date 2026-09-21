@@ -5,22 +5,42 @@
 
 import mysql from 'mysql2/promise';
 
-const godaddyConfig = {
-  host: process.env.GODADDY_MYSQL_HOST || '160.153.173.151',
-  user: process.env.GODADDY_MYSQL_USER || 'furnitureicity_user_furniture',
-  password: process.env.GODADDY_MYSQL_PASSWORD || '',
-  database: process.env.GODADDY_MYSQL_DATABASE || 'furnitureicity_wp_furniture',
-  port: parseInt(process.env.GODADDY_MYSQL_PORT || '3306'),
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-};
+function getGodaddyConfig(): mysql.PoolOptions {
+  const requiredVariables = [
+    'GODADDY_MYSQL_HOST',
+    'GODADDY_MYSQL_USER',
+    'GODADDY_MYSQL_PASSWORD',
+    'GODADDY_MYSQL_DATABASE',
+    'GODADDY_MYSQL_PORT',
+  ] as const;
+  const missingVariables = requiredVariables.filter(name => !process.env[name]);
+
+  if (missingVariables.length > 0) {
+    throw new Error(`Missing required GoDaddy configuration: ${missingVariables.join(', ')}`);
+  }
+
+  const port = Number(process.env.GODADDY_MYSQL_PORT);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    throw new Error('GODADDY_MYSQL_PORT must be a valid TCP port');
+  }
+
+  return {
+    host: process.env.GODADDY_MYSQL_HOST,
+    user: process.env.GODADDY_MYSQL_USER,
+    password: process.env.GODADDY_MYSQL_PASSWORD,
+    database: process.env.GODADDY_MYSQL_DATABASE,
+    port,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  };
+}
 
 let pool: mysql.Pool | null = null;
 
 export async function getGodaddyPool(): Promise<mysql.Pool> {
   if (!pool) {
-    pool = mysql.createPool(godaddyConfig);
+    pool = mysql.createPool(getGodaddyConfig());
   }
   return pool;
 }

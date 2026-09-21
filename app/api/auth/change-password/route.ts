@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { passwordSchema } from '@/lib/validations';
 
@@ -13,6 +13,18 @@ export async function POST(request: NextRequest) {
         { error: 'No autorizado' },
         { status: 401 }
       );
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user?.email) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const ipAddress = request.headers.get('x-forwarded-for') ||
@@ -43,7 +55,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validación fallida',
-          details: validation.error.issues.map((e: any) => e.message),
+          details: validation.error.issues.map(e => e.message),
         },
         { status: 400 }
       );
@@ -56,7 +68,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update password
+    const { error: verificationError } = await supabase.auth.signInWithPassword({
+      email: userData.user.email,
+      password: currentPassword,
+    });
+
+    if (verificationError) {
+      return NextResponse.json(
+        { error: 'Contraseña actual incorrecta' },
+        { status: 401 }
+      );
+    }
+
+    // Update password only after re-authenticating with the current password.
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });

@@ -3,6 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
   try {
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized', candidatos: [], success: false },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
     const vacante_id = request.nextUrl.searchParams.get('vacante_id');
 
     if (!vacante_id) {
@@ -23,6 +33,35 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized', candidatos: [], success: false },
+        { status: 401 }
+      );
+    }
+
+    const { data: vacante, error: vacanteError } = await supabase
+      .from('vacantes')
+      .select('usuario_id')
+      .eq('id', vacante_id)
+      .single();
+
+    if (vacanteError || !vacante) {
+      return NextResponse.json(
+        { error: 'Vacante no encontrada', candidatos: [], success: false },
+        { status: 404 }
+      );
+    }
+
+    if (vacante.usuario_id !== userData.user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden', candidatos: [], success: false },
+        { status: 403 }
+      );
+    }
 
     // Fetch candidates for this vacancy
     const { data: candidatos, error } = await supabase
