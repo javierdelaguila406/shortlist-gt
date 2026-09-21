@@ -53,10 +53,14 @@ export function middleware(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
   // ========== SEGURIDAD: Content Security Policy ==========
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'"
-  );
+  const isDev = process.env.NODE_ENV === 'development';
+  const cspPolicy = isDev
+    ? // Desarrollo: permite inline scripts para Next.js HMR
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'"
+    : // Producción: restrictivo
+      "default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'";
+
+  response.headers.set('Content-Security-Policy', cspPolicy);
 
   // Verificar si es ruta pública PRIMERO (tiene prioridad)
   // Exactitud para rutas raíz
