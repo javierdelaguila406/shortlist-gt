@@ -17,6 +17,7 @@ interface Vacante {
   departamento?: string;
   estado: string;
   created_at: string;
+  _candidatos_count?: number;
 }
 
 export default function DashboardPage() {
