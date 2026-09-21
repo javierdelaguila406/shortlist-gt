@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useLicenseCode } from '@/lib/license-system';
+import { redeemLicenseCode } from '@/lib/license-system';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
@@ -23,7 +23,7 @@ export function UseLicenseCodeModal({ userId, onClose, onSuccess }: UseLicenseCo
     setError('');
     setLoading(true);
 
-    const result = await useLicenseCode(codigo, userId);
+    const result = await redeemLicenseCode(codigo, userId);
 
     if (result.success) {
       setSuccess(true);

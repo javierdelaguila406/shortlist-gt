@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
@@ -39,7 +39,7 @@ function DashboardContent() {
     candidatos: 0,
   });
 
-  const fetchVacantes = async () => {
+  const fetchVacantes = useCallback(async () => {
     try {
       const { data: sessionData } = await (
         await import('@/lib/supabase').then((m) => m.supabase.auth.getSession())
@@ -70,11 +70,11 @@ function DashboardContent() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchVacantes();
-  }, []);
+  }, [fetchVacantes]);
 
   const handleLogout = async () => {
     await signOut();

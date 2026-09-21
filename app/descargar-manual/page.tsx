@@ -48,7 +48,7 @@ export default function DescargarManualPage() {
               jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
             };
 
-            // @ts-ignore
+            // @ts-expect-error - html2pdf no tiene tipos definidos
             html2pdf().set(opt).from(element).save();
 
             // Limpiar iframe

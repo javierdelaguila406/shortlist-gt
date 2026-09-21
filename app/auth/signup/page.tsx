@@ -92,7 +92,7 @@ export default function SignupPage() {
           router.push('/auth/login');
         }
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       setError('Error de conexión. Intenta más tarde.');
       console.error('Signup error:', err);
     } finally {

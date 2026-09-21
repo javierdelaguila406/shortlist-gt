@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { rateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
 import { syncCreateUser } from '@/lib/dual-sync';
@@ -33,7 +32,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: 'Validación fallida',
-          details: validation.error.issues.map((e: any) => e.message),
+          details: validation.error.issues.map((e) => e.message),
         },
         { status: 400 }
       );

@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function HealthCheck() {
   return (
     <div style={{
@@ -40,7 +42,7 @@ export default function HealthCheck() {
         </p>
       </div>
 
-      <a href="/" style={{
+      <Link href="/" style={{
         display: 'inline-block',
         padding: '12px 24px',
         backgroundColor: '#10b981',
@@ -51,7 +53,7 @@ export default function HealthCheck() {
         fontSize: '16px',
       }}>
         Ir a la Página Principal
-      </a>
+      </Link>
     </div>
   );
 }

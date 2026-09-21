@@ -44,7 +44,7 @@ export default function LoginPage() {
 
       // El servidor ya estableció el cookie, redirigir directamente
       router.push('/dashboard/reclutador');
-    } catch (err: any) {
+    } catch (err) {
       setError('Error de conexión. Intenta más tarde.');
       console.error('Login error:', err);
     } finally {

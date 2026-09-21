@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function TestPage() {
   return (
     <div style={{
@@ -37,7 +39,7 @@ export default function TestPage() {
         width: '100%',
         maxWidth: '300px',
       }}>
-        <a href="/" style={{
+        <Link href="/" style={{
           display: 'block',
           padding: '15px 20px',
           backgroundColor: '#10b981',
@@ -49,9 +51,9 @@ export default function TestPage() {
           fontSize: '16px',
         }}>
           Home
-        </a>
+        </Link>
 
-        <a href="/dashboard/demo" style={{
+        <Link href="/dashboard/demo" style={{
           display: 'block',
           padding: '15px 20px',
           backgroundColor: '#374151',
@@ -63,9 +65,9 @@ export default function TestPage() {
           fontSize: '16px',
         }}>
           Demo Dashboard
-        </a>
+        </Link>
 
-        <a href="/postular/sample" style={{
+        <Link href="/postular/sample" style={{
           display: 'block',
           padding: '15px 20px',
           backgroundColor: '#374151',
@@ -77,7 +79,7 @@ export default function TestPage() {
           fontSize: '16px',
         }}>
           Postularse
-        </a>
+        </Link>
 
         <a href="/auth/login" style={{
           display: 'block',

@@ -9,6 +9,7 @@ import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
 import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
 import { supabase } from '@/lib/supabase';
+import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
 import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
 import { getPostulationPath } from '@/lib/ui';
 
@@ -408,7 +409,6 @@ export default function DemoDashboard() {
     const template = templates.find(t => t.id === categoriaId);
     if (template) {
       // Obtener el template completo con todas las preguntas
-      const { TEMPLATES_PREGUNTAS } = require('@/lib/templates-preguntas');
       const fullTemplate = TEMPLATES_PREGUNTAS[categoriaId];
       if (fullTemplate) {
         setSelectedTemplatePreview({

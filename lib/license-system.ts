@@ -119,7 +119,7 @@ export async function checkPermission(
 /**
  * Usar un código de licencia
  */
-export async function useLicenseCode(code: string, userId: string): Promise<{
+export async function redeemLicenseCode(code: string, userId: string): Promise<{
   success: boolean;
   message: string;
   plan?: string;

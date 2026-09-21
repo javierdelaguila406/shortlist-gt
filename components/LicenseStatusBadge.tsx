@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
 import { AlertCircle, CheckCircle, Lock } from 'lucide-react';
@@ -17,12 +17,7 @@ interface UserLicense {
 
 export function LicenseStatusBadge() {
   const router = useRouter();
-  const [license, setLicense] = useState<UserLicense | null>(null);
-
-  useEffect(() => {
-    const license = getUserLicenseFromStorage();
-    setLicense(license);
-  }, []);
+  const [license] = useState<UserLicense | null>(() => getUserLicenseFromStorage());
 
   if (!license) {
     return (

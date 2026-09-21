@@ -14,7 +14,7 @@ export default function TerminosPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">1. Aceptación de Términos</h2>
             <p className="mb-4">
-              Al acceder y utilizar <strong>SHORTLIST.GT</strong> (en adelante, "la Plataforma"), aceptas estar vinculado por estos
+              Al acceder y utilizar <strong>SHORTLIST.GT</strong> (en adelante, &quot;la Plataforma&quot;), aceptas estar vinculado por estos
               Términos de Servicio. Si no aceptas estos términos, no debes utilizar la Plataforma.
             </p>
           </section>
@@ -84,7 +84,7 @@ export default function TerminosPage() {
           <section>
             <h2 className="text-2xl font-bold text-white mb-4">6. Limitación de Responsabilidad</h2>
             <p className="mb-4">
-              <strong>LA PLATAFORMA SE PROPORCIONA "TAL COMO ESTÁ"</strong> sin garantías de ningún tipo, explícitas o implícitas.
+              <strong>LA PLATAFORMA SE PROPORCIONA &quot;TAL COMO ESTÁ&quot;</strong> sin garantías de ningún tipo, explícitas o implícitas.
             </p>
             <div className="bg-yellow-950/30 border border-yellow-800/50 rounded-lg p-6 space-y-3">
               <p className="font-semibold text-yellow-200">SHORTLIST.GT no garantiza:</p>

@@ -213,7 +213,7 @@ export default function PrivacidadPage() {
             <h2 className="text-2xl font-bold text-white mb-4">10. Cambios en esta Política</h2>
             <p className="text-zinc-400">
               Podemos actualizar esta Política de Privacidad ocasionalmente. Publicaremos los cambios en esta página
-              con una fecha de "Última actualización" revisada. Tu uso continuado del sitio constituye aceptación de los cambios.
+              con una fecha de &quot;Última actualización&quot; revisada. Tu uso continuado del sitio constituye aceptación de los cambios.
             </p>
           </section>
 

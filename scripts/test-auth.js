@@ -5,6 +5,7 @@
  * Prueba todos los flujos, validaciones y casos de error
  */
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const http = require('http');
 
 const BASE_URL = 'http://localhost:3000';
