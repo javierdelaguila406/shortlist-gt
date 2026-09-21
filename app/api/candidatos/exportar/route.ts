@@ -7,6 +7,29 @@ import { jsPDF } from 'jspdf';
 import { randomUUID } from 'node:crypto';
 import { buildReportRows, REPORT_HEADERS, validateReportRange } from '@/lib/reporting';
 
+/**
+ * Sanitize cell values for Excel/CSV to prevent formula injection
+ * Prevents attacks like =cmd|'/c calc'!A1
+ */
+function sanitizeExcelCell(value: any): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const stringValue = String(value);
+
+  // Prevent formula injection
+  // Block strings starting with =, +, -, @, or tab character
+  if (/^[\=\+\-\@\t]/.test(stringValue)) {
+    return "'" + stringValue; // Prefix with single quote to force text format
+  }
+
+  // Remove any remaining potentially dangerous characters
+  return stringValue
+    .replace(/[\r\n]/g, ' ') // Replace newlines with space
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, ''); // Remove control characters
+}
+
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -90,7 +113,16 @@ export async function POST(request: NextRequest) {
       });
 
       if (formato === 'excel') {
-        const worksheet = XLSX.utils.json_to_sheet(rows, {
+        // Sanitize all cell values to prevent formula injection
+        const sanitizedRows = rows.map(row => {
+          const sanitized: Record<string, any> = {};
+          for (const [key, value] of Object.entries(row)) {
+            sanitized[key] = sanitizeExcelCell(value);
+          }
+          return sanitized;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(sanitizedRows, {
           header: [...REPORT_HEADERS],
         });
         const workbook = XLSX.utils.book_new();
@@ -108,16 +140,27 @@ export async function POST(request: NextRequest) {
       }
 
       const document = new jsPDF();
-      document.text(`Candidatos - ${vacante.titulo || vacante_id}`, 10, 15);
+      // Sanitize title for PDF
+      const sanitizedTitle = sanitizeExcelCell(vacante.titulo || vacante_id);
+      document.text(`Candidatos - ${sanitizedTitle}`, 10, 15);
       document.text(REPORT_HEADERS.join(' | '), 10, 25);
+
       rows.forEach((row, index) => {
         const pageRow = index % 28;
         if (index > 0 && pageRow === 0) {
           document.addPage();
           document.text(REPORT_HEADERS.join(' | '), 10, 15);
         }
+
+        // Sanitize all values before adding to PDF
+        const sanitizedEmail = sanitizeExcelCell(row.email);
+        const sanitizedNombre = sanitizeExcelCell(row.nombre);
+        const sanitizedEstado = sanitizeExcelCell(row.estado);
+        const sanitizedScore = sanitizeExcelCell(row.score_total);
+        const sanitizedFecha = sanitizeExcelCell(row.fecha_postulacion);
+
         document.text(
-          `${row.email} | ${row.nombre} | ${row.estado} | ${row.score_total} | ${row.fecha_postulacion}`,
+          `${sanitizedEmail} | ${sanitizedNombre} | ${sanitizedEstado} | ${sanitizedScore} | ${sanitizedFecha}`,
           10,
           35 + pageRow * 8,
           { maxWidth: 190 }

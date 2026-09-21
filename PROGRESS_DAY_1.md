@@ -4,22 +4,22 @@
 
 ### 1️⃣ **Supabase (PostgreSQL Database)** ✅ 100% LISTO
 - **Proyecto creado**: `shortlist-gt`
-- **URL**: https://xropotkrcovaqsarkjvp.supabase.co
+- **URL**: [REDACTED] (stored in .env.local)
 - **Status**: ✅ Funcionando
 - **En `.env.local`**:
   ```
-  NEXT_PUBLIC_SUPABASE_URL=https://xropotkrcovaqsarkjvp.supabase.co
-  NEXT_PUBLIC_SUPABASE_ANON_KEY=***REMOVED***
-  SUPABASE_SERVICE_ROLE_KEY=***REMOVED***
+  NEXT_PUBLIC_SUPABASE_URL=[REDACTED]
+  NEXT_PUBLIC_SUPABASE_ANON_KEY=[REDACTED]
+  SUPABASE_SERVICE_ROLE_KEY=[REDACTED]
   ```
 
 ### 2️⃣ **OpenAI (CV Analysis with AI)** ✅ 100% LISTO
-- **API Key generada**: ***REMOVED***
+- **API Key generada**: [REDACTED] (stored in .env.local)
 - **Model**: GPT-4o-mini (procesamiento de CVs)
 - **Status**: ✅ Funcional
 - **En `.env.local`**:
   ```
-  OPENAI_API_KEY=***REMOVED***
+  OPENAI_API_KEY=[REDACTED]
   ```
 
 ### 3️⃣ **Facebook/Meta Account** ✅ CREADA Y VERIFICADA

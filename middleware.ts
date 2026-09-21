@@ -91,7 +91,18 @@ export function middleware(request: NextRequest) {
 
       if (!authHeader?.startsWith('Bearer ')) {
         return NextResponse.json(
-          { error: 'Unauthorized', success: false },
+          { error: 'Unauthorized: Missing Bearer token', success: false },
+          { status: 401 }
+        );
+      }
+
+      const token = authHeader.substring(7); // Remove "Bearer " prefix
+      // IMPORTANT: Full JWT verification with signature happens in API endpoints
+      // This middleware only does basic format validation for performance
+      const isValid = isValidJWTFormat(token);
+      if (!isValid) {
+        return NextResponse.json(
+          { error: 'Unauthorized: Invalid token format', success: false },
           { status: 401 }
         );
       }
@@ -106,9 +117,9 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
 
-    // Validar que el token sea válido (basic JWT format check)
-    // Full verification happens in API endpoints via Supabase.auth.getUser()
-    const isValid = isValidToken(token);
+    // IMPORTANT: Only basic format validation here
+    // MUST verify signature in API endpoints using Supabase.auth.getUser()
+    const isValid = isValidJWTFormat(token);
     if (!isValid) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
@@ -117,27 +128,53 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-function isValidToken(token: string): boolean {
+/**
+ * Validates JWT format and expiration ONLY
+ * ⚠️ DOES NOT verify signature - full verification must happen in API endpoints
+ * using Supabase.auth.getUser() with the service role key
+ */
+function isValidJWTFormat(token: string): boolean {
   try {
-    // Basic JWT format validation in middleware
-    // Full verification happens in API endpoints via Supabase.auth.getUser()
-    if (!token || token.length < 20) {
+    if (!token || token.length < 50) {
       return false;
     }
 
-    // Check if token looks like a JWT (three parts separated by dots)
+    // Check JWT structure: header.payload.signature
     const parts = token.split('.');
     if (parts.length !== 3) {
       return false;
     }
 
-    // Try to decode and check expiration
+    // Validate header
     try {
-      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-      // Check if token is expired
-      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+      if (!header.alg || !header.typ) {
         return false;
       }
+    } catch {
+      return false;
+    }
+
+    // Validate payload and check expiration
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+
+      // Check required claims
+      if (!payload.sub) {
+        return false;
+      }
+
+      // Check if token is expired
+      if (payload.exp) {
+        const expirationTime = payload.exp * 1000; // Convert to milliseconds
+        if (Date.now() > expirationTime) {
+          return false;
+        }
+      } else {
+        // No expiration claim is invalid
+        return false;
+      }
+
       return true;
     } catch {
       return false;

@@ -81,17 +81,34 @@ export async function checkPermission(
     return { allowed: true };
   }
 
-  // Contar recursos actuales
+  // Contar recursos actuales (solo del usuario)
   try {
-    const { count: vacanteCount } = await supabase
+    // Get user's vacantes
+    const { count: vacanteCount, error: vacanteError } = await supabase
       .from('vacantes')
-      .select('*', { count: 'exact', head: true });
+      .select('*', { count: 'exact', head: true })
+      .eq('usuario_id', userId);
 
-    const { count: candidatoCount } = await supabase
-      .from('candidatos')
-      .select('*', { count: 'exact', head: true });
+    // Get count of candidatos from user's vacantes
+    const { data: userVacantes } = await supabase
+      .from('vacantes')
+      .select('id')
+      .eq('usuario_id', userId);
 
-    if (action === 'create_vacante' && vacanteCount) {
+    let candidatoCount = 0;
+    if (userVacantes && userVacantes.length > 0) {
+      const vacanteIds = userVacantes.map(v => v.id);
+      const { count, error: candidatoError } = await supabase
+        .from('candidatos')
+        .select('*', { count: 'exact', head: true })
+        .in('vacante_id', vacanteIds);
+
+      if (!candidatoError && count !== null) {
+        candidatoCount = count;
+      }
+    }
+
+    if (action === 'create_vacante' && vacanteCount !== null) {
       if (vacanteCount >= plan.maxVacantes) {
         return {
           allowed: false,
@@ -100,7 +117,7 @@ export async function checkPermission(
       }
     }
 
-    if (action === 'add_candidato' && candidatoCount) {
+    if (action === 'add_candidato' && candidatoCount > 0) {
       if (candidatoCount >= plan.maxCandidatos) {
         return {
           allowed: false,

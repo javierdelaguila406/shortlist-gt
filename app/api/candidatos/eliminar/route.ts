@@ -58,13 +58,16 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const vacanteRelation = candidato.vacantes as
-      | { usuario_id: string }
-      | { usuario_id: string }[]
-      | null;
-    const ownerId = Array.isArray(vacanteRelation)
-      ? vacanteRelation[0]?.usuario_id
-      : vacanteRelation?.usuario_id;
+    // Safely extract owner ID from relationship
+    type VacanteRelation = { usuario_id: string } | { usuario_id: string }[] | null;
+    const vacanteRelation = candidato.vacantes as VacanteRelation;
+
+    let ownerId: string | undefined;
+    if (Array.isArray(vacanteRelation) && vacanteRelation.length > 0) {
+      ownerId = vacanteRelation[0]?.usuario_id;
+    } else if (vacanteRelation && !Array.isArray(vacanteRelation)) {
+      ownerId = vacanteRelation.usuario_id;
+    }
 
     if (ownerId !== userId) {
       return NextResponse.json(
@@ -73,16 +76,32 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Delete CV from storage if exists
     if (candidato.cv_url) {
       try {
+        // Validate fileName before attempting deletion
         const fileName = candidato.cv_url.split('/').pop();
-        if (fileName) {
-          await supabase.storage
-            .from('cvs')
-            .remove([fileName]);
+
+        if (fileName && fileName.length > 0 && !fileName.includes('..')) {
+          // Security: Prevent directory traversal
+          // Only allow alphanumeric, underscore, hyphen, and dot
+          if (!/^[\w.\-]+$/.test(fileName)) {
+            console.warn('[ELIMINAR-CANDIDATO] Invalid filename format:', fileName);
+            // Continue deletion even if file cleanup fails
+          } else {
+            const { error: deleteError } = await supabase.storage
+              .from('cvs')
+              .remove([fileName]);
+
+            if (deleteError) {
+              console.warn('[ELIMINAR-CANDIDATO] Failed to delete CV file:', deleteError);
+              // Continue - don't fail the whole operation
+            }
+          }
         }
-      } catch {
-        console.error('[ELIMINAR-CANDIDATO] Error borrando archivo');
+      } catch (fileDeleteError) {
+        console.error('[ELIMINAR-CANDIDATO] Error deleting file:', fileDeleteError);
+        // Continue - don't fail the whole operation for file deletion errors
       }
     }
 

@@ -42,8 +42,15 @@ export async function GET(
     }
 
     // Verify ownership
-    const vacanteUsuario = (candidato as any).vacantes[0]?.usuario_id;
-    if (vacanteUsuario !== userData.user.id) {
+    type CandidatoWithVacante = typeof candidato & {
+      vacantes: Array<{ usuario_id: string }> | null;
+    };
+    const vacanteRelation = (candidato as CandidatoWithVacante).vacantes;
+    const vacanteUsuario = Array.isArray(vacanteRelation)
+      ? vacanteRelation[0]?.usuario_id
+      : null;
+
+    if (!vacanteUsuario || vacanteUsuario !== userData.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -84,12 +91,25 @@ export async function PATCH(
       );
     }
 
-    const body = await request.json();
-    const { estado } = body;
-
-    if (!['pendiente', 'en_revision', 'aprobado', 'rechazado', 'oferta'].includes(estado)) {
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
       return NextResponse.json(
-        { error: 'Invalid estado' },
+        { error: 'Invalid JSON body' },
+        { status: 400 }
+      );
+    }
+
+    const { estado } = body;
+    const validEstados = ['pendiente', 'en_revision', 'aprobado', 'rechazado', 'oferta'];
+
+    // Validate estado is provided and is a valid value
+    if (!estado || typeof estado !== 'string' || !validEstados.includes(estado)) {
+      return NextResponse.json(
+        {
+          error: 'Invalid estado. Must be one of: ' + validEstados.join(', ')
+        },
         { status: 400 }
       );
     }
@@ -108,8 +128,15 @@ export async function PATCH(
       );
     }
 
-    const vacanteUsuario = (candidato as any).vacantes[0]?.usuario_id;
-    if (vacanteUsuario !== userData.user.id) {
+    type CandidatoWithVacante = typeof candidato & {
+      vacantes: Array<{ usuario_id: string }> | null;
+    };
+    const vacanteRelation = (candidato as CandidatoWithVacante).vacantes;
+    const vacanteUsuario = Array.isArray(vacanteRelation)
+      ? vacanteRelation[0]?.usuario_id
+      : null;
+
+    if (!vacanteUsuario || vacanteUsuario !== userData.user.id) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

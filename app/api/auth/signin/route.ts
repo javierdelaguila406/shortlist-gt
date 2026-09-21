@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { rateLimit } from '@/lib/rate-limit';
 import { loginSchema } from '@/lib/validations';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,10 +47,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (error) {
-      // Log interno - NUNCA expongas detalles al cliente
+      // Log interno - NUNCA expongas detalles sensibles o email al cliente
+      // Hash the email for logging (one-way hash, cannot be reversed)
+      const emailHash = crypto
+        .createHash('sha256')
+        .update(email)
+        .digest('hex')
+        .substring(0, 8);
+
       console.warn('[SECURITY] Login failed:', {
         error: error.message,
-        email,
+        emailHash, // Log hash instead of email
         ipAddress,
         timestamp: new Date().toISOString(),
       });

@@ -75,9 +75,28 @@ export async function PUT(request: NextRequest) {
 /**
  * Endpoint: GET /api/evaluaciones/personalizar-preguntas?vacante_id=xxx
  * Obtiene las preguntas actuales de una vacante
+ * SECURITY: Requiere autenticación Bearer token
  */
 export async function GET(request: NextRequest) {
   try {
+    // Verify authentication
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Bearer token required' },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) {
+      return NextResponse.json(
+        { error: 'Unauthorized - Invalid token' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const vacante_id = searchParams.get('vacante_id');
 
@@ -85,6 +104,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: 'Falta vacante_id' },
         { status: 400 }
+      );
+    }
+
+    // Verify ownership: User must own the vacancy
+    const { data: vacante } = await supabase
+      .from('vacantes')
+      .select('usuario_id')
+      .eq('id', vacante_id)
+      .single();
+
+    if (!vacante || vacante.usuario_id !== userData.user.id) {
+      return NextResponse.json(
+        { error: 'Forbidden - You do not own this vacancy' },
+        { status: 403 }
       );
     }
 

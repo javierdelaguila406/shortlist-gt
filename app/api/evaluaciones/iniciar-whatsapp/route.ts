@@ -2,28 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendEvaluationStart } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
  * Inicia una evaluación WhatsApp para un candidato específico
  * Llamado por: Reclutador desde el dashboard
- * SEGURIDAD: Requiere token Bearer válido
+ * SEGURIDAD: Requiere token Bearer válido + Rate Limiting
  */
 
-// Verificar token de autenticación
+// Verificar token de autenticación CON rate limiting
 async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId?: string}> {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
   if (!token) return { valid: false };
 
   try {
+    // Rate limiting por token (max 10 requests/hour)
+    const rateLimitKey = `auth:${token.substring(0, 20)}`;
+    const rateLimitResult = rateLimit(rateLimitKey, 10, 3600000);
+    if (!rateLimitResult.success) {
+      console.warn('[AUTH] Rate limit exceeded for token');
+      return { valid: false };
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
     const { data, error } = await supabaseClient.auth.getUser(token);
-    if (error || !data.user) return { valid: false };
+    if (error || !data.user) {
+      console.warn('[AUTH] Invalid token attempt');
+      return { valid: false };
+    }
     return { valid: true, userId: data.user.id };
-  } catch {
+  } catch (error) {
+    console.error('[AUTH] Error verifying token:', error);
     return { valid: false };
   }
 }

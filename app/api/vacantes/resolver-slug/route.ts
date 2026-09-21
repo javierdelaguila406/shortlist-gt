@@ -12,10 +12,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Usar service role key para no estar limitado por RLS
+    // Public endpoint - use anon key with RLS
+    // RLS will only return active vacantes
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
     );
 
     // 1. Buscar por ID exacto (para IDs tipo "vacante-1234567890")

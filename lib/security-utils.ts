@@ -17,75 +17,152 @@ export function sanitizeInput(input: string): string {
   if (!input) return '';
 
   return input
-    .replace(/[<>]/g, '') // Remover < y >
-    .replace(/javascript:/gi, '') // Remover javascript:
-    .replace(/on\w+\s*=/gi, '') // Remover event handlers
+    // Remove HTML tags and dangerous characters
+    .replace(/[<>]/g, '')
+    // Remove event handlers (onclick, onload, etc)
+    .replace(/on\w+\s*=[\s\S]*?(?=\s|>|$)/gi, '')
+    // Remove javascript: protocol
+    .replace(/javascript:/gi, '')
+    // Remove data: protocol (data URIs can be dangerous)
+    .replace(/data:/gi, '')
+    // Remove vbscript: protocol
+    .replace(/vbscript:/gi, '')
+    // Escape quotes to prevent breakout
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
     .trim();
 }
 
 /**
- * Validar email
+ * Validar email con RFC 5322 simplified check
  */
 export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  if (!email || email.length > 254) {
+    return false;
+  }
+
+  // More strict email regex
+  // Format: local-part@domain
+  // Local part: alphanumeric, dots, hyphens, underscores
+  // Domain: alphanumeric, dots, hyphens with at least one TLD
+  const emailRegex = /^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+  if (!emailRegex.test(email)) {
+    return false;
+  }
+
+  // Additional checks
+  const parts = email.split('@');
+  if (parts[0].length === 0 || parts[0].length > 64) {
+    return false; // Local part must be 1-64 chars
+  }
+
+  // No consecutive dots
+  if (email.includes('..')) {
+    return false;
+  }
+
+  // Cannot start/end with dot
+  if (email.startsWith('.') || email.endsWith('.')) {
+    return false;
+  }
+
+  return true;
 }
 
 /**
- * Validar teléfono (formato básico)
+ * Validar teléfono (formato internacional)
  */
 export function validatePhone(phone: string): boolean {
-  // Aceptar teléfonos con al menos 7 dígitos
-  const phoneRegex = /\d{7,}/;
-  return phoneRegex.test(phone.replace(/\D/g, ''));
+  if (!phone || phone.length < 7 || phone.length > 20) {
+    return false;
+  }
+
+  // Acepta formato internacional: +XXX-XXX-XXXX o similar
+  // Acepta solo dígitos y caracteres permitidos (+, -, espacio, paréntesis)
+  const phoneRegex = /^[\d\s+\-()]+$/;
+
+  if (!phoneRegex.test(phone)) {
+    return false;
+  }
+
+  // Debe tener al menos 7 dígitos
+  const digitsOnly = phone.replace(/\D/g, '');
+  if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+    return false;
+  }
+
+  return true;
 }
 
 // ========== ENCRYPTION FOR SENSITIVE DATA ==========
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
+function getEncryptionKey(): Buffer {
+  const key = process.env.ENCRYPTION_KEY;
+  if (!key) {
+    throw new Error('ENCRYPTION_KEY environment variable is not set. This is required for production.');
+  }
+  // Key must be exactly 32 bytes for AES-256
+  if (key.length < 32) {
+    throw new Error('ENCRYPTION_KEY must be at least 32 characters long (256 bits)');
+  }
+  return Buffer.from(key.slice(0, 32));
+}
 
 /**
  * Encriptar datos sensibles (teléfono, email)
- * Para producción, usar un key manager seguro
+ * IMPORTANTE: No fallback a texto plano - la encriptación es obligatoria
  */
 export function encryptSensitiveData(data: string): string {
+  if (!data) {
+    throw new Error('Cannot encrypt empty data');
+  }
+
   try {
+    const key = getEncryptionKey();
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(
-      'aes-256-cbc',
-      Buffer.from(ENCRYPTION_KEY.padEnd(32, '0').slice(0, 32)),
-      iv
-    );
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
 
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
 
     return iv.toString('hex') + ':' + encrypted;
   } catch (error) {
-    console.error('[ENCRYPTION] Error:', error);
-    return data; // Fallback a texto plano (NO ideal)
+    console.error('[ENCRYPTION] Critical error:', error);
+    throw new Error(`Encryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
 /**
  * Desencriptar datos sensibles
+ * IMPORTANTE: Lanza error si falla - no retorna texto plano
  */
 export function decryptSensitiveData(encrypted: string): string {
+  if (!encrypted || !encrypted.includes(':')) {
+    throw new Error('Invalid encrypted data format');
+  }
+
   try {
     const [ivHex, encryptedData] = encrypted.split(':');
+
+    if (!ivHex || !encryptedData) {
+      throw new Error('Malformed encrypted data');
+    }
+
     const iv = Buffer.from(ivHex, 'hex');
-    const decipher = crypto.createDecipheriv(
-      'aes-256-cbc',
-      Buffer.from(ENCRYPTION_KEY.padEnd(32, '0').slice(0, 32)),
-      iv
-    );
+    if (iv.length !== 16) {
+      throw new Error('Invalid IV length');
+    }
+
+    const key = getEncryptionKey();
+    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
 
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
 
     return decrypted;
   } catch (error) {
-    console.error('[DECRYPTION] Error:', error);
-    return encrypted; // Fallback
+    console.error('[DECRYPTION] Critical error:', error);
+    throw new Error(`Decryption failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 
@@ -137,16 +214,48 @@ export function logAuditEvent(
 // ========== SQL INJECTION PREVENTION ==========
 /**
  * Validar que un valor no contenga inyección SQL
- * Nota: Supabase con prepared statements es seguro, pero validar entrada
+ * IMPORTANTE: Supabase usa prepared statements, pero aún validamos entrada
  */
 export function validateAgainstSQLInjection(input: string): boolean {
-  const sqlKeywords = [
-    'DROP', 'DELETE', 'INSERT', 'UPDATE', 'ALTER', 'CREATE',
-    'UNION', 'SELECT', 'EXEC', 'SCRIPT'
-  ];
+  if (!input || typeof input !== 'string') {
+    return false;
+  }
 
   const upperInput = input.toUpperCase();
-  return !sqlKeywords.some(keyword => upperInput.includes(keyword));
+
+  // Dangerous SQL keywords and patterns
+  const dangerousPatterns = [
+    // DDL (Data Definition Language)
+    /\bDROP\b/,
+    /\bCREATE\b/,
+    /\bALTER\b/,
+    /\bTRUNCATE\b/,
+
+    // DML (Data Manipulation Language) - risky in certain contexts
+    /\bDELETE\b/,
+    /\bINSERT\b/,
+    /\bUPDATE\b/,
+
+    // Query control
+    /\bUNION\b/,
+    /\bSELECT\b/,
+    /\bEXEC\b/,
+    /\bEXECUTE\b/,
+
+    // Advanced injection
+    /\bPRAGMA\b/,
+    /\bATTACH\b/,
+    /\bDETACH\b/,
+    /\bREPLACE\b/,
+
+    // Script injection via SQL comments
+    /--/,
+    /\/\*/,
+    /\*\//,
+    /;.*\n/,
+  ];
+
+  return !dangerousPatterns.some(pattern => pattern.test(upperInput));
 }
 
 // ========== REQUEST VALIDATION ==========

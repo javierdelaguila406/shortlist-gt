@@ -29,10 +29,11 @@ export async function POST(request: NextRequest) {
   if (!authHeader?.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRole) return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anonKey) return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
 
-  const supabase = createClient(url, serviceRole);
+  // Use anon key with RLS enforcement
+  const supabase = createClient(url, anonKey);
   const { data: authData, error: authError } = await supabase.auth.getUser(authHeader.slice(7));
   if (authError || !authData.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   if (!(await persistentRateLimit(`cv-analysis:${authData.user.id}`, 10, 86400000)).success) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { randomUUID } from 'crypto';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 import { syncCreateCandidato } from '@/lib/dual-sync';
@@ -112,7 +113,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
+    // Parse formData with error handling
+    let formData;
+    try {
+      formData = await request.formData();
+    } catch (parseError) {
+      console.error('[API] Invalid form data:', parseError);
+      return NextResponse.json(
+        { error: 'Datos del formulario inválidos', success: false },
+        { status: 400 }
+      );
+    }
     const nombre = sanitizeInput(formData.get('nombre') as string);
     const email = sanitizeInput(formData.get('email') as string);
     const telefono = sanitizeInput(formData.get('telefono') as string);
@@ -134,8 +145,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Generar candidato_id al inicio (necesario para Storage)
-    // Usar timestamp + random para evitar colisiones
-    const candidato_id = `candidato-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    // Usar randomUUID() para evitar colisiones
+    const candidato_id = `candidato-${randomUUID()}`;
 
     if (!nombre || !telefono || !vacante_id) {
       return NextResponse.json({ error: 'Faltan campos requeridos', success: false }, { status: 400 });
@@ -206,14 +217,24 @@ export async function POST(request: NextRequest) {
             .single();
 
           if (company?.plan === 'demo') {
-            // En DEMO: máximo 1 candidato TOTAL
-            const { count: candidatoCount } = await supabase
+            // En DEMO: máximo 1 candidato TOTAL por usuario
+            const { count: candidatoCount, error: countError } = await supabase
               .from('candidatos')
-              .select('*', { count: 'exact', head: true });
+              .select('*', { count: 'exact', head: true })
+              .eq('vacante_id', vacante_id)
+              .eq('email', extractedEmail);
 
-            if (candidatoCount && candidatoCount >= 1) {
+            if (countError) {
+              console.error('[API] Error counting demo candidatos:', countError);
               return NextResponse.json({
-                error: 'Has alcanzado el límite de 1 candidato en el plan Demo. Actualiza a Premium para continuar.',
+                error: 'Error al validar límite de candidatos',
+                success: false
+              }, { status: 500 });
+            }
+
+            if (candidatoCount !== null && candidatoCount >= 1) {
+              return NextResponse.json({
+                error: 'Ya has postulado para esta vacante en plan Demo. Actualiza a Premium para postularte en múltiples vacantes.',
                 success: false,
                 plan: 'demo',
               }, { status: 403 });
@@ -238,10 +259,12 @@ export async function POST(request: NextRequest) {
     // Extraer email del PDF si no vino en formulario (ANTES de agregar habilidades)
     if (finalCVText && !email) {
       const pdfEmail = extractEmailFromText(finalCVText);
-      if (pdfEmail) {
+      if (pdfEmail && validateEmail(pdfEmail)) {
         extractedEmail = pdfEmail;
-        const contactFound = Boolean(pdfEmail);
-        console.log('[API] Contact field extracted from document', { found: contactFound });
+        console.log('[API] Valid email extracted from document');
+      } else if (pdfEmail) {
+        // Don't log invalid email (PII protection)
+        console.warn('[API] Invalid email format extracted from document');
       }
     }
 
@@ -253,10 +276,10 @@ export async function POST(request: NextRequest) {
       console.log('[API] Supplementing short candidate document');
     }
 
-    // Validar que tenemos email (REQUERIDO)
-    if (!extractedEmail || extractedEmail.trim().length === 0) {
+    // Validar que tenemos email válido (REQUERIDO)
+    if (!extractedEmail || extractedEmail.trim().length === 0 || !validateEmail(extractedEmail)) {
       return NextResponse.json({
-        error: 'Email es requerido. Proporciona tu email o asegúrate que esté en el PDF.',
+        error: 'Email válido es requerido. Proporciona tu email o asegúrate que esté en el PDF.',
         success: false
       }, { status: 400 });
     }
@@ -330,18 +353,44 @@ export async function POST(request: NextRequest) {
       .eq('user_id', vacanteData.usuario_id)
       .single();
 
-    syncCreateCandidato({
-      id: candidato.id,
-      vacante_id: vacante_id,
-      nombre: nombre,
-      email: extractedEmail,
-      telefono: telefono,
-      cv_url: cvUrl,
-      score_ia: score_ia,
-      experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
-      recruiterEmail: vacanteOwner?.email,
-    }).catch(err => {
-      console.error('[SYNC] Background sync error for candidato:', err);
+    // Background sync con reintentos automáticos
+    const maxRetries = 3;
+    const syncWithRetry = async (retryCount = 0) => {
+      try {
+        await syncCreateCandidato({
+          id: candidato.id,
+          vacante_id: vacante_id,
+          nombre: nombre,
+          email: extractedEmail,
+          telefono: telefono,
+          cv_url: cvUrl,
+          score_ia: score_ia,
+          experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
+          recruiterEmail: vacanteOwner?.email,
+        });
+        console.log('[SYNC] Background sync successful for candidato:', candidato.id);
+      } catch (err) {
+        if (retryCount < maxRetries) {
+          console.warn(`[SYNC] Retry ${retryCount + 1}/${maxRetries} for candidato:`, candidato.id);
+          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // exponential backoff
+          await syncWithRetry(retryCount + 1);
+        } else {
+          console.error('[SYNC] Max retries exceeded for candidato:', candidato.id, err);
+          // Registrar en audit que sync falló
+          await persistAuditEvent({
+            action: 'SYNC_FAILED',
+            userId: consentUserId,
+            resourceId: candidato.id,
+            resourceType: 'candidato',
+            changes: { error: String(err) },
+          }).catch(e => console.error('[AUDIT] Error logging sync failure:', e));
+        }
+      }
+    };
+
+    // Ejecutar en background sin bloquear
+    syncWithRetry().catch(err => {
+      console.error('[SYNC] Unexpected error in sync retry loop:', err);
     });
 
     // ========== AUDIT LOG ==========
@@ -364,14 +413,35 @@ export async function POST(request: NextRequest) {
       candidatoId: candidato.id,
       candidato: {
         id: candidato.id,
-        email: extractedEmail,  // ✅ Retorna email extraído
+        email: extractedEmail,
         score_ia,
         estado,
         cv_url: cvUrl
       },
     });
   } catch (error) {
-    console.error('[API] Error inesperado:', error);
-    return NextResponse.json({ error: 'Error del servidor', success: false }, { status: 500 });
+    // Log detailed error internally but return generic message
+    console.error('[API] Unexpected error in postular:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Determine error type for appropriate response
+    let statusCode = 500;
+    let userMessage = 'Ocurrió un error al procesar tu postulación. Intenta más tarde.';
+
+    if (error instanceof SyntaxError) {
+      statusCode = 400;
+      userMessage = 'Datos inválidos proporcionados';
+    } else if (error instanceof TypeError) {
+      statusCode = 400;
+      userMessage = 'Error al procesar los datos';
+    }
+
+    return NextResponse.json(
+      { error: userMessage, success: false },
+      { status: statusCode }
+    );
   }
 }

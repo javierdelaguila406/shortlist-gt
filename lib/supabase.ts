@@ -1,9 +1,53 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Type definitions for API responses
+export type CriteriosMinimos = {
+  experiencia_minima_anos: number;
+  salario_minimo_esperado: number;
+  ubicacion_requerida: boolean;
+  idiomas_requeridos: string[];
+};
+
+export type PreguntasTest = {
+  id: string;
+  pregunta: string;
+  tipo: 'multiple_choice' | 'text' | 'rating';
+  opciones?: string[];
+  respuesta_correcta?: string;
+  puntaje?: number;
+};
+
+export type Metadata = {
+  notas?: string;
+  tags?: string[];
+  custom_fields?: Record<string, string | number | boolean>;
+};
+
+export type Videos = {
+  id: string;
+  url: string;
+  duracion_segundos: number;
+  timestamp_creacion: string;
+  respuesta_a_pregunta_id?: string;
+};
+
+export type RespuestasTest = {
+  id: string;
+  pregunta_id: string;
+  respuesta: string;
+  puntaje: number;
+  correcta: boolean;
+  timestamp_respuesta: string;
+};
 
 export type Tables = {
   usuarios: {
@@ -33,8 +77,8 @@ export type Tables = {
       ubicacion: string | null;
       tipo_contrato: string | null;
       estado: 'activa' | 'pausada' | 'cerrada';
-      criterios_minimos: any | null;
-      preguntas_test: any[];
+      criterios_minimos: CriteriosMinimos | null;
+      preguntas_test: PreguntasTest[];
       created_at: string;
       updated_at: string;
     };
@@ -58,7 +102,7 @@ export type Tables = {
       rango_salario: string | null;
       link_linkedin: string | null;
       estado: 'pendiente' | 'en_revision' | 'aprobado' | 'rechazado' | 'oferta';
-      metadata: any | null;
+      metadata: Metadata | null;
       created_at: string;
       updated_at: string;
     };
@@ -74,8 +118,8 @@ export type Tables = {
       estado: 'en_proceso' | 'completado' | 'abandonado';
       mensaje_confirmacion_enviado: boolean;
       respuesta_confirmacion: string | null;
-      videos: any[];
-      respuestas_test: any[];
+      videos: Videos[];
+      respuestas_test: RespuestasTest[];
       created_at: string;
       updated_at: string;
     };
