@@ -2,9 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimit } from '@/lib/rate-limit';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -12,6 +9,9 @@ export async function POST(request: NextRequest) {
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
     if (!supabaseUrl || !supabaseServiceRole) {
       return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const rateLimitResult = rateLimit(`candidate-export:${userData.user.id}`, 10, 3600000);
+    const rateLimitResult = rateLimit(`candidate-export:${userData.user.id}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Intenta más tarde.' },

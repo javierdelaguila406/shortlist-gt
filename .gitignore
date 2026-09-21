@@ -32,6 +32,7 @@ yarn-error.log*
 *.swp
 *.swo
 *~
+*.tsbuildinfo
 
 # OS
 Thumbs.db

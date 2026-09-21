@@ -1,10 +1,8 @@
-// Simple in-memory rate limiter
-// Para producción, usar Redis
-type RateLimitStore = {
-  [key: string]: { count: number; resetTime: number };
-};
+// Simple in-memory rate limiter. En despliegues con varias instancias debe
+// sustituirse por un almacén compartido (por ejemplo, Redis).
+type RateLimitEntry = { count: number; resetTime: number };
 
-const store: RateLimitStore = {};
+const store = new Map<string, RateLimitEntry>();
 
 export function rateLimit(
   identifier: string,
@@ -13,18 +11,10 @@ export function rateLimit(
 ): { success: boolean; remaining: number; retryAfter?: number } {
   const now = Date.now();
   const key = `ratelimit:${identifier}`;
+  const record = store.get(key);
 
-  if (!store[key]) {
-    store[key] = { count: 1, resetTime: now + windowMs };
-    return { success: true, remaining: limit - 1 };
-  }
-
-  const record = store[key];
-
-  // Reset si la ventana expiró
-  if (now > record.resetTime) {
-    record.count = 1;
-    record.resetTime = now + windowMs;
+  if (!record || now >= record.resetTime) {
+    store.set(key, { count: 1, resetTime: now + windowMs });
     return { success: true, remaining: limit - 1 };
   }
 
@@ -39,12 +29,18 @@ export function rateLimit(
   return { success: true, remaining: limit - record.count };
 }
 
-// Limpiar store viejo cada 10 minutos
-setInterval(() => {
+// Limpiar entradas expiradas cada 5 minutos sin mantener vivo el proceso.
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
-  for (const key in store) {
-    if (store[key].resetTime < now) {
-      delete store[key];
+  for (const [key, entry] of store) {
+    if (entry.resetTime <= now) {
+      store.delete(key);
     }
   }
-}, 600000);
+}, 300000);
+
+cleanupTimer.unref?.();
+
+export function resetRateLimitStore(): void {
+  store.clear();
+}

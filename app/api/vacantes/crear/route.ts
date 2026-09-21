@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     // Sincronizar con Godaddy en background (sin bloquear respuesta)
     syncCreateVacante({
       id: newId,
-      user_id: userId,
+      usuario_id: userId,
       titulo: titulo.trim(),
       descripcion: descripcion || '',
       departamento: departamento || '',

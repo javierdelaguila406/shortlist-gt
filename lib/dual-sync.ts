@@ -81,7 +81,7 @@ export async function syncCreateUser(userData: {
  */
 export async function syncCreateVacante(vacanteData: {
   id: string;
-  user_id: string;
+  usuario_id: string;
   titulo: string;
   descripcion?: string;
   departamento?: string;
@@ -91,31 +91,40 @@ export async function syncCreateVacante(vacanteData: {
     // Siempre guardar en Supabase
     const supabaseResult = await supabase
       .from('vacantes')
-      .insert({
+      .upsert({
         id: vacanteData.id,
-        user_id: vacanteData.user_id,
+        usuario_id: vacanteData.usuario_id,
         titulo: vacanteData.titulo,
         descripcion: vacanteData.descripcion,
         departamento: vacanteData.departamento,
-        estado: 'abierta',
+        estado: 'activa',
         created_at: new Date().toISOString(),
-      })
+      }, { onConflict: 'id' })
       .select();
 
     let godaddyResult = true;
 
     // Solo sincronizar con Godaddy si es el usuario específico
     if (vacanteData.userEmail && shouldSync(vacanteData.userEmail)) {
-      godaddyResult = await insertGodaddyRecord('vacantes', {
+      const correlationId = `vacante:${vacanteData.id}`;
+      const existingVacante = await getGodaddyRecord('vacantes', vacanteData.id);
+      const godaddyVacante = {
         id: vacanteData.id,
-        user_id: vacanteData.user_id,
+        usuario_id: vacanteData.usuario_id,
         titulo: vacanteData.titulo,
         descripcion: vacanteData.descripcion,
         departamento: vacanteData.departamento,
-        estado: 'abierta',
+        estado: 'activa',
         created_at: new Date().toISOString(),
+      };
+
+      godaddyResult = existingVacante
+        ? await updateGodaddyRecord('vacantes', vacanteData.id, godaddyVacante)
+        : await insertGodaddyRecord('vacantes', godaddyVacante);
+      console.log('[SYNC] Vacante synchronized in Godaddy:', {
+        correlationId,
+        operation: existingVacante ? 'update' : 'insert',
       });
-      console.log('[SYNC] Vacante created in Godaddy:', vacanteData.id);
     } else {
       console.log('[SYNC] Vacante skipped Godaddy (not target user)');
     }
@@ -230,7 +239,7 @@ export async function syncUpdatePlan(
     // Solo sincronizar con Godaddy si es el usuario específico
     if (shouldSync(userEmail)) {
       const godaddyRecord = await getGodaddyRecord('companies', userId);
-      if (godaddyRecord) {
+      if (godaddyRecord && typeof godaddyRecord.id === 'string') {
         godaddyResult = await updateGodaddyRecord('companies', godaddyRecord.id, {
           plan: plan,
           license_code_used: licenseCode,

@@ -12,11 +12,11 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: máx 20 análisis por IP cada 10 minutos
+    // Rate limiting: máx 10 análisis por IP por hora
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = rateLimit(`cv-analysis:${ipAddress}`, 20, 600000); // 10 min
+    const rateLimitResult = rateLimit(`cv-analysis:${ipAddress}`, 10, 3600000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
         {
           status: 429,
           headers: {
-            'Retry-After': String(rateLimitResult.retryAfter || 600),
+            'Retry-After': String(rateLimitResult.retryAfter || 3600),
           }
         }
       );

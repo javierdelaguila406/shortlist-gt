@@ -5,6 +5,9 @@
 
 import mysql from 'mysql2/promise';
 
+type GodaddyValue = string | number | bigint | boolean | Date | null | Buffer | Uint8Array | undefined;
+type GodaddyRecord = Record<string, GodaddyValue>;
+
 function getGodaddyConfig(): mysql.PoolOptions {
   const requiredVariables = [
     'GODADDY_MYSQL_HOST',
@@ -76,18 +79,28 @@ export async function initializeGodaddyDatabase() {
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS vacantes (
         id VARCHAR(36) PRIMARY KEY,
-        user_id VARCHAR(36),
+        usuario_id VARCHAR(36),
         titulo VARCHAR(255),
         descripcion LONGTEXT,
         departamento VARCHAR(255),
-        estado VARCHAR(50) DEFAULT 'abierta',
+        estado VARCHAR(50) DEFAULT 'activa',
         link_aplicar VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX (user_id),
+        INDEX (usuario_id),
         INDEX (estado)
       )
     `);
+
+    // Migrar instalaciones anteriores sin perder datos.
+    const [legacyVacanteColumns] = await connection.execute(
+      "SHOW COLUMNS FROM vacantes LIKE 'user_id'"
+    );
+    if ((legacyVacanteColumns as unknown[]).length > 0) {
+      await connection.execute(
+        'ALTER TABLE vacantes CHANGE COLUMN user_id usuario_id VARCHAR(36)'
+      );
+    }
 
     // Tabla de candidatos
     await connection.execute(`
@@ -139,7 +152,7 @@ export async function initializeGodaddyDatabase() {
  */
 export async function insertGodaddyRecord(
   table: string,
-  data: Record<string, any>
+  data: GodaddyRecord
 ): Promise<boolean> {
   try {
     const connection = await getGodaddyConnection();
@@ -148,7 +161,8 @@ export async function insertGodaddyRecord(
     const values = Object.values(data).map(() => '?').join(',');
     const sql = `INSERT INTO ${table} (${columns}) VALUES (${values})`;
 
-    await connection.execute(sql, Object.values(data));
+    const queryValues = Object.values(data).map(value => value ?? null);
+    await connection.execute(sql, queryValues);
     await connection.end();
 
     console.log(`[GODADDY] Inserted into ${table}:`, data.id || data.email);
@@ -165,7 +179,7 @@ export async function insertGodaddyRecord(
 export async function updateGodaddyRecord(
   table: string,
   id: string,
-  data: Record<string, any>
+  data: GodaddyRecord
 ): Promise<boolean> {
   try {
     const connection = await getGodaddyConnection();
@@ -173,7 +187,8 @@ export async function updateGodaddyRecord(
     const setClause = Object.keys(data).map(key => `${key} = ?`).join(',');
     const sql = `UPDATE ${table} SET ${setClause} WHERE id = ?`;
 
-    await connection.execute(sql, [...Object.values(data), id]);
+    const queryValues = Object.values(data).map(value => value ?? null);
+    await connection.execute(sql, [...queryValues, id]);
     await connection.end();
 
     console.log(`[GODADDY] Updated ${table}:`, id);
@@ -190,7 +205,7 @@ export async function updateGodaddyRecord(
 export async function getGodaddyRecord(
   table: string,
   id: string
-): Promise<any | null> {
+): Promise<GodaddyRecord | null> {
   try {
     const connection = await getGodaddyConnection();
 
@@ -201,7 +216,7 @@ export async function getGodaddyRecord(
 
     await connection.end();
 
-    return (rows as any[])[0] || null;
+    return (rows as GodaddyRecord[])[0] || null;
   } catch (error) {
     console.error(`[GODADDY] Error getting record from ${table}:`, error);
     return null;

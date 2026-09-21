@@ -25,16 +25,18 @@ export async function POST(request: NextRequest) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json(
         { error: 'Configuración faltante', success: false },
         { status: 500 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
 
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) {
@@ -56,72 +58,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar el código de licencia
-    const { data: licenseCode, error: fetchError } = await supabase
-      .from('license_codes')
-      .select('*')
-      .eq('code', codigo.trim().toUpperCase())
+    const normalizedCode = codigo.trim().toUpperCase();
+    const { data: redemption, error: redemptionError } = await supabase
+      .rpc('redeem_license_code', { p_code: normalizedCode })
       .single();
 
-    if (fetchError || !licenseCode) {
+    if (redemptionError || !redemption) {
+      console.error('[SECURITY] Atomic license redemption failed:', redemptionError);
       return NextResponse.json(
-        { error: 'Código de licencia inválido', success: false },
-        { status: 401 }
-      );
-    }
-
-    // Validar que no esté usado
-    if (licenseCode.status === 'used') {
-      return NextResponse.json(
-        { error: 'Este código ya ha sido utilizado', success: false },
-        { status: 403 }
-      );
-    }
-
-    if (licenseCode.status === 'inactive') {
-      return NextResponse.json(
-        { error: 'Código desactivado', success: false },
-        { status: 403 }
-      );
-    }
-
-    // Actualizar el código como usado
-    const { data: updatedCode, error: updateError } = await supabase
-      .from('license_codes')
-      .update({
-        status: 'used',
-        used_by_user_id: userId || null,
-        used_at: new Date().toISOString(),
-      })
-      .eq('id', licenseCode.id)
-      .eq('status', licenseCode.status)
-      .select('id')
-      .single();
-
-    if (updateError || !updatedCode) {
-      console.error('[SECURITY] Error updating license code:', updateError);
-      return NextResponse.json(
-        { error: 'El código ya no está disponible', success: false },
+        { error: 'Código inválido, inactivo o ya utilizado', success: false },
         { status: 409 }
       );
     }
 
-    // Obtener email del usuario para validar si debe sincronizar con Godaddy
-    const { data: user } = await supabase
-      .from('companies')
-      .select('email')
-      .eq('user_id', userId)
-      .single();
-
-    const userEmail = user?.email || '';
+    const result = redemption as { email: string | null; plan: string };
+    const userEmail = result.email || '';
 
     // Sincronizar en background (sin bloquear respuesta)
-    syncUpdatePlan(userId, userEmail, 'premium', codigo.trim().toUpperCase()).catch(err => {
+    syncUpdatePlan(userId, userEmail, 'premium', normalizedCode).catch(err => {
       console.error('[SYNC] Background sync error updating plan:', err);
     });
 
     console.log('[API] License code used successfully:', {
-      codigo: codigo.trim().toUpperCase(),
+      codigo: normalizedCode,
       userId,
       timestamp: new Date().toISOString(),
     });
@@ -129,7 +88,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: '¡Acceso Premium activado!',
-      plan: 'premium',
+      plan: result.plan,
     });
 
   } catch (error) {
