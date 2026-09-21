@@ -55,7 +55,7 @@ export function middleware(request: NextRequest) {
   // ========== SEGURIDAD: Content Security Policy ==========
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co"
+    "default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'"
   );
 
   // Verificar si es ruta pública PRIMERO (tiene prioridad)
@@ -101,8 +101,10 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
 
-    // Validar que el token sea válido (formato básico)
-    if (!isValidToken(token)) {
+    // Validar que el token sea válido (basic JWT format check)
+    // Full verification happens in API endpoints via Supabase.auth.getUser()
+    const isValid = isValidToken(token);
+    if (!isValid) {
       return NextResponse.redirect(new URL('/auth/login', request.url));
     }
   }
@@ -112,9 +114,29 @@ export function middleware(request: NextRequest) {
 
 function isValidToken(token: string): boolean {
   try {
-    // Token debe ser un JWT o sesión válida
-    // Por ahora, verificar que no esté vacío
-    return !!token && token.length > 10;
+    // Basic JWT format validation in middleware
+    // Full verification happens in API endpoints via Supabase.auth.getUser()
+    if (!token || token.length < 20) {
+      return false;
+    }
+
+    // Check if token looks like a JWT (three parts separated by dots)
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    // Try to decode and check expiration
+    try {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      // Check if token is expired
+      if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
   } catch {
     return false;
   }

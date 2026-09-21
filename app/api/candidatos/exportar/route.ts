@@ -16,14 +16,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    if (!supabaseUrl || !supabaseServiceRole) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
     }
 
     const token = authHeader.slice('Bearer '.length);
-    const supabase = createClient(supabaseUrl, supabaseServiceRole);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // RLS policies in Supabase enforce authorization
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
 
     if (userError || !userData.user) {
