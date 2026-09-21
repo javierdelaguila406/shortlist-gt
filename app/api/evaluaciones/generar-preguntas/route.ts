@@ -156,6 +156,18 @@ IMPORTANTE:
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticación
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.slice('Bearer '.length);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { vacante_id, titulo, descripcion, nivel } = await request.json();
 
     if (!vacante_id || !titulo || !descripcion) {

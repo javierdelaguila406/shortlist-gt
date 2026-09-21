@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { randomBytes } from 'crypto';
+import { randomBytes, timingSafeEqual } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +8,19 @@ export async function POST(request: NextRequest) {
     const adminToken = request.headers.get('X-Admin-Token');
     const expectedToken = process.env.ADMIN_SECRET_TOKEN;
 
-    if (!expectedToken || adminToken !== expectedToken) {
+    let isValid = false;
+    if (expectedToken && adminToken) {
+      try {
+        isValid = timingSafeEqual(
+          Buffer.from(adminToken),
+          Buffer.from(expectedToken)
+        );
+      } catch {
+        isValid = false;
+      }
+    }
+
+    if (!isValid) {
       return NextResponse.json(
         { error: 'Acceso no autorizado', success: false },
         { status: 403 }

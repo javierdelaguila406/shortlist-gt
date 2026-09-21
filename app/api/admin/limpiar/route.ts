@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'crypto';
 
 // Verificar que es admin (requiere admin token específico)
 function verifyAdminAccess(request: NextRequest): boolean {
@@ -13,7 +14,17 @@ function verifyAdminAccess(request: NextRequest): boolean {
   }
 
   // Comparar tokens de forma segura (timing-safe comparison)
-  const isValid = !!adminToken && adminToken === expectedToken;
+  let isValid = false;
+  if (adminToken) {
+    try {
+      isValid = timingSafeEqual(
+        Buffer.from(adminToken),
+        Buffer.from(expectedToken)
+      );
+    } catch {
+      isValid = false;
+    }
+  }
 
   if (!isValid) {
     console.warn('[SECURITY] Invalid admin credential attempt', {
