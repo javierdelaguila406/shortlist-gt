@@ -163,3 +163,35 @@ CREATE POLICY "logs_select_own" ON logs_whatsapp FOR SELECT
     JOIN vacantes v ON v.id = e.vacante_id
     WHERE e.id = logs_whatsapp.evaluacion_id AND v.usuario_id = auth.uid()
   ));
+
+-- Audit Logs Table for production logging
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  event_type TEXT NOT NULL CHECK (event_type IN ('AUTH_SUCCESS', 'AUTH_FAILURE', 'ADMIN_ACTION', 'DATA_ACCESS', 'SECURITY_ALERT', 'API_ERROR')),
+  user_id UUID,
+  action TEXT NOT NULL,
+  resource TEXT,
+  status TEXT NOT NULL CHECK (status IN ('success', 'failure')),
+  ip_address TEXT,
+  user_agent TEXT,
+  details JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  FOREIGN KEY (user_id) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+-- Create index for faster queries
+CREATE INDEX IF NOT EXISTS audit_logs_event_type_idx ON audit_logs(event_type);
+CREATE INDEX IF NOT EXISTS audit_logs_created_at_idx ON audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS audit_logs_user_id_idx ON audit_logs(user_id);
+
+-- Enable RLS on audit_logs
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for audit_logs (only admins can read, service role can insert)
+CREATE POLICY "audit_logs_admin_read" ON audit_logs FOR SELECT
+  USING (auth.jwt() ->> 'role' = 'authenticated' AND EXISTS (
+    SELECT 1 FROM usuarios WHERE id = auth.uid() AND rol = 'administrador'
+  ));
+
+CREATE POLICY "audit_logs_service_insert" ON audit_logs FOR INSERT
+  WITH CHECK (TRUE);  -- Service role can always insert
