@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendEvaluationStart } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { persistentRateLimit } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
@@ -17,9 +17,9 @@ async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId
   if (!token) return { valid: false };
 
   try {
-    // Rate limiting por token (max 10 requests/hour - persistent across instances)
+    // Rate limiting por token (max 10 requests/hour)
     const rateLimitKey = `auth:${token.substring(0, 20)}`;
-    const rateLimitResult = await persistentRateLimit(rateLimitKey, 'whatsapp_init', 10, 3600000);
+    const rateLimitResult = rateLimit(rateLimitKey, 10, 3600000);
     if (!rateLimitResult.success) {
       console.warn('[AUTH] Rate limit exceeded for token');
       return { valid: false };
@@ -223,12 +223,12 @@ export async function POST(request: NextRequest) {
       );
     }
   } catch (error) {
-    console.error('[INICIAR-WHATSAPP] Error (internal):', {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString(),
-    });
+    console.error('Error en evaluación/iniciar-whatsapp:', error);
     return NextResponse.json(
-      { error: 'Error procesando solicitud. Intenta más tarde.' },
+      {
+        error: 'Error procesando solicitud',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }

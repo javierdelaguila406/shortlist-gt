@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes, timingSafeEqual } from 'crypto';
-import { persistentRateLimit } from '@/lib/rate-limit';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: máx 30 requests por IP cada 15 minutos (persistent across instances)
+    // Rate limiting: máx 30 requests por IP cada 15 minutos
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = await persistentRateLimit(`admin-generate-license:${ipAddress}`, 'generate_license', 30, 900000);
+    const rateLimitResult = rateLimit(`admin-generate-license:${ipAddress}`, 30, 900000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
