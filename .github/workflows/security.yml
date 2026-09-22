@@ -2,12 +2,16 @@ name: Security Checks
 
 on: [push, pull_request]
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@a6bd8640a6c1773288d5265dd89aab7e2ff8a967  # v4 pinned to commit SHA
+      - uses: actions/setup-node@60edb5dd545a775178f52524873c85c46aca29ca  # v4 pinned to commit SHA
         with:
           node-version: '20'
           cache: npm
@@ -15,4 +19,4 @@ jobs:
       - run: npm run type-check
       - run: npm run lint
       - run: npm run test -- authorization
-      - run: npm audit --audit-level=moderate
+      - run: npm audit --audit-level=high

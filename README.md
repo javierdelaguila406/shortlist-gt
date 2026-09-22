@@ -197,6 +197,42 @@ Luego sube a Vercel desde el repositorio Git.
 
 Asegúrate de configurar todas las variables en Vercel Settings → Environment Variables.
 
+## 🔐 Seguridad
+
+### CORS Configuration
+
+CORS (Cross-Origin Resource Sharing) is configured in `middleware.ts`:
+
+- **Development**: Allows `localhost:3000`, `localhost:3001`, and production domain
+- **Production**: Restricts to `https://shortlist-gt.vercel.app` only
+
+Environment-specific origins prevent unauthorized cross-domain requests:
+```typescript
+// Development: flexible for local testing
+// Production: strict single-origin policy
+const isDevelopment = process.env.NODE_ENV === 'development';
+const allowedOrigins = isDevelopment ? [...] : ['https://shortlist-gt.vercel.app'];
+```
+
+### Authentication & JWT Verification
+
+- All API endpoints require Bearer token authentication (JWT)
+- JWT signature verification prevents forged tokens
+- Row Level Security (RLS) enforced on all database tables
+- Rate limiting on authentication endpoints
+
+### Environment Variables
+
+Never commit `.env.local` with real credentials. Use `.env.example` as template and rotate credentials regularly:
+- Supabase API keys
+- OpenAI API key
+- WhatsApp credentials
+- Admin tokens
+
+### More Information
+
+See [Comprehensive Security Audit Report](cyber-neo-report-SHORTLIST-2026-09-21-COMPREHENSIVE.md) for detailed security findings and remediations.
+
 ## 📝 Próximos Pasos
 
 - [ ] Integrar autenticación Supabase

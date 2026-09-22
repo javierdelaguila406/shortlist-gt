@@ -32,6 +32,10 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // ========== SEGURIDAD: CORS ==========
+  // Cross-Origin Resource Sharing configuration
+  // Development: allows localhost for frontend development
+  // Production: restricts to deployed domain only to prevent unauthorized cross-origin access
+  // Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
   const origin = request.headers.get('origin');
   const isDevelopment = process.env.NODE_ENV === 'development';
   const allowedOrigins = isDevelopment
@@ -41,7 +45,7 @@ export function middleware(request: NextRequest) {
         'http://localhost:3001'
       ]
     : [
-        'https://shortlist-gt.vercel.app'
+        'https://shortlist-gt.vercel.app'  // Production: only allow deployed domain
       ];
 
   if (origin && allowedOrigins.includes(origin)) {
