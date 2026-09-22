@@ -84,9 +84,9 @@ export async function POST(request: NextRequest) {
         name: 'sb-auth-token',
         value: data.session.access_token,
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,  // Always secure (CN-MEDIUM-009) - prevents transmission over non-HTTPS
         sameSite: 'strict',
-        maxAge: 60 * 60 * 24 * 30, // 30 días
+        maxAge: 60 * 60 * 24 * 14, // 14 días (CN-MEDIUM-008) - reduced from 30 to minimize compromise window
         path: '/',
       });
     }

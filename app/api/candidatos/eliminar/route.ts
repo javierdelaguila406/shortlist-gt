@@ -122,12 +122,12 @@ export async function DELETE(request: NextRequest) {
       message: 'Candidato eliminado exitosamente',
     });
   } catch (error) {
-    console.error('[ELIMINAR-CANDIDATO] Error:', error);
+    console.error('[ELIMINAR-CANDIDATO] Error (internal):', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
     return NextResponse.json(
-      {
-        error: 'Error eliminando candidato',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Error eliminando candidato. Intenta más tarde.' },
       { status: 500 }
     );
   }

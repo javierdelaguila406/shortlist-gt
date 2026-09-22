@@ -103,22 +103,17 @@ export async function POST(request: NextRequest) {
     console.log('[API] STEP 3 - Respuesta del insert:', { error: insertError?.message, dataLength: insertedData?.length });
 
     if (insertError) {
-      const errorDetails = {
+      // Log full error details server-side only (CN-HIGH-001)
+      console.error('[API] Database error (internal):', {
         message: insertError.message,
         code: insertError.code,
         details: insertError.details,
         hint: insertError.hint,
-        fullError: JSON.stringify(insertError),
-      };
-      console.error('[API] ❌ ERROR inserting vacante:', errorDetails);
+        timestamp: new Date().toISOString(),
+      });
+      // Return generic message to client to prevent schema disclosure
       return NextResponse.json(
-        {
-          error: 'Error al crear vacante en BD',
-          details: insertError.message,
-          code: insertError.code,
-          hint: insertError.hint,
-          success: false
-        },
+        { error: 'Error al crear vacante. Intenta más tarde.', success: false },
         { status: 500 }
       );
     }

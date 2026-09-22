@@ -185,6 +185,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SECURITY: Verify vacancy belongs to current user (CN-CRITICAL-004)
+    const { data: vacante, error: vacanteError } = await supabase
+      .from('vacantes')
+      .select('id, usuario_id')
+      .eq('id', vacante_id)
+      .eq('usuario_id', userData.user.id)  // ← OWNERSHIP VERIFICATION
+      .single();
+
+    if (vacanteError || !vacante) {
+      return NextResponse.json(
+        { error: 'Vacante no encontrada o sin permisos' },
+        { status: 404 }
+      );
+    }
+
     if (!ANTHROPIC_API_KEY) {
       return NextResponse.json(
         { error: 'ANTHROPIC_API_KEY no configurado' },

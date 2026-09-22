@@ -34,15 +34,17 @@ export async function POST(request: NextRequest) {
 
     const { vacanteId, titulo, descripcion, departamento } = await request.json();
 
+    // SECURITY: Verify vacancy belongs to current user (CN-CRITICAL-003)
     const { data: vacante, error: vacanteError } = await supabase
       .from('vacantes')
-      .select('id')
+      .select('id, usuario_id')
       .eq('id', vacanteId)
+      .eq('usuario_id', userData.user.id)  // ← OWNERSHIP VERIFICATION
       .single();
 
     if (vacanteError || !vacante) {
       return NextResponse.json(
-        { error: 'Vacante no encontrada' },
+        { error: 'Vacante no encontrada o sin permisos' },
         { status: 404 }
       );
     }
