@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Use webpack instead of Turbopack due to custom webpack configuration
+  // TODO: Migrate webpack config to Turbopack if possible
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.externals = {
