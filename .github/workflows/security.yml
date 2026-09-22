@@ -9,14 +9,22 @@ permissions:
 jobs:
   security:
     runs-on: ubuntu-latest
+    # NOTE: Never log secrets in workflow. All secrets are provided via environment at runtime.
+    # Secrets used in this workflow:
+    # - SUPABASE_SERVICE_ROLE_KEY: Production database access (never log, never commit)
+    # - OPENAI_API_KEY: Claude/GPT API access (never log, never commit)
+    # - NEXT_PUBLIC_SUPABASE_URL: Published (safe to log, safe to commit)
+    # - NEXT_PUBLIC_SUPABASE_ANON_KEY: Published anon key (safe to log, safe to commit)
     steps:
       - uses: actions/checkout@a6bd8640a6c1773288d5265dd89aab7e2ff8a967  # v4 pinned to commit SHA
       - uses: actions/setup-node@60edb5dd545a775178f52524873c85c46aca29ca  # v4 pinned to commit SHA
         with:
           node-version: '20'
           cache: npm
-      - run: npm ci
+      - run: npm ci --omit=dev  # Production builds should not include dev dependencies
       - run: npm run type-check
       - run: npm run lint
       - run: npm run test -- authorization
       - run: npm audit --audit-level=high
+      # Pre-commit hook recommendation (local only): Install git-secrets or detect-secrets
+      # Example: npx detect-secrets scan --baseline .secrets.baseline

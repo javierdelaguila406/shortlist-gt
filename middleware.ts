@@ -58,7 +58,7 @@ export function middleware(request: NextRequest) {
   // ========== SEGURIDAD: Security Headers ==========
   response.headers.set('X-Content-Type-Options', 'nosniff');
   response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
+  // X-XSS-Protection: deprecated/redundant in modern browsers (CSP handles XSS protection) (CN-MEDIUM-011)
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
