@@ -64,6 +64,11 @@ export function middleware(request: NextRequest) {
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
 
   // ========== SEGURIDAD: Content Security Policy ==========
+  // NOTA: SRI (Subresource Integrity) debe configurarse en el HTML de cada página
+  // que cargue scripts externos. Estructura recomendada:
+  // <script src="https://cdnjs.cloudflare.com/..." integrity="sha384-..." crossorigin="anonymous"></script>
+  // Generar SRI hashes en: https://www.srihash.org/
+  // Referencia: https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity
   const isDev = process.env.NODE_ENV === 'development';
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.co';
 

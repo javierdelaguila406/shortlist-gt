@@ -1,5 +1,19 @@
 import type { NextConfig } from "next";
 
+// ========== BUILD-TIME VALIDATION ==========
+// Validate NODE_ENV is set correctly before build
+const nodeEnv = process.env.NODE_ENV;
+if (!nodeEnv || !['production', 'development', 'test'].includes(nodeEnv)) {
+  console.warn(`⚠️  WARNING: NODE_ENV="${nodeEnv}" is invalid. Expected: production, development, or test`);
+  console.warn('   Current build CSP configuration may not be appropriate for the deployment target');
+}
+
+if (nodeEnv === 'production') {
+  console.log('✓ Building for PRODUCTION: Restrictive CSP, no unsafe-* directives');
+} else if (nodeEnv === 'development') {
+  console.log('✓ Building for DEVELOPMENT: Permissive CSP for HMR');
+}
+
 const nextConfig: NextConfig = {
   // Use webpack instead of Turbopack due to custom webpack configuration
   // TODO: Migrate webpack config to Turbopack if possible
