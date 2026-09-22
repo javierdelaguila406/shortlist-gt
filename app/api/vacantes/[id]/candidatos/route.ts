@@ -47,8 +47,13 @@ export async function GET(
       .order('score_total', { ascending: false });
 
     if (error) {
+      console.error('[API] Database error (internal):', {
+        message: error.message,
+        code: error.code,
+        timestamp: new Date().toISOString()
+      });
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Error al obtener candidatos. Intenta más tarde.' },
         { status: 500 }
       );
     }

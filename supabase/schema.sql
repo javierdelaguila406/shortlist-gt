@@ -195,3 +195,24 @@ CREATE POLICY "audit_logs_admin_read" ON audit_logs FOR SELECT
 
 CREATE POLICY "audit_logs_service_insert" ON audit_logs FOR INSERT
   WITH CHECK (TRUE);  -- Service role can always insert
+
+-- Rate Limiting Table for distributed deployments
+CREATE TABLE IF NOT EXISTS rate_limit_log (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  key TEXT NOT NULL,
+  timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for efficient rate limit checks
+CREATE INDEX IF NOT EXISTS rate_limit_log_key_timestamp_idx ON rate_limit_log(key, timestamp DESC);
+CREATE INDEX IF NOT EXISTS rate_limit_log_cleanup_idx ON rate_limit_log(timestamp);
+
+-- Enable RLS on rate_limit_log (service role inserts only)
+ALTER TABLE rate_limit_log ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies for rate_limit_log (service role can insert/read, cleanup)
+CREATE POLICY "rate_limit_log_service_insert" ON rate_limit_log FOR INSERT
+  WITH CHECK (TRUE);
+
+CREATE POLICY "rate_limit_log_service_select" ON rate_limit_log FOR SELECT
+  USING (TRUE);

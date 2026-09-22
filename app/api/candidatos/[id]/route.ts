@@ -151,8 +151,13 @@ export async function PATCH(
       .single();
 
     if (error) {
+      console.error('[API] Database error (internal):', {
+        message: error.message,
+        code: error.code,
+        timestamp: new Date().toISOString()
+      });
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Error al actualizar candidato. Intenta más tarde.' },
         { status: 500 }
       );
     }

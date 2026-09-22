@@ -190,11 +190,10 @@ async function isValidJWT(token: string): Promise<boolean> {
       return false;
     }
 
-    // Verify JWT signature using Supabase JWT secret
+    // Verify JWT signature using Supabase JWT secret (REQUIRED - fail securely if missing)
     const jwtSecret = process.env.SUPABASE_JWT_SECRET;
     if (!jwtSecret) {
-      console.error('[SECURITY] SUPABASE_JWT_SECRET not configured - skipping signature verification');
-      return true; // Fall back to format validation only if secret not available
+      throw new Error('[SECURITY] SUPABASE_JWT_SECRET environment variable is required for JWT signature verification. Cannot authenticate without it. Check your .env configuration.');
     }
 
     try {

@@ -60,8 +60,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('[SECURITY] Critical credential reset error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
 

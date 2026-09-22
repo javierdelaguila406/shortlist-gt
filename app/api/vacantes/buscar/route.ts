@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { isValidUUID } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
 
-    if (!id) {
+    if (!id || !isValidUUID(id)) {
       return NextResponse.json(
-        { error: 'ID requerido' },
+        { found: false },
         { status: 400 }
       );
     }

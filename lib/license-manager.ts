@@ -29,26 +29,16 @@ export const LICENSE_TYPES = {
 };
 
 export function getUserLicenseFromStorage(): UserLicense | null {
-  if (typeof window === 'undefined') return null;
-
-  try {
-    const stored = localStorage.getItem('userLicense');
-    if (!stored) return null;
-    return JSON.parse(stored);
-  } catch (e) {
-    console.error('Error reading user license:', e);
-    return null;
-  }
+  // SECURITY: Don't cache sensitive license data in localStorage
+  // Always fetch from server via /api/auth/check-plan endpoint
+  // This prevents XSS attacks and ensures up-to-date information
+  return null;
 }
 
 export function saveUserLicense(license: UserLicense): void {
-  if (typeof window === 'undefined') return;
-
-  try {
-    localStorage.setItem('userLicense', JSON.stringify(license));
-  } catch (e) {
-    console.error('Error saving user license:', e);
-  }
+  // SECURITY: Don't cache sensitive license data in localStorage
+  // Always fetch from server via /api/auth/check-plan endpoint
+  // License verification should happen server-side only
 }
 
 export function getDemoLicense(): UserLicense {

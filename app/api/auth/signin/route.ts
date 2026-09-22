@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { loginSchema } from '@/lib/validations';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: máx 10 intentos de login por IP cada 15 minutos
+    // Rate limiting: máx 10 intentos de login por IP cada 15 minutos (persistent across instances)
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = rateLimit(`auth-signin:${ipAddress}`, 10, 900000); // 15 min
+    const rateLimitResult = await persistentRateLimit(`auth-signin:${ipAddress}`, 10, 900000); // 15 min
 
     if (!rateLimitResult.success) {
-      console.warn('[SECURITY] Login rate limit exceeded', { timestamp: new Date().toISOString() });
+      console.warn('[SECURITY] Login rate limit exceeded', { ipAddress, timestamp: new Date().toISOString() });
       return NextResponse.json(
         { error: 'Demasiados intentos de inicio de sesión. Intenta más tarde.' },
         {
@@ -94,8 +94,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('[SECURITY] Critical signin error:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
 

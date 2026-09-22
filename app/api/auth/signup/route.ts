@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
 import { supabase } from '@/lib/supabase';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
 import { syncCreateUser } from '@/lib/dual-sync';
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: máx 3 registros por IP cada hora
+    // Rate limiting: máx 3 registros por IP cada hora (persistent across instances)
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = rateLimit(`auth-signup:${ipAddress}`, 3, 3600000); // 1 hour
+    const rateLimitResult = await persistentRateLimit(`auth-signup:${ipAddress}`, 3, 3600000); // 1 hour
 
     if (!rateLimitResult.success) {
+      console.warn('[SECURITY] Signup rate limit exceeded', { ipAddress, timestamp: new Date().toISOString() });
       return NextResponse.json(
         { error: 'Demasiados intentos de registro. Intenta más tarde.' },
         {
@@ -105,8 +106,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('[SECURITY] Critical signup error:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
 

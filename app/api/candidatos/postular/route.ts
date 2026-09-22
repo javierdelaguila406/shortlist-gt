@@ -337,10 +337,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('[API] Error guardando candidato:', error);
+      console.error('[API] Database error (internal):', {
+        message: error.message,
+        code: error.code,
+        timestamp: new Date().toISOString()
+      });
       return NextResponse.json({
-        error: `Error al guardar candidato: ${error.message}`,
-        details: error.details,
+        error: 'Error al guardar candidato. Intenta más tarde.',
         success: false
       }, { status: 500 });
     }
@@ -424,8 +427,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // Log detailed error internally but return generic message
     console.error('[API] Unexpected error in postular:', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
 

@@ -87,7 +87,8 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.warn('[SECURITY] Credential change failed', {
-        error: error.message,
+        message: error.message,
+        code: error.code || 'unknown',
         ipAddress,
         timestamp: new Date().toISOString(),
       });
@@ -104,8 +105,7 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('[SECURITY] Critical credential change error', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
+      message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
 

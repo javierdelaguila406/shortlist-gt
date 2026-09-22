@@ -28,8 +28,13 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
+      console.error('[API] Database error (internal):', {
+        message: error.message,
+        code: error.code,
+        timestamp: new Date().toISOString()
+      });
       return NextResponse.json(
-        { error: error.message },
+        { error: 'Error al obtener vacantes. Intenta más tarde.' },
         { status: 500 }
       );
     }
