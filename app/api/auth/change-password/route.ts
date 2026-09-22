@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { passwordSchema } from '@/lib/validations';
 
 export async function POST(request: NextRequest) {
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
 
-    // Rate limit: 5 password changes per hour per user
-    const rateLimitResult = rateLimit(`password-change:${ipAddress}`, 5, 3600000);
+    // Rate limit: 5 password changes per hour per IP (persistent across instances)
+    const rateLimitResult = await persistentRateLimit(`password-change:${ipAddress}`, 'change_password', 5, 3600000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(

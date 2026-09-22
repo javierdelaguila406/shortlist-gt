@@ -118,12 +118,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[ASIGNAR-TEMPLATE] Error fatal:', error);
+    console.error('[ASIGNAR-TEMPLATE] Error (internal):', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
     return NextResponse.json(
-      {
-        error: 'Error asignando template',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Error asignando template. Intenta más tarde.' },
       { status: 500 }
     );
   }

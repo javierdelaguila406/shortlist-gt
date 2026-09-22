@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting: máx 5 intentos por IP cada 15 minutos
+    // Rate limiting: máx 5 intentos por IP cada 15 minutos (persistent across instances)
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = rateLimit(`license-validate:${ipAddress}`, 5, 900000);
+    const rateLimitResult = await persistentRateLimit(`license-validate:${ipAddress}`, 'validate_license', 5, 900000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(

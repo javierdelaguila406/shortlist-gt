@@ -239,12 +239,12 @@ export async function POST(request: NextRequest) {
       data: preguntas,
     });
   } catch (error) {
-    console.error('[GENERAR-PREGUNTAS] Error:', error);
+    console.error('[GENERAR-PREGUNTAS] Error (internal):', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+    });
     return NextResponse.json(
-      {
-        error: 'Error generando preguntas',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
+      { error: 'Error generando preguntas. Intenta más tarde.' },
       { status: 500 }
     );
   }

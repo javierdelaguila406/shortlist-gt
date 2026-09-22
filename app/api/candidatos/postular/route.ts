@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 import { syncCreateCandidato } from '@/lib/dual-sync';
 import { logAuditEvent as persistAuditEvent } from '@/lib/audit';
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get('x-forwarded-for') ||
                      request.headers.get('x-real-ip') ||
                      '127.0.0.1';
-    const rateLimitResult = rateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
+    const rateLimitResult = await persistentRateLimit(`postular:${ipAddress}`, 'postular', 5, 3600000); // 5 postulaciones por hora (persistent)
 
     if (!rateLimitResult.success) {
       console.warn('[SECURITY] Application rate limit exceeded');
