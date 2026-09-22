@@ -229,6 +229,18 @@ Never commit `.env.local` with real credentials. Use `.env.example` as template 
 - WhatsApp credentials
 - Admin tokens
 
+### Automated Dependency Updates
+
+This project uses **Dependabot** for automated security updates:
+
+- **npm dependencies**: Updated weekly (Mondays at 04:00 UTC)
+- **GitHub Actions**: Updated weekly (Mondays at 05:00 UTC)
+- **Pull requests**: Automatically created and require review before merging
+- **Audit level**: All updates are checked with `npm audit --audit-level=high`
+- **Max 5 PRs**: Prevents overwhelming the review queue
+
+Dependabot configuration is defined in `.github/dependabot.yml`. Review and merge security update PRs promptly to keep dependencies patched.
+
 ### More Information
 
 See [Comprehensive Security Audit Report](cyber-neo-report-SHORTLIST-2026-09-21-COMPREHENSIVE.md) for detailed security findings and remediations.

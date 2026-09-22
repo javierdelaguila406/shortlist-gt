@@ -70,8 +70,36 @@ export async function DELETE(request: NextRequest) {
     // Verificar acceso de admin
     const isAdminAuthorized = await verifyAdminAccess(request);
     if (!isAdminAuthorized) {
+      console.warn('[SECURITY] Unauthorized database wipe attempt');
       return NextResponse.json(
         { error: 'No autorizado. Acceso de administrador requerido.', success: false },
+        { status: 403 }
+      );
+    }
+
+    // SAFEGUARD 1: Require explicit confirmation header
+    const confirmationToken = request.headers.get('X-Confirm-Wipe');
+    const expectedConfirmation = process.env.DATABASE_WIPE_CONFIRMATION_TOKEN;
+
+    if (!confirmationToken || !expectedConfirmation) {
+      console.warn('[SECURITY] Database wipe confirmation missing');
+      return NextResponse.json(
+        {
+          error: 'Confirmación requerida. Incluye header X-Confirm-Wipe con token de confirmación.',
+          success: false
+        },
+        { status: 400 }
+      );
+    }
+
+    // Timing-safe confirmation comparison
+    if (!timingSafeEqual(Buffer.from(confirmationToken), Buffer.from(expectedConfirmation))) {
+      console.warn('[SECURITY] Invalid database wipe confirmation attempt', {
+        ipAddress: request.headers.get('x-forwarded-for'),
+        timestamp: new Date().toISOString()
+      });
+      return NextResponse.json(
+        { error: 'Token de confirmación inválido', success: false },
         { status: 403 }
       );
     }
@@ -88,21 +116,39 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // SAFEGUARD 2: Log detailed audit trail BEFORE deletion
+    const timestamp = new Date().toISOString();
+    const adminUser = request.headers.get('X-Admin-Email') || 'unknown';
+    const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
+
+    console.warn('[CRITICAL] Database wipe operation initiated', {
+      timestamp,
+      admin: adminUser,
+      ipAddress,
+      action: 'DELETE_ALL_CANDIDATES_AND_VACANTES'
+    });
+
     // Delete all candidates first
-    const { error: candidatosError } = await supabase
+    const { error: candidatosError, count: candidatosCount } = await supabase
       .from('candidatos')
       .delete()
-      .neq('id', 'null');
+      .neq('id', 'null')
+      .select('id', { count: 'exact', head: true });
 
     if (candidatosError) {
       console.error('[API] Error deleting all candidates:', candidatosError);
+      return NextResponse.json(
+        { error: 'Error al eliminar candidatos', success: false },
+        { status: 500 }
+      );
     }
 
     // Delete all vacantes
-    const { error: vacantesError } = await supabase
+    const { error: vacantesError, count: vacantesCount } = await supabase
       .from('vacantes')
       .delete()
-      .neq('id', 'null');
+      .neq('id', 'null')
+      .select('id', { count: 'exact', head: true });
 
     if (vacantesError) {
       console.error('[API] Error deleting all vacantes:', vacantesError);
@@ -112,13 +158,25 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.log('[API] Base de datos limpiada');
+    // SAFEGUARD 3: Log detailed completion audit trail
+    console.warn('[CRITICAL] Database wipe operation completed successfully', {
+      timestamp: new Date().toISOString(),
+      admin: adminUser,
+      ipAddress,
+      candidatosDeleted: candidatosCount || 0,
+      vacantesDeleted: vacantesCount || 0,
+      action: 'DELETE_ALL_COMPLETED'
+    });
+
     return NextResponse.json({
       success: true,
       message: 'Base de datos limpiada correctamente',
+      deletedCandidates: candidatosCount || 0,
+      deletedVacantes: vacantesCount || 0,
+      timestamp
     });
   } catch (error) {
-    console.error('[API] Error:', error);
+    console.error('[API] Error in database wipe operation:', error);
     return NextResponse.json(
       { error: 'Error del servidor', success: false },
       { status: 500 }
