@@ -1,8 +1,21 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    turbopack: false,
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.externals = {
+        ...config.externals,
+        'fs': 'empty',
+        'path': 'empty',
+        'crypto': 'empty',
+        '@nodelib/fs.scandir': 'empty',
+        '@nodelib/fs.stat': 'empty',
+        '@nodelib/fs.walk': 'empty',
+        'fast-glob': 'empty',
+        'tailwindcss': 'empty',
+      };
+    }
+    return config;
   },
   headers: async () => {
     return [
@@ -42,4 +55,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-// Force rebuild - 1788816857

@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
     let isValid = false;
     try {
       isValid = timingSafeEqual(
-        Buffer.from(token),
-        Buffer.from(adminSecret)
+        new Uint8Array(Buffer.from(token)),
+        new Uint8Array(Buffer.from(adminSecret))
       );
     } catch {
       isValid = false;

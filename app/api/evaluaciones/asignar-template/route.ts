@@ -121,8 +121,7 @@ export async function POST(request: NextRequest) {
     console.error('[ASIGNAR-TEMPLATE] Error fatal:', error);
     return NextResponse.json(
       {
-        error: 'Error asignando template',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Error asignando template. Intenta más tarde.',
       },
       { status: 500 }
     );

@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     if (mode === 'subscribe' && verifyToken) {
       try {
         isValid = timingSafeEqual(
-          Buffer.from(token),
-          Buffer.from(verifyToken)
+          new Uint8Array(Buffer.from(token)),
+          new Uint8Array(Buffer.from(verifyToken))
         );
       } catch {
         isValid = false;
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
 
     const rawBody = await request.text();
     const expectedSignature = `sha256=${createHmac('sha256', appSecret).update(rawBody).digest('hex')}`;
-    const receivedBuffer = Buffer.from(signature, 'utf8');
-    const expectedBuffer = Buffer.from(expectedSignature, 'utf8');
+    const receivedBuffer = new Uint8Array(Buffer.from(signature, 'utf8'));
+    const expectedBuffer = new Uint8Array(Buffer.from(expectedSignature, 'utf8'));
 
     if (
       receivedBuffer.length !== expectedBuffer.length ||

@@ -2,18 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { PDFParse } from 'pdf-parse';
 import { persistentRateLimit } from '@/lib/rate-limit';
+import { calculateCVScore } from '@/lib/cv-score';
 
 const MAX_PDF_SIZE = 10 * 1024 * 1024;
-
-function calculateCVScore(text: string) {
-  const normalized = text.toLocaleLowerCase('es');
-  const skills = ['typescript', 'react', 'nodejs', 'python', 'sql'];
-  const keywordScore = skills.reduce((score, skill) => score + (normalized.includes(skill) ? 10 : 0), 0);
-  const experienceMatch = normalized.match(/(\d+)\s+(?:años|año|years|year)/);
-  const years = experienceMatch ? Number.parseInt(experienceMatch[1], 10) : 0;
-  const experienceScore = Math.min(years * 5, 50);
-  return { total: Math.min(keywordScore + experienceScore, 100), keywords: keywordScore, experience: experienceScore };
-}
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: buffer });

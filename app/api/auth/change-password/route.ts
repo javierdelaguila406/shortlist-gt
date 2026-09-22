@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { passwordSchema } from '@/lib/validations';
 
 export async function POST(request: NextRequest) {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
                       '127.0.0.1';
 
     // Rate limit: 5 password changes per hour per user
-    const rateLimitResult = rateLimit(`password-change:${ipAddress}`, 5, 3600000);
+    const rateLimitResult = await persistentRateLimit(`password-change:${ipAddress}`, 5, 3600000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -54,8 +54,7 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return NextResponse.json(
         {
-          error: 'Validación fallida',
-          details: validation.error.issues.map(e => e.message),
+          error: 'Validación fallida.',
         },
         { status: 400 }
       );

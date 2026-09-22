@@ -64,8 +64,7 @@ export async function PUT(request: NextRequest) {
     console.error('[PERSONALIZAR-PREGUNTAS] Error:', error);
     return NextResponse.json(
       {
-        error: 'Error personalizando preguntas',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Error personalizando preguntas. Intenta más tarde.',
       },
       { status: 500 }
     );

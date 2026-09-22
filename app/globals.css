@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: 0 0% 100%;
@@ -43,13 +45,6 @@
     --secondary: 210 40% 96%;
     --secondary-foreground: 224 71.4% 4.1%;
   }
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
 html, body {

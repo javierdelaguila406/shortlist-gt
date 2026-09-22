@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { randomBytes, timingSafeEqual } from 'crypto';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get('x-forwarded-for') ||
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
-    const rateLimitResult = rateLimit(`admin-generate-license:${ipAddress}`, 30, 900000);
+    const rateLimitResult = await persistentRateLimit(`admin-generate-license:${ipAddress}`, 30, 900000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(
@@ -31,8 +31,8 @@ export async function POST(request: NextRequest) {
     if (expectedToken && adminToken) {
       try {
         isValid = timingSafeEqual(
-          Buffer.from(adminToken),
-          Buffer.from(expectedToken)
+          new Uint8Array(Buffer.from(adminToken)),
+          new Uint8Array(Buffer.from(expectedToken))
         );
       } catch {
         isValid = false;

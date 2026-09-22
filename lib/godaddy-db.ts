@@ -36,10 +36,6 @@ function getGodaddyConfig(): mysql.PoolOptions {
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    enableConnectionTimeoutError: true,
-    waitForConnectionsMillis: 10000, // Max 10 seconds to get connection from pool
-    connectionTimeoutMillis: 30000, // Max 30 seconds for connection to complete
-    idleTimeoutMillis: 60000, // Close idle connections after 60 seconds
   };
 }
 

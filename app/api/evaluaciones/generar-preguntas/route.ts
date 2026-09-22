@@ -242,8 +242,7 @@ export async function POST(request: NextRequest) {
     console.error('[GENERAR-PREGUNTAS] Error:', error);
     return NextResponse.json(
       {
-        error: 'Error generando preguntas',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Error generando preguntas. Intenta más tarde.',
       },
       { status: 500 }
     );

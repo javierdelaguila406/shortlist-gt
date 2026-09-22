@@ -44,8 +44,8 @@ async function verifyAdminAccess(request: NextRequest): Promise<boolean> {
     let isValid = false;
     try {
       isValid = timingSafeEqual(
-        Buffer.from(adminToken),
-        Buffer.from(expectedToken)
+        new Uint8Array(Buffer.from(adminToken)),
+        new Uint8Array(Buffer.from(expectedToken))
       );
     } catch {
       isValid = false;
@@ -93,7 +93,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Timing-safe confirmation comparison
-    if (!timingSafeEqual(Buffer.from(confirmationToken), Buffer.from(expectedConfirmation))) {
+    if (!timingSafeEqual(new Uint8Array(Buffer.from(confirmationToken)), new Uint8Array(Buffer.from(expectedConfirmation)))) {
       console.warn('[SECURITY] Invalid database wipe confirmation attempt', {
         ipAddress: request.headers.get('x-forwarded-for'),
         timestamp: new Date().toISOString()
@@ -133,7 +133,7 @@ export async function DELETE(request: NextRequest) {
       .from('candidatos')
       .delete()
       .neq('id', 'null')
-      .select('id', { count: 'exact', head: true });
+      .select();
 
     if (candidatosError) {
       console.error('[API] Error deleting all candidates:', candidatosError);
@@ -148,7 +148,7 @@ export async function DELETE(request: NextRequest) {
       .from('vacantes')
       .delete()
       .neq('id', 'null')
-      .select('id', { count: 'exact', head: true });
+      .select();
 
     if (vacantesError) {
       console.error('[API] Error deleting all vacantes:', vacantesError);

@@ -120,7 +120,7 @@ export function encryptSensitiveData(data: string): string {
   try {
     const key = getEncryptionKey();
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    const cipher = crypto.createCipheriv('aes-256-cbc' as any, key as any, iv as any);
 
     let encrypted = cipher.update(data, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -154,7 +154,7 @@ export function decryptSensitiveData(encrypted: string): string {
     }
 
     const key = getEncryptionKey();
-    const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+    const decipher = crypto.createDecipheriv('aes-256-cbc' as any, key as any, iv as any);
 
     let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
     decrypted += decipher.final('utf8');

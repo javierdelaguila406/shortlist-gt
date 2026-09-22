@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { emailSchema } from '@/lib/validations';
 
 export async function POST(request: NextRequest) {
@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
                       '127.0.0.1';
 
     // Rate limit: 3 reset requests per hour per IP
-    const rateLimitResult = rateLimit(`password-reset:${ipAddress}`, 3, 3600000);
+    const rateLimitResult = await persistentRateLimit(`password-reset:${ipAddress}`, 3, 3600000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(

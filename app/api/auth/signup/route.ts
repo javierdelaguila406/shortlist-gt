@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
     if (!validation.success) {
       return NextResponse.json(
         {
-          error: 'Validación fallida',
-          details: validation.error.issues.map((e) => e.message),
+          error: 'Validación fallida.',
         },
         { status: 400 }
       );

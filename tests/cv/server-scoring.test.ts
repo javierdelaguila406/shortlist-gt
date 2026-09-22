@@ -16,7 +16,8 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-import { calculateCVScore, POST } from '@/app/api/cv/route';
+import { POST } from '@/app/api/cv/route';
+import { calculateCVScore } from '@/lib/cv-score';
 import { resetRateLimitStore } from '@/lib/rate-limit';
 
 const makeRequest = (file: File, authenticated = true) => {

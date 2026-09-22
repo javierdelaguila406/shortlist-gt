@@ -6,6 +6,8 @@ import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-util
 import { syncCreateCandidato } from '@/lib/dual-sync';
 import { logAuditEvent as persistAuditEvent } from '@/lib/audit';
 
+const persistentRateLimit = rateLimit;
+
 // Función para extraer email del texto
 function extractEmailFromText(text: string): string | null {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
@@ -98,7 +100,7 @@ export async function POST(request: NextRequest) {
     const ipAddress = request.headers.get('x-forwarded-for') ||
                      request.headers.get('x-real-ip') ||
                      '127.0.0.1';
-    const rateLimitResult = rateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
+    const rateLimitResult = await persistentRateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
 
     if (!rateLimitResult.success) {
       console.warn('[SECURITY] Application rate limit exceeded');
@@ -383,11 +385,11 @@ export async function POST(request: NextRequest) {
           console.error('[SYNC] Max retries exceeded for candidato:', candidato.id, err);
           // Registrar en audit que sync falló
           await persistAuditEvent({
-            action: 'SYNC_FAILED',
+            action: 'UPDATE',
             userId: consentUserId,
             resourceId: candidato.id,
             resourceType: 'candidato',
-            changes: { error: String(err) },
+            changes: { sync_status: 'failed', error: String(err) },
           }).catch(e => console.error('[AUDIT] Error logging sync failure:', e));
         }
       }

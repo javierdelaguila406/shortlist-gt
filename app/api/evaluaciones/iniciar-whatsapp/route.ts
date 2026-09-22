@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendEvaluationStart } from '@/lib/whatsapp';
 import { supabase } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 
 /**
  * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
@@ -19,7 +19,7 @@ async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId
   try {
     // Rate limiting por token (max 10 requests/hour)
     const rateLimitKey = `auth:${token.substring(0, 20)}`;
-    const rateLimitResult = rateLimit(rateLimitKey, 10, 3600000);
+    const rateLimitResult = await persistentRateLimit(rateLimitKey, 10, 3600000);
     if (!rateLimitResult.success) {
       console.warn('[AUTH] Rate limit exceeded for token');
       return { valid: false };
@@ -226,8 +226,7 @@ export async function POST(request: NextRequest) {
     console.error('Error en evaluación/iniciar-whatsapp:', error);
     return NextResponse.json(
       {
-        error: 'Error procesando solicitud',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        error: 'Error procesando solicitud. Intenta más tarde.',
       },
       { status: 500 }
     );
