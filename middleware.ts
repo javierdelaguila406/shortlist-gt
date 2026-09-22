@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { jwtVerify } from 'jose';
 
 // Rutas protegidas que requieren autenticación
 const protectedRoutes = [
@@ -60,11 +61,13 @@ export function middleware(request: NextRequest) {
 
   // ========== SEGURIDAD: Content Security Policy ==========
   const isDev = process.env.NODE_ENV === 'development';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.co';
+
   const cspPolicy = isDev
     ? // Desarrollo: permite inline scripts para Next.js HMR
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'"
-    : // Producción: restrictivo
-      "default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' https://xropotkrcovaqsarkjvp.supabase.co wss://xropotkrcovaqsarkjvp.supabase.co; frame-ancestors 'none'; base-uri 'self'";
+      `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' ${supabaseUrl} wss://${supabaseUrl.replace('https://', '')}; frame-ancestors 'none'; base-uri 'self'`
+    : // Producción: restrictivo (sin unsafe-inline/unsafe-eval)
+      `default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' ${supabaseUrl} wss://${supabaseUrl.replace('https://', '')}; frame-ancestors 'none'; base-uri 'self'`;
 
   response.headers.set('Content-Security-Policy', cspPolicy);
 
@@ -134,11 +137,11 @@ export function middleware(request: NextRequest) {
 }
 
 /**
- * Validates JWT format and expiration ONLY
- * ⚠️ DOES NOT verify signature - full verification must happen in API endpoints
- * using Supabase.auth.getUser() with the service role key
+ * Validates JWT format, expiration, AND cryptographic signature
+ * Uses Supabase JWT_SECRET to verify token authenticity
+ * Prevents forged token attacks
  */
-function isValidJWTFormat(token: string): boolean {
+async function isValidJWT(token: string): Promise<boolean> {
   try {
     if (!token || token.length < 50) {
       return false;
@@ -179,11 +182,65 @@ function isValidJWTFormat(token: string): boolean {
         // No expiration claim is invalid
         return false;
       }
-
-      return true;
     } catch {
       return false;
     }
+
+    // Verify JWT signature using Supabase JWT secret
+    const jwtSecret = process.env.SUPABASE_JWT_SECRET;
+    if (!jwtSecret) {
+      console.error('[SECURITY] SUPABASE_JWT_SECRET not configured - skipping signature verification');
+      return true; // Fall back to format validation only if secret not available
+    }
+
+    try {
+      const secret = new TextEncoder().encode(jwtSecret);
+      await jwtVerify(token, secret);
+      return true;
+    } catch (signatureError) {
+      console.warn('[SECURITY] JWT signature verification failed:', signatureError instanceof Error ? signatureError.message : 'Unknown error');
+      return false;
+    }
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Synchronous wrapper for JWT validation (format only, for middleware performance)
+ * Note: Full signature verification happens in API endpoints via Supabase.auth.getUser()
+ */
+function isValidJWTFormat(token: string): boolean {
+  try {
+    if (!token || token.length < 50) {
+      return false;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+    if (!header.alg || !header.typ) {
+      return false;
+    }
+
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+    if (!payload.sub) {
+      return false;
+    }
+
+    if (payload.exp) {
+      const expirationTime = payload.exp * 1000;
+      if (Date.now() > expirationTime) {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    return true;
   } catch {
     return false;
   }

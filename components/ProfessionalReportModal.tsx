@@ -14,6 +14,18 @@ interface ReportModalProps {
   company?: string;
 }
 
+// Escape HTML special characters to prevent XSS
+const escapeHtml = (text: string): string => {
+  const map: { [key: string]: string } = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, char => map[char]);
+};
+
 export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candidates, company = 'FORNITURE CITY' }: ReportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [periodo, setPeriodo] = useState('mes');
@@ -181,11 +193,11 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
           <div class="company-info">
             <div class="info-row">
               <div class="info-label">Empresa:</div>
-              <div class="info-value">${company}</div>
+              <div class="info-value">${escapeHtml(company)}</div>
             </div>
             <div class="info-row">
               <div class="info-label">Vacante:</div>
-              <div class="info-value">${vacanteTitle}</div>
+              <div class="info-value">${escapeHtml(vacanteTitle)}</div>
             </div>
             <div class="info-row">
               <div class="info-label">Generado:</div>
@@ -233,13 +245,13 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
               ${sorted.map((candidate, idx) => `
                 <tr>
                   <td><span class="rank-badge">${idx + 1}</span></td>
-                  <td><strong>${candidate.nombre}</strong></td>
-                  <td>${candidate.email}</td>
-                  <td>${candidate.telefono}</td>
+                  <td><strong>${escapeHtml(candidate.nombre || '')}</strong></td>
+                  <td>${escapeHtml(candidate.email || '')}</td>
+                  <td>${escapeHtml(candidate.telefono || '')}</td>
                   <td class="score-${candidate.score_ia > 80 ? 'high' : candidate.score_ia > 60 ? 'medium' : 'low'}">
                     ${candidate.score_ia || '-'}/100
                   </td>
-                  <td>${candidate.estado.toUpperCase()}</td>
+                  <td>${escapeHtml((candidate.estado || '').toUpperCase())}</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -252,9 +264,6 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         </body>
         </html>
       `;
-
-      const element = document.createElement('div');
-      element.innerHTML = htmlContent;
 
       const options: any = {
         margin: 10,

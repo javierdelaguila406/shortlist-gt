@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    turbopack: false,
+  },
   headers: async () => {
     return [
       {
@@ -21,11 +24,7 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          // Content Security Policy - Disabled for development to allow Supabase connections
-          // {
-          //   key: 'Content-Security-Policy',
-          //   value: "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self' https:;",
-          // },
+          // Note: Content Security Policy is configured in middleware.ts for dynamic environment-based settings
           // Referrer Policy
           {
             key: 'Referrer-Policy',

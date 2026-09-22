@@ -201,6 +201,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se pudo registrar el consentimiento', success: false }, { status: 500 });
     }
 
+    // Declarar extractedEmail ANTES de usarlo
+    let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
+
     // VALIDACIÓN DE PLAN: Verificar límite de candidatos en DEMO
     const authHeader = request.headers.get('authorization');
     if (authHeader?.startsWith('Bearer ')) {
@@ -250,7 +253,6 @@ export async function POST(request: NextRequest) {
     // Usar cvText + habilidades para análisis
     const finalCVText = (cvText || '').trim();
     let cvUrl = '';
-    let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
 
     // El frontend extrae el PDF con pdfjs - confiamos en eso
     const documentLength = finalCVText.length;

@@ -42,8 +42,20 @@ export async function GET(request: NextRequest) {
 
   // Check if a token and mode were sent
   if (mode && token) {
-    // Check the token sent is correct
-    if (mode === 'subscribe' && token === verifyToken) {
+    // Check the token sent is correct using timing-safe comparison
+    let isValid = false;
+    if (mode === 'subscribe' && verifyToken) {
+      try {
+        isValid = timingSafeEqual(
+          Buffer.from(token),
+          Buffer.from(verifyToken)
+        );
+      } catch {
+        isValid = false;
+      }
+    }
+
+    if (isValid) {
       console.log('Webhook verified successfully');
       // Respond with the challenge sent by Facebook
       return new NextResponse(challenge, { status: 200 });
