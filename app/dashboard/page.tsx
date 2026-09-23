@@ -41,21 +41,12 @@ function DashboardContent() {
 
   const fetchVacantes = useCallback(async () => {
     try {
-      const { data: sessionData } = await (
-        await import('@/lib/supabase').then((m) => m.supabase.auth.getSession())
-      );
+      const response = await fetch('/api/vacantes');
 
-      if (!sessionData.session) {
+      if (response.status === 401) {
         router.push('/auth/login');
         return;
       }
-
-      const response = await fetch('/api/vacantes', {
-        headers: {
-          Authorization: `Bearer ${sessionData.session.access_token}`,
-        },
-      });
-
       if (!response.ok) throw new Error('Failed to fetch vacantes');
 
       const data = await response.json();

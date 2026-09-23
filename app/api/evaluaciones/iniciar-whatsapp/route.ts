@@ -1,114 +1,66 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEvaluationStart } from '@/lib/whatsapp';
-import { supabase } from '@/lib/supabase';
-import { createClient } from '@supabase/supabase-js';
 import { persistentRateLimit } from '@/lib/rate-limit';
-
-/**
- * Endpoint: POST /api/evaluaciones/iniciar-whatsapp
- * Inicia una evaluación WhatsApp para un candidato específico
- * Llamado por: Reclutador desde el dashboard
- * SEGURIDAD: Requiere token Bearer válido + Rate Limiting
- */
-
-// Verificar token de autenticación CON rate limiting
-async function verifyAuth(request: NextRequest): Promise<{valid: boolean; userId?: string}> {
-  const token = request.headers.get('Authorization')?.replace('Bearer ', '');
-  if (!token) return { valid: false };
-
-  try {
-    // Rate limiting por token (max 10 requests/hour)
-    const rateLimitKey = `auth:${token.substring(0, 20)}`;
-    const rateLimitResult = await persistentRateLimit(rateLimitKey, 10, 3600000);
-    if (!rateLimitResult.success) {
-      console.warn('[AUTH] Rate limit exceeded for token');
-      return { valid: false };
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-
-    const { data, error } = await supabaseClient.auth.getUser(token);
-    if (error || !data.user) {
-      console.warn('[AUTH] Invalid token attempt');
-      return { valid: false };
-    }
-    return { valid: true, userId: data.user.id };
-  } catch (error) {
-    console.error('[AUTH] Error verifying token:', error);
-    return { valid: false };
-  }
-}
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedCandidato, ownershipError } from '@/lib/authz';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticación
-    const auth = await verifyAuth(request);
-    if (!auth.valid) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json(
         { error: 'No autorizado. Debes estar autenticado.' },
         { status: 401 }
       );
     }
+    const { user, supabase } = auth;
 
-    // VALIDACIÓN DE PLAN: WhatsApp solo en PREMIUM
-    if (auth.userId) {
-      try {
-        const supabaseService = createClient(
-          process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-          process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-        );
-
-        const { data: company } = await supabaseService
-          .from('companies')
-          .select('plan')
-          .eq('user_id', auth.userId)
-          .single();
-
-        if (company?.plan === 'demo') {
-          return NextResponse.json(
-            {
-              error: 'Las evaluaciones por WhatsApp solo están disponibles en el plan Premium.',
-              success: false,
-              plan: 'demo',
-            },
-            { status: 403 }
-          );
-        }
-      } catch (planCheckError) {
-        console.log('[API] Error checking plan for WhatsApp:', planCheckError);
-        // Continuar sin validación si hay error
-      }
+    const rateLimitResult = await persistentRateLimit(`whatsapp-start:${user.id}`, 10, 3600000);
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+        { status: 429, headers: { 'Retry-After': String(rateLimitResult.retryAfter || 3600) } }
+      );
     }
 
-    const { candidatoId } = await request.json();
+    const { data: company, error: companyError } = await supabase
+      .from('companies')
+      .select('plan')
+      .eq('user_id', user.id)
+      .maybeSingle();
 
-    if (!candidatoId) {
+    if (companyError || !company) {
+      return NextResponse.json(
+        { error: 'No se pudo verificar el plan de la empresa.', success: false },
+        { status: 403 }
+      );
+    }
+    if (company.plan !== 'premium') {
+      return NextResponse.json(
+        {
+          error: 'Las evaluaciones por WhatsApp solo están disponibles en el plan Premium.',
+          success: false,
+          plan: company.plan,
+        },
+        { status: 403 }
+      );
+    }
+
+    const { candidatoId } = await request.json().catch(() => ({}));
+    if (!candidatoId || typeof candidatoId !== 'string') {
       return NextResponse.json(
         { error: 'candidatoId es requerido' },
         { status: 400 }
       );
     }
 
-    console.log(`[EVALUACION] Iniciando WhatsApp para candidato: ${candidatoId}`);
-
-    // Obtener datos del candidato
-    const { data: candidato, error: candidatoError } = await supabase
-      .from('candidatos')
-      .select('id, nombre, email, telefono, vacante_id, score_cv')
-      .eq('id', candidatoId)
-      .single();
-
-    if (candidatoError || !candidato) {
-      console.error('Candidato no encontrado:', candidatoError);
-      return NextResponse.json(
-        { error: 'Candidato no encontrado' },
-        { status: 404 }
-      );
+    const owned = await getOwnedCandidato(supabase, user.id, candidatoId);
+    if (!owned.ok) {
+      const { body, init } = ownershipError(owned);
+      return NextResponse.json(body, init);
     }
+    const candidato = owned.data;
 
-    // Validar que tenga teléfono
     if (!candidato.telefono) {
       return NextResponse.json(
         { error: 'El candidato no tiene teléfono registrado' },
@@ -116,64 +68,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar que WhatsApp esté configurado
-    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
-      console.warn('WhatsApp no está configurado, usando modo demo');
+    const evaluacionBase = {
+      candidato_id: candidatoId,
+      vacante_id: candidato.vacante_id,
+      paso: 1,
+    };
 
-      // En modo demo, solo crear la evaluación
+    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
+      console.warn('[EVALUACION] WhatsApp no configurado; se registra la evaluación sin enviar mensajes');
+
       const { data: evaluacion, error: evalError } = await supabase
         .from('evaluaciones_whatsapp')
-        .insert({
-          candidato_id: candidatoId,
-          vacante_id: candidato.vacante_id,
-          paso: 1,
-          estado: 'en_proceso',
-          mensaje_confirmacion_enviado: true,
-        })
+        .insert({ ...evaluacionBase, estado: 'en_proceso', mensaje_confirmacion_enviado: false })
         .select()
         .single();
 
-      if (evalError) {
-        throw evalError;
-      }
+      if (evalError) throw evalError;
 
       return NextResponse.json(
         {
           success: true,
-          message: '[DEMO] Evaluación iniciada (WhatsApp no configurado)',
+          message: '[DEMO] Evaluación registrada (WhatsApp no configurado)',
           evaluacionId: evaluacion?.id,
-          candidato: {
-            nombre: candidato.nombre,
-            email: candidato.email,
-            telefono: candidato.telefono,
-          },
         },
         { status: 201 }
       );
     }
 
-    // MODO PRODUCCIÓN: Enviar WhatsApp real
     try {
       await sendEvaluationStart(candidatoId, candidato.telefono, candidato.nombre);
 
-      // Crear registro de evaluación
       const { data: evaluacion, error: evalError } = await supabase
         .from('evaluaciones_whatsapp')
-        .insert({
-          candidato_id: candidatoId,
-          vacante_id: candidato.vacante_id,
-          paso: 1,
-          estado: 'en_proceso',
-          mensaje_confirmacion_enviado: true,
-        })
+        .insert({ ...evaluacionBase, estado: 'en_proceso', mensaje_confirmacion_enviado: true })
         .select()
         .single();
 
-      if (evalError) {
-        throw evalError;
-      }
+      if (evalError) throw evalError;
 
-      // Actualizar estado del candidato
       await supabase
         .from('candidatos')
         .update({
@@ -182,52 +114,41 @@ export async function POST(request: NextRequest) {
         })
         .eq('id', candidatoId);
 
-      console.log(`✅ Mensaje WhatsApp enviado a ${candidato.telefono}`);
+      console.log('[EVALUACION] Mensaje inicial enviado', { candidatoId });
 
       return NextResponse.json(
         {
           success: true,
-          message: `✅ Mensaje enviado a ${candidato.telefono}. Esperando respuesta...`,
+          message: 'Mensaje enviado. Esperando respuesta del candidato.',
           evaluacionId: evaluacion?.id,
-          candidato: {
-            nombre: candidato.nombre,
-            email: candidato.email,
-            telefono: candidato.telefono,
-          },
         },
         { status: 201 }
       );
     } catch (whatsappError) {
-      console.error('Error enviando WhatsApp:', whatsappError);
+      console.error('[EVALUACION] Error enviando WhatsApp', {
+        candidatoId,
+        message: whatsappError instanceof Error ? whatsappError.message : 'unknown',
+      });
 
-      // Aún así crear la evaluación para que el reclutador pueda ver que lo intentó
       const { data: evaluacion } = await supabase
         .from('evaluaciones_whatsapp')
-        .insert({
-          candidato_id: candidatoId,
-          vacante_id: candidato.vacante_id,
-          paso: 1,
-          estado: 'error_envio',
-        })
+        .insert({ ...evaluacionBase, estado: 'error_envio' })
         .select()
         .single();
 
       return NextResponse.json(
         {
           success: false,
-          message: '⚠️ Error enviando mensaje. Verifica configuración de WhatsApp',
-          error: whatsappError instanceof Error ? whatsappError.message : 'Error desconocido',
+          message: 'Error enviando mensaje. Verifica la configuración de WhatsApp.',
           evaluacionId: evaluacion?.id,
         },
-        { status: 500 }
+        { status: 502 }
       );
     }
   } catch (error) {
     console.error('Error en evaluación/iniciar-whatsapp:', error);
     return NextResponse.json(
-      {
-        error: 'Error procesando solicitud. Intenta más tarde.',
-      },
+      { error: 'Error procesando solicitud. Intenta más tarde.' },
       { status: 500 }
     );
   }

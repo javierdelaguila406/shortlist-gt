@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+import { createAdminClient } from '@/lib/supabase-admin';
 import { rateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 import { syncCreateCandidato } from '@/lib/dual-sync';
@@ -154,31 +154,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos', success: false }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    // Ruta pública sin usuario: el servidor valida todo y escribe con service role (RLS no permite INSERT a anon).
+    let admin: ReturnType<typeof createAdminClient>;
+    try {
+      admin = createAdminClient();
+    } catch {
       return NextResponse.json({ error: 'Configuración faltante', success: false }, { status: 500 });
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    const privacyClient = serviceRole ? createClient(supabaseUrl, serviceRole) : supabase;
-
-    const { data: vacanteData } = await supabase
+    const { data: vacanteData } = await admin
       .from('vacantes')
       .select('titulo, descripcion, estado, usuario_id')
       .eq('id', vacante_id)
-      .single();
+      .maybeSingle();
 
     if (!vacanteData) {
       return NextResponse.json({ error: 'Vacante no encontrada', success: false }, { status: 404 });
     }
 
-    // Verificar que la vacante está abierta (no cerrada)
-    if (vacanteData.estado === 'cerrada' || vacanteData.estado === 'closed') {
+    if (vacanteData.estado !== 'activa') {
       return NextResponse.json({
-        error: 'La vacante está cerrada y no acepta más aplicaciones',
+        error: 'La vacante no está recibiendo aplicaciones',
         success: false
       }, { status: 410 }); // 410 Gone - El recurso ya no está disponible
     }
@@ -186,10 +182,10 @@ export async function POST(request: NextRequest) {
     let consentUserId = candidato_id;
     const consentAuthHeader = request.headers.get('authorization');
     if (consentAuthHeader?.startsWith('Bearer ')) {
-      const { data: consentAuth } = await privacyClient.auth.getUser(consentAuthHeader.slice(7));
+      const { data: consentAuth } = await admin.auth.getUser(consentAuthHeader.slice(7));
       if (consentAuth.user) consentUserId = consentAuth.user.id;
     }
-    const { error: consentError } = await privacyClient.from('consent_log').insert({
+    const { error: consentError } = await admin.from('consent_log').insert({
       usuario_id: consentUserId,
       vacante_id,
       tipo: 'postulacion',
@@ -203,54 +199,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No se pudo registrar el consentimiento', success: false }, { status: 500 });
     }
 
-    // Declarar extractedEmail ANTES de usarlo
-    let extractedEmail = email || ''; // Usar email ingresado como base, o vacío
-
-    // VALIDACIÓN DE PLAN: Verificar límite de candidatos en DEMO
-    const authHeader = request.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      try {
-        const token = authHeader.substring(7);
-        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-        if (user && !authError) {
-          // Obtener plan del usuario
-          const { data: company } = await supabase
-            .from('companies')
-            .select('plan')
-            .eq('user_id', user.id)
-            .single();
-
-          if (company?.plan === 'demo') {
-            // En DEMO: máximo 1 candidato TOTAL por usuario
-            const { count: candidatoCount, error: countError } = await supabase
-              .from('candidatos')
-              .select('*', { count: 'exact', head: true })
-              .eq('vacante_id', vacante_id)
-              .eq('email', extractedEmail);
-
-            if (countError) {
-              console.error('[API] Error counting demo candidatos:', countError);
-              return NextResponse.json({
-                error: 'Error al validar límite de candidatos',
-                success: false
-              }, { status: 500 });
-            }
-
-            if (candidatoCount !== null && candidatoCount >= 1) {
-              return NextResponse.json({
-                error: 'Ya has postulado para esta vacante en plan Demo. Actualiza a Premium para postularte en múltiples vacantes.',
-                success: false,
-                plan: 'demo',
-              }, { status: 403 });
-            }
-          }
-        }
-      } catch (planCheckError) {
-        console.log('[API] Error checking plan (continuing):', planCheckError);
-        // Continuar sin validación si hay error
-      }
-    }
+    let extractedEmail = email || '';
 
     // Usar cvText + habilidades para análisis
     const finalCVText = (cvText || '').trim();
@@ -288,30 +237,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Guardar PDF en Supabase Storage
-    if (cv) {
-      try {
-        const fileName = `${candidato_id}_${Date.now()}.pdf`;
-        const buffer = await cv.arrayBuffer();
+    if (cv instanceof File && cv.size > 0) {
+      const cvPath = `${vacante_id}/${candidato_id}.pdf`;
+      const { error: uploadError } = await admin.storage
+        .from('cvs')
+        .upload(cvPath, Buffer.from(await cv.arrayBuffer()), {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('cvs')
-          .upload(fileName, Buffer.from(buffer), {
-            contentType: 'application/pdf',
-          });
-
-        if (!uploadError && uploadData) {
-          const { data: urlData } = supabase.storage
-            .from('cvs')
-            .getPublicUrl(fileName);
-          cvUrl = urlData.publicUrl;
-          console.log('[API] Candidate document stored');
-        } else {
-          console.error('[API] Candidate document storage failed');
-        }
-      } catch (e) {
-        console.error('[API] Error en Storage:', e);
+      if (uploadError) {
+        console.error('[API] Candidate document storage failed', { code: uploadError.name });
+        return NextResponse.json(
+          { error: 'No se pudo guardar el CV. Intenta más tarde.', success: false },
+          { status: 500 }
+        );
       }
+      cvUrl = cvPath;
     }
 
     // Calcular score
@@ -332,7 +274,7 @@ export async function POST(request: NextRequest) {
       score_ia: score_ia,
     };
 
-    const { data: candidato, error } = await supabase
+    const { data: candidato, error } = await admin
       .from('candidatos')
       .insert(candidatoData)
       .select()
@@ -354,7 +296,7 @@ export async function POST(request: NextRequest) {
 
     // Sincronizar con Godaddy en background (sin bloquear respuesta)
     // Obtener email del reclutador (dueño de la vacante)
-    const { data: vacanteOwner } = await supabase
+    const { data: vacanteOwner } = await admin
       .from('companies')
       .select('email')
       .eq('user_id', vacanteData.usuario_id)

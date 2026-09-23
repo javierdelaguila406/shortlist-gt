@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 // Removed mockData imports - using only Supabase data
 import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
 import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
-import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
-import { supabase } from '@/lib/supabase';
 import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
 import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
 import { getPostulationPath } from '@/lib/ui';
@@ -48,7 +46,7 @@ interface UserLicense {
 
 export default function DemoDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const [selectedVacanteId, setSelectedVacanteId] = useState('demo-1');
+  const [selectedVacanteId, setSelectedVacanteId] = useState('');
   const [showCreateVacante, setShowCreateVacante] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [newVacante, setNewVacante] = useState({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
@@ -94,20 +92,17 @@ export default function DemoDashboard() {
       let allVacantes: Vacante[] = [];
 
       try {
-        const { data, error } = await supabase
-          .from('vacantes')
-          .select('id, titulo, descripcion, departamento');
-
-        if (error) throw new Error(error.message);
-        if (data) {
-          const supabaseVacantes: Vacante[] = data.map(v => ({
+        const response = await fetch('/api/vacantes');
+        if (!response.ok) throw new Error(`Error ${response.status} al cargar las vacantes`);
+        const data = await response.json();
+        allVacantes = ((data.vacantes || []) as Array<Vacante & { estado?: string }>)
+          .filter(v => v.estado !== 'cerrada')
+          .map(v => ({
             id: v.id,
             titulo: v.titulo,
             descripcion: v.descripcion,
             departamento: v.departamento,
           }));
-          allVacantes = supabaseVacantes;
-        }
       } catch (e) {
         console.error('[DASHBOARD] Error loading vacantes from Supabase:', e);
         setVacantesError(e instanceof Error ? e.message : 'No se pudieron cargar las vacantes');
@@ -116,18 +111,15 @@ export default function DemoDashboard() {
       // Remove duplicates by id
       const uniqueVacantes = Array.from(new Map(allVacantes.map(v => [v.id, v])).values());
       setVacantes(uniqueVacantes);
+      setSelectedVacanteId(current =>
+        uniqueVacantes.some(v => v.id === current) ? current : uniqueVacantes[0]?.id || ''
+      );
 
-      // Load user plan from Supabase (not localStorage)
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: company } = await supabase
-            .from('companies')
-            .select('plan')
-            .eq('user_id', user.id)
-            .single();
-
-          if (company) {
+        const planResponse = await fetch('/api/auth/check-plan');
+        if (planResponse.ok) {
+          const company = await planResponse.json();
+          if (company?.plan) {
             // Map plan to legacy license format for compatibility
             const planType = company.plan === 'premium' ? 'PREMIUM' : 'DEMO';
             setUserLicense({
@@ -167,13 +159,6 @@ export default function DemoDashboard() {
     loadVacantes();
   }, [vacantesRetry]);
 
-  useEffect(() => {
-    const vacanteJson = JSON.stringify(vacantes);
-    localStorage.setItem('vacantes', vacanteJson);
-    sessionStorage.setItem('vacantes', vacanteJson);
-    console.log('[Dashboard] Vacantes guardadas:', { count: vacantes.length, ids: vacantes.map(v => v.id) });
-  }, [vacantes]);
-
   // Load candidates from Supabase when selectedVacanteId changes
   useEffect(() => {
     const loadCandidates = async () => {
@@ -212,24 +197,6 @@ export default function DemoDashboard() {
     };
 
     loadCandidates();
-
-    // Configurar escucha en tiempo real de Supabase
-    const subscription = supabase
-      .channel('candidatos-channel')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'candidatos' },
-        (payload) => {
-          console.log('[REALTIME] Cambio detectado:', payload);
-          loadCandidates();
-        }
-      )
-      .subscribe();
-
-    // Limpiar suscripción al desmontar
-    return () => {
-      supabase.removeChannel(subscription);
-    };
   }, [selectedVacanteId]);
 
   const getFilteredCandidates = () => {
@@ -261,72 +228,40 @@ export default function DemoDashboard() {
   const handleCreateVacante = async () => {
     if (!newVacante.titulo.trim()) return;
 
-    // Verificar licencia
-    const license = getUserLicenseFromStorage();
-    const { canCreate, reason } = canCreateVacante(license);
-
-    if (!canCreate) {
-      alert(`No puedes crear vacantes: ${reason}`);
-      setShowCreateVacante(false);
-      return;
-    }
-
-    const newId = `vacante-${Date.now()}`;
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://shortlist-gt.vercel.app';
-    const aplicarLink = `${baseUrl}/postular/${newId}`;
-
     try {
-      const response = await fetch('/api/vacantes/generate-link', {
+      const createResponse = await fetch('/api/vacantes/crear', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vacanteId: newId,
           titulo: newVacante.titulo,
           descripcion: newVacante.descripcion,
           departamento: newVacante.departamento,
         }),
       });
-
-      const data = await response.json();
-
-      const newVacanteData = {
-        id: newId,
-        titulo: newVacante.titulo,
-        descripcion: newVacante.descripcion,
-        departamento: newVacante.departamento,
-        linkedinLink: data.linkedinShareUrl,
-        aplicarLink: aplicarLink
-      };
-
-      const updatedVacantes = [...vacantes, newVacanteData];
-
-      // Save immediately to localStorage
-      localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
-      sessionStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
-
-      // Also save to Supabase for cross-session access
-      try {
-        await supabase.from('vacantes').insert({
-          id: newId,
-          usuario_id: 'demo-user',
-          titulo: newVacante.titulo,
-          descripcion: newVacante.descripcion,
-          slug: newId,
-          departamento: newVacante.departamento,
-          estado: 'activa'
-        });
-        console.log('[DASHBOARD] Vacante guardada en Supabase:', newId);
-      } catch (e) {
-        console.warn('[DASHBOARD] No se pudo guardar en Supabase:', e);
+      const created = await createResponse.json().catch(() => ({}));
+      if (!createResponse.ok || !created.success) {
+        alert(`❌ ${created.error || 'No se pudo crear la vacante'}`);
+        return;
       }
+      const newId: string = created.vacante_id;
 
-      setVacantes(updatedVacantes);
+      const linkResponse = await fetch('/api/vacantes/generate-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vacanteId: newId }),
+      });
+      const data = linkResponse.ok ? await linkResponse.json() : null;
 
-      setLinkedinData(data);
-      setShowLinkedinLink(true);
-      setShowCreateVacante(false);
+      setVacantesRetry(value => value + 1);
       setSelectedVacanteId(newId);
+      setShowCreateVacante(false);
       setNewVacante({ titulo: '', descripcion: '', departamento: '', linkedinLink: '' });
+      if (data) {
+        setLinkedinData(data);
+        setShowLinkedinLink(true);
+      } else {
+        alert('✅ Vacante creada. No se pudo generar el enlace para compartir; inténtalo desde "Ver Link".');
+      }
     } catch (error) {
       console.error('Error:', error);
       alert('Error creando vacante');
@@ -342,35 +277,21 @@ export default function DemoDashboard() {
     setDeletingVacante(vacanteId);
 
     try {
-      // Crear/actualizar lista de vacantes cerradas
-      const cerradasLS = localStorage.getItem('vacantesCerradas') || '[]';
-      const cerradas = JSON.parse(cerradasLS);
-
-      if (!cerradas.includes(vacanteId)) {
-        cerradas.push(vacanteId);
-        localStorage.setItem('vacantesCerradas', JSON.stringify(cerradas));
+      const response = await fetch(`/api/vacantes/${encodeURIComponent(vacanteId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado: 'cerrada' }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Error ${response.status}`);
       }
 
-      // También guardar en Supabase si es posible
-      try {
-        await supabase
-          .from('vacantes')
-          .update({ estado: 'cerrada' })
-          .eq('id', vacanteId);
-        console.log('[CERRAR-VACANTE] Actualizado en Supabase:', vacanteId);
-      } catch (e) {
-        console.warn('[CERRAR-VACANTE] No se pudo actualizar en Supabase:', e);
-      }
-
-      // Quitar de la lista visible
       const updatedVacantes = vacantes.filter(v => v.id !== vacanteId);
       setVacantes(updatedVacantes);
-      localStorage.setItem('vacantes', JSON.stringify(updatedVacantes));
 
-      // Cambiar a otra vacante si la cerrada estaba seleccionada
       if (selectedVacanteId === vacanteId) {
-        const nextVacante = updatedVacantes[0]?.id || 'demo-1';
-        setSelectedVacanteId(nextVacante);
+        setSelectedVacanteId(updatedVacantes[0]?.id || '');
       }
 
       setSelectedCandidate(null);
@@ -460,7 +381,8 @@ export default function DemoDashboard() {
         });
 
         if (!updateResponse.ok) {
-          console.warn('Error guardando cambios en preguntas');
+          const data = await updateResponse.json().catch(() => ({}));
+          throw new Error(`Template asignado, pero no se guardaron tus cambios: ${data.error || updateResponse.status}`);
         }
       }
 
@@ -843,14 +765,21 @@ export default function DemoDashboard() {
                     {selectedCandidate.cv_url && (
                       <div className="flex items-center gap-2 pt-2 border-t border-zinc-700">
                         <span className="text-zinc-400">📄</span>
-                        <a
-                          href={selectedCandidate.cv_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const response = await fetch(`/api/candidatos/${encodeURIComponent(selectedCandidate.id)}/cv`);
+                            const data = await response.json().catch(() => ({}));
+                            if (response.ok && data.url) {
+                              window.open(data.url, '_blank', 'noopener,noreferrer');
+                            } else {
+                              alert(`❌ ${data.error || 'No se pudo abrir el CV'}`);
+                            }
+                          }}
                           className="text-emerald-400 hover:underline text-xs"
                         >
                           Ver PDF del CV
-                        </a>
+                        </button>
                       </div>
                     )}
                   </div>

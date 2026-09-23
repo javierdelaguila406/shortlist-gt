@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createAnonClient } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,48 +12,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Public endpoint - use anon key with RLS
-    // RLS will only return active vacantes
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-    );
+    const { data, error } = await createAnonClient()
+      .rpc('get_vacante_publica', { p_id: slug })
+      .maybeSingle();
 
-    // 1. Buscar por ID exacto (para IDs tipo "vacante-1234567890")
-    if (slug.startsWith('vacante-')) {
-      const { data, error } = await supabase
-        .from('vacantes')
-        .select('id')
-        .eq('id', slug)
-        .single();
-
-      if (!error && data) {
-        return NextResponse.json({
-          success: true,
-          vacante_id: data.id,
-        });
-      }
-    }
-
-    // 2. Si no es un ID, buscar por título
-    const { data, error } = await supabase
-      .from('vacantes')
-      .select('id')
-      .ilike('titulo', `%${slug}%`)
-      .limit(1);
-
-    if (!error && data && data.length > 0) {
+    if (error || !data) {
       return NextResponse.json({
-        success: true,
-        vacante_id: data[0].id,
-      });
+        success: false,
+        error: 'Vacante no encontrada',
+      }, { status: 404 });
     }
 
-    // 3. No encontramos la vacante
     return NextResponse.json({
-      success: false,
-      error: 'Vacante no encontrada',
-    }, { status: 404 });
+      success: true,
+      vacante_id: (data as { id: string }).id,
+    });
   } catch (error) {
     console.error('[API] Error:', error);
     return NextResponse.json(

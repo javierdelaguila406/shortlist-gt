@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedVacante, ownershipError } from '@/lib/authz';
 
 export async function GET(
   request: NextRequest,
@@ -7,51 +8,23 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const auth = await requireUser(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'No authorization header' },
-        { status: 401 }
-      );
+    const owned = await getOwnedVacante(auth.supabase, auth.user.id, id);
+    if (!owned.ok) {
+      const { body, init } = ownershipError(owned);
+      return NextResponse.json(body, init);
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Verify vacante belongs to user
-    const { data: vacante } = await supabase
-      .from('vacantes')
-      .select('id')
-      .eq('id', id)
-      .eq('usuario_id', userData.user.id)
-      .single();
-
-    if (!vacante) {
-      return NextResponse.json(
-        { error: 'Vacante not found' },
-        { status: 404 }
-      );
-    }
-
-    const { data: candidatos, error } = await supabase
+    const { data: candidatos, error } = await auth.supabase
       .from('candidatos')
       .select('*')
       .eq('vacante_id', id)
       .order('score_total', { ascending: false });
 
     if (error) {
-      console.error('[API] Database error (internal):', {
-        message: error.message,
-        code: error.code,
-        timestamp: new Date().toISOString()
-      });
+      console.error('[API] Database error (internal):', { code: error.code, timestamp: new Date().toISOString() });
       return NextResponse.json(
         { error: 'Error al obtener candidatos. Intenta más tarde.' },
         { status: 500 }
@@ -65,15 +38,9 @@ export async function GET(
       rechazados: candidatos?.filter((c) => c.estado === 'rechazado').length || 0,
     };
 
-    return NextResponse.json(
-      { candidatos, stats },
-      { status: 200 }
-    );
+    return NextResponse.json({ candidatos, stats }, { status: 200 });
   } catch (error) {
     console.error('Error fetching candidatos:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

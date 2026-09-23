@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('sb-auth-token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 }
-      );
+    const auth = await requireUser(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
-
-    // Get user with the token
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-
-    if (error || !user) {
-      return NextResponse.json(
-        { error: 'Token inválido' },
-        { status: 401 }
-      );
-    }
+    const { user } = auth;
 
     return NextResponse.json(
       {
@@ -40,9 +27,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    return NextResponse.json(
-      { error: 'Ocurrió un error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Ocurrió un error' }, { status: 500 });
   }
 }

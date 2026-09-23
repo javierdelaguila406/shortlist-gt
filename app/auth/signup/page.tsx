@@ -78,10 +78,8 @@ export default function SignupPage() {
           });
 
           if (loginResponse.ok) {
-            const loginData = await loginResponse.json();
             // Guardar email en localStorage para el dashboard
             localStorage.setItem('reclutador_email', formData.email);
-            localStorage.setItem('reclutador_token', loginData.session.access_token);
             // El servidor ya estableció el cookie, redirigir directamente
             router.push('/dashboard/reclutador');
           } else {

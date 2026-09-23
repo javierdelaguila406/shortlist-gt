@@ -21,6 +21,7 @@ const publicRoutes = [
   '/postular',
   '/api/vacantes/crear',
   '/api/vacantes/buscar',
+  '/api/vacantes/resolver-slug',
   '/api/candidatos/postular',
   '/',
 ];
@@ -105,15 +106,17 @@ export function middleware(request: NextRequest) {
   if (isProtectedRoute) {
     if (pathname.startsWith('/api/')) {
       const authHeader = request.headers.get('Authorization');
+      const token = authHeader?.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : request.cookies.get('sb-auth-token')?.value;
 
-      if (!authHeader?.startsWith('Bearer ')) {
+      if (!token) {
         return NextResponse.json(
-          { error: 'Unauthorized: Missing Bearer token', success: false },
+          { error: 'Unauthorized', success: false },
           { status: 401 }
         );
       }
 
-      const token = authHeader.substring(7); // Remove "Bearer " prefix
       // IMPORTANT: Full JWT verification with signature happens in API endpoints
       // This middleware only does basic format validation for performance
       const isValid = isValidJWTFormat(token);

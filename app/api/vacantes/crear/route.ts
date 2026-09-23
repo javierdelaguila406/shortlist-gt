@@ -1,88 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { syncCreateVacante } from '@/lib/dual-sync';
 import { logAuditEvent } from '@/lib/audit';
+import { requireUser } from '@/lib/supabase-server';
 
-// Validate required environment variables at module load time
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error(
-    'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY'
-  );
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
+const ESTADOS_PERMITIDOS = ['activa', 'pausada', 'cerrada'];
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { titulo, descripcion, departamento, estado } = body;
-    const estadosPermitidos = ['activa', 'pausada', 'cerrada'];
 
-    if (!titulo || !titulo.trim()) {
+    if (!titulo || typeof titulo !== 'string' || !titulo.trim()) {
       return NextResponse.json(
         { error: 'Título requerido', success: false },
         { status: 400 }
       );
     }
 
-    if (estado !== undefined && !estadosPermitidos.includes(estado)) {
+    if (estado !== undefined && !ESTADOS_PERMITIDOS.includes(estado)) {
       return NextResponse.json(
         { error: 'Estado inválido', success: false },
         { status: 400 }
       );
     }
 
-    // Obtener usuario autenticado del header (REQUERIDO)
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      console.error('[API] No authorization header provided');
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json(
         { error: 'Se requiere autenticación', success: false },
         { status: 401 }
       );
     }
+    const userId = auth.user.id;
 
-    let userId: string;
     let userEmail = '';
-
-    try {
-      const token = authHeader.substring(7);
-      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-      if (!user || authError) {
-        console.error('[API] Authentication rejected');
-        return NextResponse.json(
-          { error: 'Token inválido', success: false },
-          { status: 401 }
-        );
-      }
-
-      userId = user.id;
-
-      // Obtener email del usuario (opcional - no requerido para crear vacante)
-      const { data: companies, error: companyError } = await supabase
-        .from('companies')
-        .select('email')
-        .eq('user_id', user.id);
-
-      if (!companyError && companies && companies.length > 0) {
-        userEmail = companies[0].email;
-      }
-      const companyFound = Boolean(userEmail);
-      console.log('[API] Company lookup completed');
-    } catch (authCheckError) {
-      console.error('[API] Error verifying auth');
-      return NextResponse.json(
-        { error: 'Error de autenticación', success: false },
-        { status: 401 }
-      );
+    const { data: companies, error: companyError } = await auth.supabase
+      .from('companies')
+      .select('email')
+      .eq('user_id', userId);
+    if (!companyError && companies && companies.length > 0) {
+      userEmail = companies[0].email;
     }
 
     const newId = `vacante-${Date.now()}`;
-
     const vacante = {
       id: newId,
       titulo: titulo.trim(),
@@ -93,47 +53,37 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    console.log('[API] Creating new vacancy');
-
-    const { error: insertError, data: insertedData } = await supabase
+    const { error: insertError } = await auth.supabase
       .from('vacantes')
       .insert([vacante])
       .select();
 
-    console.log('[API] STEP 3 - Respuesta del insert:', { error: insertError?.message, dataLength: insertedData?.length });
-
     if (insertError) {
-      // Log full error details server-side only (CN-HIGH-001)
       console.error('[API] Database error (internal):', {
         message: insertError.message,
         code: insertError.code,
-        details: insertError.details,
-        hint: insertError.hint,
         timestamp: new Date().toISOString(),
       });
-      // Return generic message to client to prevent schema disclosure
       return NextResponse.json(
         { error: 'Error al crear vacante. Intenta más tarde.', success: false },
         { status: 500 }
       );
     }
 
-    console.log('[API] ✅ VACANTE GUARDADA EN BD:', { id: newId, insertedRows: insertedData?.length });
     await logAuditEvent({ action: 'CREATE', userId, resourceId: newId, resourceType: 'vacante', changes: { estado: vacante.estado } });
 
-    // Sincronizar con Godaddy en background (sin bloquear respuesta)
     syncCreateVacante({
       id: newId,
       usuario_id: userId,
       titulo: titulo.trim(),
       descripcion: descripcion || '',
       departamento: departamento || '',
-      userEmail: userEmail,
+      userEmail,
     }).catch(err => {
       console.error('[SYNC] Background sync error:', err);
     });
 
-    console.log('[API] Vacante creada en Supabase:', newId);
+    console.log('[API] Vacante creada:', newId);
     return NextResponse.json({
       success: true,
       vacante_id: newId,

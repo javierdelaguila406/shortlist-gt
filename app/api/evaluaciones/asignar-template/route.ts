@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
 import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedVacante } from '@/lib/authz';
 
 /**
  * Endpoint: POST /api/evaluaciones/asignar-template
@@ -9,29 +9,8 @@ import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.slice('Bearer '.length);
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Configuración faltante' },
-        { status: 500 }
-      );
-    }
-
-    const authSupabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: userData, error: userError } = await authSupabase.auth.getUser(token);
-
-    if (userError || !userData.user) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -47,23 +26,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: vacante, error: vacanteError } = await authSupabase
-      .from('vacantes')
-      .select('usuario_id')
-      .eq('id', vacante_id)
-      .single();
-
-    if (vacanteError || !vacante) {
+    const owned = await getOwnedVacante(auth.supabase, auth.user.id, vacante_id);
+    if (!owned.ok) {
       return NextResponse.json(
-        { error: 'Vacante no encontrada' },
-        { status: 404 }
-      );
-    }
-
-    if (vacante.usuario_id !== userData.user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
+        { error: owned.status === 403 ? 'Forbidden' : 'Vacante no encontrada' },
+        { status: owned.status }
       );
     }
 
@@ -78,31 +45,25 @@ export async function POST(request: NextRequest) {
 
     console.log('[ASIGNAR-TEMPLATE] Asignando template:', categoria_template, 'a vacante:', vacante_id);
 
-    // Intentar guardar preguntas en Supabase
-    try {
-      const { data: savedPreguntas, error: saveError } = await supabase
-        .from('vacante_preguntas')
-        .upsert({
-          vacante_id,
-          pre_entrevista: template.pre_entrevista,
-          prueba_tecnica: template.prueba_tecnica,
-          preguntas_video: template.preguntas_video,
-          nivel_requerido: template.nombre,
-          generado_por: 'template',
-          categoria_template: categoria_template,
-        })
-        .select();
+    const { error: saveError } = await auth.supabase
+      .from('vacante_preguntas')
+      .upsert({
+        vacante_id,
+        pre_entrevista: template.pre_entrevista,
+        prueba_tecnica: template.prueba_tecnica,
+        preguntas_video: template.preguntas_video,
+        nivel_requerido: template.nombre,
+        generado_por: 'template',
+        categoria_template: categoria_template,
+      }, { onConflict: 'vacante_id' })
+      .select();
 
-      if (saveError) {
-        console.error('[ASIGNAR-TEMPLATE] Supabase error:', saveError);
-        console.error('Error details:', { code: saveError.code, message: saveError.message });
-        // Continuar de todas formas - el template se asignó aunque no se guardó en DB
-      } else {
-        console.log('[ASIGNAR-TEMPLATE] Template guardado en DB:', vacante_id);
-      }
-    } catch (dbError) {
-      console.error('[ASIGNAR-TEMPLATE] Database exception:', dbError);
-      // No fallar si hay error de DB - el template se devuelve de todas formas
+    if (saveError) {
+      console.error('[ASIGNAR-TEMPLATE] Supabase error:', { code: saveError.code });
+      return NextResponse.json(
+        { error: 'No se pudo guardar el template. Intenta más tarde.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

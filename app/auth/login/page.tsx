@@ -40,7 +40,6 @@ export default function LoginPage() {
 
       // Guardar email en localStorage para el dashboard
       localStorage.setItem('reclutador_email', data.user.email);
-      localStorage.setItem('reclutador_token', data.session.access_token);
 
       // El servidor ya estableció el cookie, redirigir directamente
       router.push('/dashboard/reclutador');

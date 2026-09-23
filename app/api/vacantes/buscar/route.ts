@@ -1,53 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { isValidUUID } from '@/lib/security-utils';
+import { createAnonClient } from '@/lib/supabase-server';
 
 export async function GET(request: NextRequest) {
   try {
     const id = request.nextUrl.searchParams.get('id');
 
-    if (!id || !isValidUUID(id)) {
-      return NextResponse.json(
-        { found: false },
-        { status: 400 }
-      );
+    if (!id || !(isValidUUID(id) || /^vacante-\d+$/.test(id))) {
+      return NextResponse.json({ found: false }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase credentials');
-      return NextResponse.json(
-        { found: false },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data, error } = await supabase
-      .from('vacantes')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await createAnonClient()
+      .rpc('get_vacante_publica', { p_id: id })
+      .maybeSingle();
 
     if (error || !data) {
-      console.log('Vacancy not found in DB:', id);
-      return NextResponse.json(
-        { found: false },
-        { status: 404 }
-      );
+      return NextResponse.json({ found: false }, { status: 404 });
     }
 
-    return NextResponse.json({
-      found: true,
-      vacante: data,
-    });
+    return NextResponse.json({ found: true, vacante: data });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
-      { found: false },
-      { status: 500 }
-    );
+    return NextResponse.json({ found: false }, { status: 500 });
   }
 }

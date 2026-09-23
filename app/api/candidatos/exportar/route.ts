@@ -1,6 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 import { persistentRateLimit } from '@/lib/rate-limit';
+import { requireUser } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { getOwnedVacante, ownerOf, type CandidatoRow, type OwnerRelation } from '@/lib/authz';
 import { logAuditEvent } from '@/lib/audit';
 import * as XLSX from 'xlsx';
 import { jsPDF } from 'jspdf';
@@ -32,29 +34,13 @@ function sanitizeExcelCell(value: any): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const { supabase, user } = auth;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
-    }
-
-    const token = authHeader.slice('Bearer '.length);
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    // RLS policies in Supabase enforce authorization
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const rateLimitResult = await persistentRateLimit(`candidate-export:${userData.user.id}`, 5, 3600000);
+    const rateLimitResult = await persistentRateLimit(`candidate-export:${user.id}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
         { error: 'Demasiadas solicitudes. Intenta más tarde.' },
@@ -72,19 +58,14 @@ export async function POST(request: NextRequest) {
       const rangeError = validateReportRange(desde, hasta);
       if (rangeError) return NextResponse.json({ error: rangeError }, { status: 400 });
 
-      const { data: vacante } = await supabase
-        .from('vacantes')
-        .select('id, usuario_id, titulo')
-        .eq('id', vacante_id)
-        .single();
-
-      if (!vacante) {
-        return NextResponse.json({ error: 'Vacante no encontrada' }, { status: 404 });
+      const owned = await getOwnedVacante(supabase, user.id, vacante_id);
+      if (!owned.ok) {
+        return NextResponse.json(
+          { error: owned.status === 403 ? 'Forbidden' : 'Vacante no encontrada' },
+          { status: owned.status }
+        );
       }
-
-      if (vacante.usuario_id !== userData.user.id) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+      const vacante = owned.data;
 
       let candidateQuery = supabase
         .from('candidatos')
@@ -103,12 +84,12 @@ export async function POST(request: NextRequest) {
       const reportId = randomUUID();
       const rows = buildReportRows(candidatos || []);
       await logAuditEvent({
-        action: 'READ', userId: userData.user.id, resourceId: reportId, resourceType: 'reporte',
+        action: 'READ', userId: user.id, resourceId: reportId, resourceType: 'reporte',
         changes: { vacante_id, formato, desde, hasta, registros: rows.length },
       });
 
       console.log('[Report] Generated', {
-        reportId, userId: userData.user.id, vacante_id, formato,
+        reportId, userId: user.id, vacante_id, formato,
         startDate: desde, endDate: hasta, timestamp: new Date().toISOString(),
       });
 
@@ -184,42 +165,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar candidato
-    let candidatoData = null;
+    const { data: matches } = await supabase
+      .from('candidatos')
+      .select('*, vacantes:vacante_id(usuario_id)')
+      .eq(email ? 'email' : 'telefono', email || telefono);
 
-    if (email) {
-      const { data } = await supabase
-        .from('candidatos')
-        .select('*, vacantes:vacante_id(usuario_id)')
-        .eq('email', email)
-        .single();
-      candidatoData = data;
-    } else if (telefono) {
-      const { data } = await supabase
-        .from('candidatos')
-        .select('*, vacantes:vacante_id(usuario_id)')
-        .eq('telefono', telefono)
-        .single();
-      candidatoData = data;
-    }
+    const rows = (matches || []) as Array<CandidatoRow & { vacantes: OwnerRelation }>;
+    const candidatoData = rows.find((row) => ownerOf(row.vacantes) === user.id);
 
     if (!candidatoData) {
-      return NextResponse.json(
-        { error: 'Candidato no encontrado' },
-        { status: 404 }
-      );
-    }
-
-    const vacanteRelation = candidatoData.vacantes as
-      | { usuario_id: string }
-      | { usuario_id: string }[]
-      | null;
-    const ownerId = Array.isArray(vacanteRelation)
-      ? vacanteRelation[0]?.usuario_id
-      : vacanteRelation?.usuario_id;
-
-    if (ownerId !== userData.user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return rows.length > 0
+        ? NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+        : NextResponse.json({ error: 'Candidato no encontrado' }, { status: 404 });
     }
 
     // Compilar datos en formato JSON compatible con GDPR
@@ -262,17 +219,20 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    // Log de exportación
-    await supabase
-      .from('logs_privacidad')
-      .insert({
-        accion: 'EXPORTACION_DATOS',
-        candidato_id: candidatoData.id,
-        candidato_nombre: candidatoData.nombre,
-        candidato_email: candidatoData.email,
-        motivo: 'Solicitud de portabilidad de datos (Derecho GDPR Art. 20)',
-        ip_origen: request.headers.get('x-forwarded-for') || 'unknown',
-      });
+    try {
+      await createAdminClient()
+        .from('logs_privacidad')
+        .insert({
+          accion: 'EXPORTACION_DATOS',
+          candidato_id: candidatoData.id,
+          candidato_nombre: candidatoData.nombre,
+          candidato_email: candidatoData.email,
+          motivo: 'Solicitud de portabilidad de datos (Derecho GDPR Art. 20)',
+          ip_origen: request.headers.get('x-forwarded-for') || 'unknown',
+        });
+    } catch {
+      console.error('[Export] Privacy log write failed', { candidatoId: candidatoData.id });
+    }
 
     // Retornar datos en formato JSON descargable
     return NextResponse.json(
@@ -284,7 +244,7 @@ export async function POST(request: NextRequest) {
       {
         status: 200,
         headers: {
-          'Content-Disposition': `attachment; filename="shortlist-gt-datos-personales-${candidatoData.email}-${new Date().toISOString().split('T')[0]}.json"`,
+          'Content-Disposition': `attachment; filename="shortlist-gt-datos-personales-${new Date().toISOString().split('T')[0]}.json"`,
           'Content-Type': 'application/json'
         }
       }

@@ -39,7 +39,7 @@ beforeEach(() => {
 
 describe('scoring de documentos en servidor', () => {
   test('calcula y persiste un score determinista sin aceptar score cliente', async () => {
-    const file = new File(['%PDF'], 'resume.pdf', { type: 'application/pdf' });
+    const file = new File(['%PDF-1.4'], 'resume.pdf', { type: 'application/pdf' });
     const first = await POST(makeRequest(file));
     const second = await POST(makeRequest(file));
     expect(first.status).toBe(200);
@@ -50,12 +50,18 @@ describe('scoring de documentos en servidor', () => {
 
   test('documento sin texto retorna score cero y no evaluado', async () => {
     mocks.extractedText = '   ';
-    const response = await POST(makeRequest(new File(['%PDF'], 'scan.pdf', { type: 'application/pdf' })));
+    const response = await POST(makeRequest(new File(['%PDF-1.4'], 'scan.pdf', { type: 'application/pdf' })));
     expect(await response.json()).toMatchObject({ score_total: 0, evaluated: false });
   });
 
   test('rechaza archivo no PDF', async () => {
     expect((await POST(makeRequest(new File(['text'], 'resume.txt', { type: 'text/plain' })))).status).toBe(400);
+  });
+
+  test('rechaza archivo que declara PDF pero no tiene la firma %PDF-', async () => {
+    const disguised = new File(['<html>no es pdf</html>'], 'resume.pdf', { type: 'application/pdf' });
+    expect((await POST(makeRequest(disguised))).status).toBe(400);
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
 
   test('rechaza archivo mayor de 10MB', async () => {

@@ -1,53 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedVacante } from '@/lib/authz';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const auth = await requireUser(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const { vacanteId } = await request.json();
+    if (!vacanteId || typeof vacanteId !== 'string') {
+      return NextResponse.json({ error: 'vacanteId requerido' }, { status: 400 });
     }
 
-    const token = authHeader.slice('Bearer '.length);
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Configuración faltante' },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { vacanteId, titulo, descripcion, departamento } = await request.json();
-
-    // SECURITY: Verify vacancy belongs to current user (CN-CRITICAL-003)
-    const { data: vacante, error: vacanteError } = await supabase
-      .from('vacantes')
-      .select('id, usuario_id')
-      .eq('id', vacanteId)
-      .eq('usuario_id', userData.user.id)  // ← OWNERSHIP VERIFICATION
-      .single();
-
-    if (vacanteError || !vacante) {
+    const owned = await getOwnedVacante(auth.supabase, auth.user.id, vacanteId);
+    if (!owned.ok) {
       return NextResponse.json(
         { error: 'Vacante no encontrada o sin permisos' },
         { status: 404 }
       );
     }
+    const { titulo, descripcion, departamento } = owned.data;
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://shortlist-gt.vercel.app';
     const aplicarLink = `${baseUrl}/postular/${vacanteId}`;

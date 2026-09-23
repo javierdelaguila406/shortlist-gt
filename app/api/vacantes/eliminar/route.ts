@@ -1,20 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { logAuditEvent } from '@/lib/audit';
 import { syncDeleteVacante } from '@/lib/dual-sync';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedVacante } from '@/lib/authz';
 
 export async function DELETE(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json(
         { error: 'Unauthorized', success: false },
         { status: 401 }
       );
     }
 
-    const token = authHeader.slice('Bearer '.length);
     const body = await request.json();
     const { vacante_id } = body;
 
@@ -25,70 +24,34 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
+    const owned = await getOwnedVacante(auth.supabase, auth.user.id, vacante_id);
+    if (!owned.ok) {
       return NextResponse.json(
-        { error: 'Configuración faltante', success: false },
-        { status: 500 }
+        { error: owned.status === 403 ? 'Forbidden' : 'Vacante no encontrada', success: false },
+        { status: owned.status }
       );
     }
 
-    // Use anon key with RLS enforcement
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', success: false },
-        { status: 401 }
-      );
-    }
-
-    const { data: vacante, error: vacanteError } = await supabase
-      .from('vacantes')
-      .select('usuario_id')
-      .eq('id', vacante_id)
-      .single();
-
-    if (vacanteError || !vacante) {
-      return NextResponse.json(
-        { error: 'Vacante no encontrada', success: false },
-        { status: 404 }
-      );
-    }
-
-    if (vacante.usuario_id !== userData.user.id) {
-      return NextResponse.json(
-        { error: 'Forbidden', success: false },
-        { status: 403 }
-      );
-    }
-
-    // Delete all candidates for this vacancy first
-    const { error: candidatosError } = await supabase
+    const { error: candidatosError } = await auth.supabase
       .from('candidatos')
       .delete()
       .eq('vacante_id', vacante_id);
 
     if (candidatosError) {
-      console.error('[API] Error deleting candidates:', candidatosError);
+      console.error('[API] Error deleting candidates:', { code: candidatosError.code });
       return NextResponse.json(
         { error: 'Error al eliminar candidatos', success: false },
         { status: 500 }
       );
     }
 
-    // Delete the vacancy
-    const { error: vacantesError } = await supabase
+    const { error: vacantesError } = await auth.supabase
       .from('vacantes')
       .delete()
       .eq('id', vacante_id);
 
     if (vacantesError) {
-      console.error('[API] Error deleting vacancy:', vacantesError);
+      console.error('[API] Error deleting vacancy:', { code: vacantesError.code });
       return NextResponse.json(
         { error: 'Error al eliminar vacante', success: false },
         { status: 500 }
@@ -98,7 +61,7 @@ export async function DELETE(request: NextRequest) {
     const mirrorDeleted = await syncDeleteVacante(vacante_id);
     if (!mirrorDeleted) console.error('[SYNC] Mirror deletion failed', { vacancyId: vacante_id });
     await logAuditEvent({
-      action: 'DELETE', userId: userData.user.id, resourceId: vacante_id,
+      action: 'DELETE', userId: auth.user.id, resourceId: vacante_id,
       resourceType: 'vacante', changes: { reason: 'user_deletion' },
     });
 

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedCandidato, ownershipError } from '@/lib/authz';
+
+const VALID_ESTADOS = ['pendiente', 'en_revision', 'aprobado', 'rechazado', 'oferta'];
 
 export async function GET(
   request: NextRequest,
@@ -7,63 +10,19 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const auth = await requireUser(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'No authorization header' },
-        { status: 401 }
-      );
+    const owned = await getOwnedCandidato(auth.supabase, auth.user.id, id);
+    if (!owned.ok) {
+      const { body, init } = ownershipError(owned);
+      return NextResponse.json(body, init);
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { data: candidato, error } = await supabase
-      .from('candidatos')
-      .select(`
-        *,
-        vacantes:vacante_id(usuario_id)
-      `)
-      .eq('id', id)
-      .single();
-
-    if (error || !candidato) {
-      return NextResponse.json(
-        { error: 'Candidato not found' },
-        { status: 404 }
-      );
-    }
-
-    // Verify ownership
-    type CandidatoWithVacante = typeof candidato & {
-      vacantes: Array<{ usuario_id: string }> | null;
-    };
-    const vacanteRelation = (candidato as CandidatoWithVacante).vacantes;
-    const vacanteUsuario = Array.isArray(vacanteRelation)
-      ? vacanteRelation[0]?.usuario_id
-      : null;
-
-    if (!vacanteUsuario || vacanteUsuario !== userData.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    return NextResponse.json({ candidato }, { status: 200 });
+    return NextResponse.json({ candidato: owned.data }, { status: 200 });
   } catch (error) {
     console.error('Error fetching candidato:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -73,77 +32,31 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'No authorization header' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const auth = await requireUser(request);
+    if (!auth) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     let body;
     try {
       body = await request.json();
-    } catch (parseError) {
-      return NextResponse.json(
-        { error: 'Invalid JSON body' },
-        { status: 400 }
-      );
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
     const { estado } = body;
-    const validEstados = ['pendiente', 'en_revision', 'aprobado', 'rechazado', 'oferta'];
-
-    // Validate estado is provided and is a valid value
-    if (!estado || typeof estado !== 'string' || !validEstados.includes(estado)) {
+    if (!estado || typeof estado !== 'string' || !VALID_ESTADOS.includes(estado)) {
       return NextResponse.json(
-        {
-          error: 'Invalid estado. Must be one of: ' + validEstados.join(', ')
-        },
+        { error: 'Invalid estado. Must be one of: ' + VALID_ESTADOS.join(', ') },
         { status: 400 }
       );
     }
 
-    // Verify ownership
-    const { data: candidato } = await supabase
-      .from('candidatos')
-      .select('vacantes:vacante_id(usuario_id)')
-      .eq('id', id)
-      .single();
-
-    if (!candidato) {
-      return NextResponse.json(
-        { error: 'Candidato not found' },
-        { status: 404 }
-      );
+    const owned = await getOwnedCandidato(auth.supabase, auth.user.id, id);
+    if (!owned.ok) {
+      const { body: errorBody, init } = ownershipError(owned);
+      return NextResponse.json(errorBody, init);
     }
 
-    type CandidatoWithVacante = typeof candidato & {
-      vacantes: Array<{ usuario_id: string }> | null;
-    };
-    const vacanteRelation = (candidato as CandidatoWithVacante).vacantes;
-    const vacanteUsuario = Array.isArray(vacanteRelation)
-      ? vacanteRelation[0]?.usuario_id
-      : null;
-
-    if (!vacanteUsuario || vacanteUsuario !== userData.user.id) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await auth.supabase
       .from('candidatos')
       .update({ estado, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -151,26 +64,16 @@ export async function PATCH(
       .single();
 
     if (error) {
-      console.error('[API] Database error (internal):', {
-        message: error.message,
-        code: error.code,
-        timestamp: new Date().toISOString()
-      });
+      console.error('[API] Database error (internal):', { code: error.code, timestamp: new Date().toISOString() });
       return NextResponse.json(
         { error: 'Error al actualizar candidato. Intenta más tarde.' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(
-      { candidato: updated, message: 'Estado actualizado' },
-      { status: 200 }
-    );
+    return NextResponse.json({ candidato: updated, message: 'Estado actualizado' }, { status: 200 });
   } catch (error) {
     console.error('Error updating candidato:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

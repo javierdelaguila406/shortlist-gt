@@ -14,6 +14,7 @@ class QueryBuilder {
   eq(column: string, value: unknown) { this.filters[column] = value; return this; }
   gte() { return this; }
   lte() { return this; }
+  maybeSingle() { return this.single(); }
   single() {
     if (this.table === 'vacantes') {
       const owner = this.filters.id === 'vacante-b' ? 'user-b' : 'user-a';

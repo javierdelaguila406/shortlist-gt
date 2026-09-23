@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockVacantes } from '@/lib/mock-data';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -57,75 +56,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
         setVacanteError(e instanceof Error ? e.message : 'No se pudo cargar la vacante');
       }
 
-      // 2. Construir lista de vacantes desde TODAS las fuentes
-      const allVacantes: Vacante[] = [];
-
-      // 2a. Agregar mockVacantes primero
-      mockVacantes.forEach(v => {
-        allVacantes.push({
-          id: v.id,
-          titulo: v.titulo,
-          descripcion: v.descripcion,
-          departamento: undefined,
-        });
-      });
-
-      // 2b. Intentar agregar desde localStorage o cookie
-      try {
-        let savedVacantes = localStorage.getItem('vacantes');
-        if (!savedVacantes) {
-          const cookies = document.cookie.split(';');
-          const vacCookie = cookies.find(c => c.trim().startsWith('vacantes='));
-          if (vacCookie) {
-            savedVacantes = decodeURIComponent(vacCookie.split('=')[1]);
-          }
-        }
-        if (savedVacantes) {
-          const parsed = JSON.parse(savedVacantes);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(v => {
-              if (v && v.id && !allVacantes.find(av => av.id === v.id)) {
-                allVacantes.push({
-                  id: v.id,
-                  titulo: v.titulo,
-                  descripcion: v.descripcion,
-                  departamento: v.departamento,
-                });
-              }
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing localStorage vacantes:', e);
-      }
-
-      // 3. Fallback: sessionStorage
-      try {
-        const savedVacantes = localStorage.getItem('vacantes');
-        if (!savedVacantes) {
-          const sessionVacantes = sessionStorage.getItem('vacantes');
-          if (sessionVacantes) {
-            const parsed = JSON.parse(sessionVacantes);
-            if (Array.isArray(parsed)) {
-              parsed.forEach(v => {
-                if (v && v.id && !allVacantes.find(av => av.id === v.id)) {
-                  allVacantes.push({
-                    id: v.id,
-                    titulo: v.titulo,
-                    descripcion: v.descripcion,
-                    departamento: v.departamento,
-                  });
-                }
-              });
-            }
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing sessionStorage vacantes:', e);
-      }
-
-      const found = allVacantes.find(v => v.id === params.slug);
-      setVacante(found || null);
+      setVacante(null);
       setVacanteLoading(false);
     };
 

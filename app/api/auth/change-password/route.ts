@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { passwordSchema } from '@/lib/validations';
+import { createAnonClient, getRequestToken } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticación
-    const token = request.cookies.get('sb-auth-token')?.value;
+    const token = getRequestToken(request);
 
     if (!token) {
       return NextResponse.json(
@@ -15,13 +14,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json({ error: 'Configuración faltante' }, { status: 500 });
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // Cliente sin cabecera global: signInWithPassword debe dejar su propia sesión para updateUser.
+    const supabase = createAnonClient();
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user?.email) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -31,8 +25,7 @@ export async function POST(request: NextRequest) {
                       request.headers.get('x-real-ip') ||
                       '127.0.0.1';
 
-    // Rate limit: 5 password changes per hour per user
-    const rateLimitResult = await persistentRateLimit(`password-change:${ipAddress}`, 5, 3600000);
+    const rateLimitResult = await persistentRateLimit(`password-change:${userData.user.id}`, 5, 3600000);
 
     if (!rateLimitResult.success) {
       return NextResponse.json(

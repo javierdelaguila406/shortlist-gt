@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { requireUser } from '@/lib/supabase-server';
+import { getOwnedVacante } from '@/lib/authz';
 
 /**
  * Endpoint: POST /api/evaluaciones/generar-preguntas
@@ -164,17 +165,11 @@ IMPORTANTE:
 
 export async function POST(request: NextRequest) {
   try {
-    // Verificar autenticación
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.slice('Bearer '.length);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { supabase } = auth;
 
     const { vacante_id, titulo, descripcion, nivel } = await request.json();
 
@@ -185,15 +180,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // SECURITY: Verify vacancy belongs to current user (CN-CRITICAL-004)
-    const { data: vacante, error: vacanteError } = await supabase
-      .from('vacantes')
-      .select('id, usuario_id')
-      .eq('id', vacante_id)
-      .eq('usuario_id', userData.user.id)  // ← OWNERSHIP VERIFICATION
-      .single();
-
-    if (vacanteError || !vacante) {
+    const owned = await getOwnedVacante(supabase, auth.user.id, vacante_id);
+    if (!owned.ok) {
       return NextResponse.json(
         { error: 'Vacante no encontrada o sin permisos' },
         { status: 404 }
@@ -222,7 +210,7 @@ export async function POST(request: NextRequest) {
         preguntas_video: preguntas.preguntas_video,
         nivel_requerido: nivel || 'No especificado',
         generado_por: 'claude',
-      })
+      }, { onConflict: 'vacante_id' })
       .select()
       .single();
 

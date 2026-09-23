@@ -25,6 +25,7 @@ class QueryBuilder {
   eq(column: string, value: unknown) { this.filters[column] = value; return this; }
   order() { return this.execute(); }
   single() { return this.execute(true); }
+  maybeSingle() { return this.execute(true); }
   then(resolve: (value: unknown) => unknown) { return this.execute().then(resolve); }
 
   private async execute(single = false) {
@@ -43,6 +44,10 @@ class QueryBuilder {
       return single
         ? { data: rows[0] || null, error: rows[0] ? null : { message: 'not found' } }
         : { data: rows, error: null };
+    }
+
+    if (this.table === 'companies') {
+      return { data: single ? { plan: 'premium' } : [{ plan: 'premium' }], error: null };
     }
 
     return { data: single ? null : [], error: null };
@@ -65,7 +70,12 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
+vi.mock('@/lib/whatsapp', () => ({ sendEvaluationStart: vi.fn() }));
+
 import { GET as listCandidates } from '@/app/api/candidatos/listar/route';
+import { GET as getCandidate } from '@/app/api/candidatos/[id]/route';
+import { PUT as customizeQuestions } from '@/app/api/evaluaciones/personalizar-preguntas/route';
+import { POST as startWhatsapp } from '@/app/api/evaluaciones/iniciar-whatsapp/route';
 import { DELETE as deleteVacancy } from '@/app/api/vacantes/eliminar/route';
 import { POST as exportCandidate } from '@/app/api/candidatos/exportar/route';
 import { DELETE as deleteCandidate } from '@/app/api/candidatos/eliminar/route';
@@ -157,6 +167,61 @@ describe('authorization boundaries', () => {
     ];
     const responses = await Promise.all(requests);
     expect(responses.map((response) => response.status)).toEqual([401, 401, 401]);
+  });
+
+  test('La sesión en cookie httpOnly autentica igual que el Bearer', async () => {
+    const request = new NextRequest('http://localhost/api/candidatos/listar?vacante_id=vacante-a', {
+      headers: { cookie: 'sb-auth-token=token-a' },
+    });
+    expect((await listCandidates(request)).status).toBe(200);
+  });
+
+  test('El dueño puede ver su candidato aunque la relación llegue como objeto (N-05)', async () => {
+    const request = new NextRequest('http://localhost/api/candidatos/candidate-a', { headers: auth('token-a') });
+    const response = await getCandidate(request, { params: Promise.resolve({ id: 'candidate-a' }) });
+    expect(response.status).toBe(200);
+    expect((await response.json()).candidato).not.toHaveProperty('vacantes');
+  });
+
+  test('Usuario A NO puede ver candidato de Usuario B', async () => {
+    const request = new NextRequest('http://localhost/api/candidatos/candidate-b', { headers: auth('token-a') });
+    const response = await getCandidate(request, { params: Promise.resolve({ id: 'candidate-b' }) });
+    expect([403, 404]).toContain(response.status);
+  });
+
+  test('Usuario A NO puede reescribir preguntas de vacante de Usuario B (N-03)', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/personalizar-preguntas', {
+      method: 'PUT',
+      headers: { ...auth('token-a'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vacante_id: 'vacante-b',
+        prueba_tecnica: [{ numero: 1, pregunta: 'QA', opciones: ['a', 'b'], respuesta_correcta: 1 }],
+      }),
+    });
+    expect([403, 404]).toContain((await customizeQuestions(request)).status);
+  });
+
+  test('personalizar-preguntas rechaza respuesta_correcta fuera de rango', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/personalizar-preguntas', {
+      method: 'PUT',
+      headers: { ...auth('token-a'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        vacante_id: 'vacante-a',
+        prueba_tecnica: [{ numero: 1, pregunta: 'QA', opciones: ['a', 'b'], respuesta_correcta: 5 }],
+      }),
+    });
+    expect((await customizeQuestions(request)).status).toBe(400);
+  });
+
+  test('Usuario A NO puede iniciar WhatsApp ni leer datos de candidato de Usuario B (N-02)', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/iniciar-whatsapp', {
+      method: 'POST',
+      headers: { ...auth('token-a'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidatoId: 'candidate-b' }),
+    });
+    const response = await startWhatsapp(request);
+    expect([403, 404]).toContain(response.status);
+    expect(JSON.stringify(await response.json())).not.toContain('b@example.com');
   });
 });
 
