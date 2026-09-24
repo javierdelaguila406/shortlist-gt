@@ -29,8 +29,33 @@ const publicRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Crear respuesta base
-  const response = NextResponse.next();
+  // ========== SEGURIDAD: Content Security Policy con nonce ==========
+  // Next.js lee el nonce de la cabecera CSP de la petición y lo aplica a sus propios scripts en línea;
+  // sin él, 'script-src' bloquea la hidratación y las páginas quedan en blanco.
+  const nonce = btoa(crypto.randomUUID());
+  const isDev = process.env.NODE_ENV === 'development';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.co';
+  const cspPolicy = [
+    `default-src 'self'`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ''}`,
+    // React emite atributos style="…" en el HTML del servidor y esos no admiten nonce.
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com`,
+    `img-src 'self' data: blob: https:`,
+    `font-src 'self' data: https://fonts.gstatic.com`,
+    `connect-src 'self' ${supabaseUrl} ${supabaseUrl.replace('https://', 'wss://')}`,
+    `worker-src 'self' blob:`,
+    `object-src 'none'`,
+    `base-uri 'self'`,
+    `form-action 'self'`,
+    `frame-ancestors 'none'`,
+  ].join('; ');
+
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-nonce', nonce);
+  requestHeaders.set('Content-Security-Policy', cspPolicy);
+
+  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  response.headers.set('Content-Security-Policy', cspPolicy);
 
   // ========== SEGURIDAD: CORS ==========
   // Cross-Origin Resource Sharing configuration
@@ -63,23 +88,6 @@ export function middleware(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
   response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-
-  // ========== SEGURIDAD: Content Security Policy ==========
-  // NOTA: SRI (Subresource Integrity) debe configurarse en el HTML de cada página
-  // que cargue scripts externos. Estructura recomendada:
-  // <script src="https://cdnjs.cloudflare.com/..." integrity="sha384-..." crossorigin="anonymous"></script>
-  // Generar SRI hashes en: https://www.srihash.org/
-  // Referencia: https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity
-  const isDev = process.env.NODE_ENV === 'development';
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://supabase.co';
-
-  const cspPolicy = isDev
-    ? // Desarrollo: permite inline scripts para Next.js HMR
-      `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' ${supabaseUrl} wss://${supabaseUrl.replace('https://', '')}; frame-ancestors 'none'; base-uri 'self'`
-    : // Producción: restrictivo (sin unsafe-inline/unsafe-eval)
-      `default-src 'self'; script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net; style-src 'self' fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' fonts.gstatic.com; connect-src 'self' ${supabaseUrl} wss://${supabaseUrl.replace('https://', '')}; frame-ancestors 'none'; base-uri 'self'`;
-
-  response.headers.set('Content-Security-Policy', cspPolicy);
 
   // Verificar si es ruta pública PRIMERO (tiene prioridad)
   // Exactitud para rutas raíz
