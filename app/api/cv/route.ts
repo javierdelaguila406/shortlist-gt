@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PDFParse } from 'pdf-parse';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { calculateCVScore } from '@/lib/cv-score';
 import { requireUser } from '@/lib/supabase-server';
@@ -8,6 +7,9 @@ import { getOwnedCandidato } from '@/lib/authz';
 const MAX_PDF_SIZE = 10 * 1024 * 1024;
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
+  // pdf-parse/worker define DOMMatrix con @napi-rs/canvas y debe cargarse antes que pdf-parse.
+  await import('pdf-parse/worker');
+  const { PDFParse } = await import('pdf-parse');
   const parser = new PDFParse({ data: buffer });
   try {
     return (await parser.getText()).text || '';

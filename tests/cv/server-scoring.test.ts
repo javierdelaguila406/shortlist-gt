@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 
 const mocks = vi.hoisted(() => ({ extractedText: 'TypeScript React SQL 6 años de experiencia', insert: vi.fn(async () => ({ error: null })) }));
 
+vi.mock('pdf-parse/worker', () => ({}));
 vi.mock('pdf-parse', () => ({
   PDFParse: class {
     async getText() { return { text: mocks.extractedText }; }

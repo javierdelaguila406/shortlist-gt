@@ -15,6 +15,9 @@ if (nodeEnv === 'production') {
 }
 
 const nextConfig: NextConfig = {
+  // pdf-parse depende del binario nativo de @napi-rs/canvas; si webpack lo empaqueta, en Vercel falta y
+  // /api/cv falla al cargar con "DOMMatrix is not defined".
+  serverExternalPackages: ['pdf-parse', '@napi-rs/canvas'],
   // Use webpack instead of Turbopack due to custom webpack configuration
   // TODO: Migrate webpack config to Turbopack if possible
   webpack: (config, { isServer }) => {
