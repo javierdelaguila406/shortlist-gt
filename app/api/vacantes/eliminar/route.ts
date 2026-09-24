@@ -32,6 +32,18 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    // Las claves foráneas de estas tablas no borran en cascada.
+    for (const table of ['evaluaciones_whatsapp', 'vacante_preguntas']) {
+      const { error: dependentError } = await auth.supabase.from(table).delete().eq('vacante_id', vacante_id);
+      if (dependentError) {
+        console.error('[API] Error deleting dependent rows:', { table, code: dependentError.code });
+        return NextResponse.json(
+          { error: 'Error al eliminar datos asociados a la vacante', success: false },
+          { status: 500 }
+        );
+      }
+    }
+
     const { error: candidatosError } = await auth.supabase
       .from('candidatos')
       .delete()

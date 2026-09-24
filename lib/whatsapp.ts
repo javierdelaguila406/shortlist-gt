@@ -1,4 +1,13 @@
-import { supabase } from './supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createAdminClient } from './supabase-admin';
+
+// Solo se llama desde el webhook con firma verificada y rutas de servidor ya autorizadas:
+// no hay usuario final y la RLS no permite estas operaciones a anon.
+let adminClient: SupabaseClient | null = null;
+function db(): SupabaseClient {
+  adminClient ??= createAdminClient();
+  return adminClient;
+}
 
 const WHATSAPP_API_URL = 'https://graph.instagram.com/v20.0';
 const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -75,7 +84,7 @@ Para continuar con el proceso de selección, necesitamos que respondas algunas p
 
   if (sent) {
     // Create evaluation record
-    await supabase.from('evaluaciones_whatsapp').insert({
+    await db().from('evaluaciones_whatsapp').insert({
       candidato_id: candidatoId,
       paso: 1,
       estado: 'en_proceso',
@@ -101,7 +110,7 @@ Puedes enviar el video cuando estés listo.`;
   await sendWhatsAppMessage(phoneNumber, message);
 
   // Log the event
-  await supabase.from('logs_whatsapp').insert({
+  await db().from('logs_whatsapp').insert({
     evaluacion_id: evaluacionId,
     tipo_evento: 'video_prompt_sent',
     contenido: JSON.stringify({ questionNumber, question }),
@@ -130,7 +139,7 @@ ${question}`;
   await sendWhatsAppMessage(phoneNumber, message);
 
   // Log
-  await supabase.from('logs_whatsapp').insert({
+  await db().from('logs_whatsapp').insert({
     evaluacion_id: evaluacionId,
     tipo_evento: 'test_question_sent',
     contenido: JSON.stringify({ questionNumber, question, options }),
@@ -160,7 +169,7 @@ export async function handleIncomingMessage(
 ): Promise<void> {
   try {
     // Find candidate by phone
-    const { data: candidato } = await supabase
+    const { data: candidato } = await db()
       .from('candidatos')
       .select('id, vacante_id, nombre')
       .eq('telefono', phoneNumber)
@@ -174,7 +183,7 @@ export async function handleIncomingMessage(
     }
 
     // Get or create evaluation
-    let { data: evaluacion } = await supabase
+    let { data: evaluacion } = await db()
       .from('evaluaciones_whatsapp')
       .select('*')
       .eq('candidato_id', candidato.id)
@@ -184,7 +193,7 @@ export async function handleIncomingMessage(
       .single();
 
     if (!evaluacion) {
-      const { data: newEval } = await supabase
+      const { data: newEval } = await db()
         .from('evaluaciones_whatsapp')
         .insert({
           candidato_id: candidato.id,
@@ -202,7 +211,7 @@ export async function handleIncomingMessage(
       // Step 1: Confirmation
       if (messageText.toLowerCase().includes('sí') || messageText.toLowerCase().includes('si')) {
         // Move to step 2
-        await supabase
+        await db()
           .from('evaluaciones_whatsapp')
           .update({
             paso: 2,
@@ -224,7 +233,7 @@ export async function handleIncomingMessage(
           'Entendemos, gracias por tu interés. ¡Buena suerte en tu búsqueda!'
         );
 
-        await supabase
+        await db()
           .from('evaluaciones_whatsapp')
           .update({ estado: 'abandonado' })
           .eq('id', evaluacion.id);
@@ -237,7 +246,7 @@ export async function handleIncomingMessage(
         received_at: new Date().toISOString(),
       });
 
-      await supabase
+      await db()
         .from('evaluaciones_whatsapp')
         .update({ videos })
         .eq('id', evaluacion.id);
@@ -245,7 +254,7 @@ export async function handleIncomingMessage(
       // Check if all videos collected (assume 2 videos)
       if (videos.length >= 2) {
         // Move to step 3
-        await supabase
+        await db()
           .from('evaluaciones_whatsapp')
           .update({ paso: 3 })
           .eq('id', evaluacion.id);
@@ -276,7 +285,7 @@ export async function handleIncomingMessage(
         timestamp: new Date().toISOString(),
       });
 
-      await supabase
+      await db()
         .from('evaluaciones_whatsapp')
         .update({ respuestas_test: responses })
         .eq('id', evaluacion.id);
@@ -284,7 +293,7 @@ export async function handleIncomingMessage(
       // Check if evaluation complete
       if (responses.length >= 3) {
         // Mark as complete
-        await supabase
+        await db()
           .from('evaluaciones_whatsapp')
           .update({ estado: 'completado' })
           .eq('id', evaluacion.id);
@@ -293,7 +302,7 @@ export async function handleIncomingMessage(
         const scoreTest = 75 + Math.random() * 25;
 
         // Update candidate
-        await supabase
+        await db()
           .from('candidatos')
           .update({
             score_test: Math.round(scoreTest),

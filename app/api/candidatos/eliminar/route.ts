@@ -37,6 +37,15 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    const { error: evaluacionesError } = await auth.supabase
+      .from('evaluaciones_whatsapp')
+      .delete()
+      .eq('candidato_id', candidatoId);
+    if (evaluacionesError) {
+      console.error('[ELIMINAR-CANDIDATO] Error eliminando evaluaciones:', { code: evaluacionesError.code });
+      throw evaluacionesError;
+    }
+
     const { error } = await auth.supabase
       .from('candidatos')
       .delete()
