@@ -18,8 +18,13 @@ const supabase = createClient(
 
 const SYNC_EMAIL = 'lesters@furniturecity.com.gt';
 
+// Las vistas previas de Vercel reciben las credenciales de GoDaddy; solo producción debe tocar la copia real.
+function mirrorEnabled(): boolean {
+  return process.env.VERCEL_ENV === 'production';
+}
+
 function shouldSync(email: string): boolean {
-  return email?.toLowerCase() === SYNC_EMAIL.toLowerCase();
+  return mirrorEnabled() && email?.toLowerCase() === SYNC_EMAIL.toLowerCase();
 }
 
 /**
@@ -155,8 +160,8 @@ export async function syncDeleteVacante(vacanteId: string): Promise<boolean> {
     process.env.GODADDY_MYSQL_PORT,
   ].every(Boolean);
 
-  if (!configured) {
-    console.log('[SYNC] Mirror deletion skipped: integration not configured', {
+  if (!configured || !mirrorEnabled()) {
+    console.log('[SYNC] Mirror deletion skipped: integration disabled in this environment', {
       correlationId: `vacante:${vacanteId}`,
     });
     return true;

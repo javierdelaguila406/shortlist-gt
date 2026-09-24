@@ -70,7 +70,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-vi.mock('@/lib/whatsapp', () => ({ sendEvaluationStart: vi.fn() }));
+vi.mock('@/lib/whatsapp', () => ({ sendEvaluationStart: vi.fn(), isWhatsAppEnabled: vi.fn(() => false) }));
 
 import { GET as listCandidates } from '@/app/api/candidatos/listar/route';
 import { GET as getCandidate } from '@/app/api/candidatos/[id]/route';

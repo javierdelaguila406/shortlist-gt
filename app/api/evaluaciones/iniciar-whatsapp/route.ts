@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendEvaluationStart } from '@/lib/whatsapp';
+import { isWhatsAppEnabled, sendEvaluationStart } from '@/lib/whatsapp';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase-server';
 import { getOwnedCandidato, ownershipError } from '@/lib/authz';
@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
       paso: 1,
     };
 
-    if (!process.env.WHATSAPP_ACCESS_TOKEN || !process.env.WHATSAPP_PHONE_NUMBER_ID) {
-      console.warn('[EVALUACION] WhatsApp no configurado; se registra la evaluación sin enviar mensajes');
+    if (!isWhatsAppEnabled()) {
+      console.warn('[EVALUACION] WhatsApp desactivado en este entorno; se registra la evaluación sin enviar mensajes');
 
       const { data: evaluacion, error: evalError } = await supabase
         .from('evaluaciones_whatsapp')

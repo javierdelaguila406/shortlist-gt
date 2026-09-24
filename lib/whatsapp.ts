@@ -22,12 +22,18 @@ export interface WhatsAppMessage {
   parameters?: Record<string, any>;
 }
 
+// Las vistas previas de Vercel reciben las mismas credenciales que producción; solo el
+// despliegue de producción puede escribir a candidatos reales.
+export function isWhatsAppEnabled(): boolean {
+  return process.env.VERCEL_ENV === 'production' && Boolean(phoneNumberId && accessToken);
+}
+
 export async function sendWhatsAppMessage(
   phoneNumber: string,
   message: string
 ): Promise<boolean> {
-  if (!phoneNumberId || !accessToken) {
-    console.error('WhatsApp credentials not configured');
+  if (!isWhatsAppEnabled()) {
+    console.warn('[WhatsApp] Envío desactivado: fuera de producción o sin credenciales');
     return false;
   }
 

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   existing: null as null | { id: string },
@@ -32,6 +32,22 @@ const vacancy = {
 beforeEach(() => {
   mocks.existing = null;
   vi.clearAllMocks();
+  process.env.VERCEL_ENV = 'production';
+});
+
+afterEach(() => {
+  delete process.env.VERCEL_ENV;
+});
+
+describe('copia a GoDaddy solo en producción', () => {
+  test.each(['preview', 'development', undefined])('con VERCEL_ENV=%s no toca GoDaddy', async (env) => {
+    if (env === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = env;
+    await syncCreateVacante(vacancy);
+    expect(mocks.get).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
 });
 
 describe('syncCreateVacante idempotente', () => {
