@@ -33,7 +33,7 @@ export async function GET(
 
     const stats = {
       total: candidatos?.length || 0,
-      evaluados: candidatos?.filter((c) => c.score_test !== null && c.score_test !== undefined).length || 0,
+      evaluados: candidatos?.filter((c) => c.estado === 'evaluado').length || 0,
       aprobados: candidatos?.filter((c) => c.estado === 'aprobado').length || 0,
       rechazados: candidatos?.filter((c) => c.estado === 'rechazado').length || 0,
     };

@@ -688,7 +688,7 @@ export default function DemoDashboard() {
                             {candidate.cv_evaluado === false ? 'CV no evaluado' : 'Score CV'}
                           </div>
                         </div>
-                        {candidate.score_test !== null && candidate.score_test !== undefined && (
+                        {candidate.estado === 'evaluado' && candidate.score_test !== null && candidate.score_test !== undefined && (
                           <div>
                             <div className="text-2xl font-bold text-sky-400">{candidate.score_test}</div>
                             <div className="text-xs text-zinc-500">Prueba</div>
@@ -1118,10 +1118,16 @@ export default function DemoDashboard() {
                   </div>
                   <div className="bg-zinc-800/40 rounded-lg p-4">
                     <div className="text-4xl font-bold text-sky-400">
-                      {selectedCandidate.score_test !== null && selectedCandidate.score_test !== undefined ? `${selectedCandidate.score_test}/100` : '—'}
+                      {selectedCandidate.estado === 'evaluado' && selectedCandidate.score_test !== null && selectedCandidate.score_test !== undefined
+                        ? `${selectedCandidate.score_test}/100`
+                        : '—'}
                     </div>
                     <p className="text-sm text-zinc-400 mt-1">
-                      {selectedCandidate.estado === 'evaluado' ? 'Prueba técnica' : 'Prueba pendiente'}
+                      {selectedCandidate.estado !== 'evaluado'
+                        ? 'Prueba pendiente'
+                        : selectedCandidate.score_test === null || selectedCandidate.score_test === undefined
+                          ? 'Solo respuestas abiertas: revisar'
+                          : 'Prueba técnica'}
                     </p>
                   </div>
                 </div>

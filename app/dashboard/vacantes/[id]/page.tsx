@@ -120,7 +120,7 @@ export default function VacantePage() {
   const topCandidatos = candidatos.slice(0, 3);
   const stats = {
     total: candidatos.length,
-    evaluados: candidatos.filter((c) => c.score_test !== null && c.score_test !== undefined).length,
+    evaluados: candidatos.filter((c) => c.estado === 'evaluado').length,
     top_performers: topCandidatos.length,
   };
 

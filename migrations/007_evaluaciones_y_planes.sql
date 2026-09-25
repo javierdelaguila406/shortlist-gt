@@ -5,6 +5,11 @@ BEGIN;
 -- R-07: el puntaje del CV sale del PDF; si no se pudo leer, el candidato queda "no evaluado".
 ALTER TABLE public.candidatos ADD COLUMN IF NOT EXISTS cv_evaluado boolean NOT NULL DEFAULT false;
 
+-- score_test valía 0 por defecto sin que nadie hubiera hecho una prueba; ahora NULL significa "sin prueba".
+-- El estado 'evaluado' es nuevo en esta migración, así que ningún 0 existente proviene de una prueba real.
+ALTER TABLE public.candidatos ALTER COLUMN score_test DROP DEFAULT;
+UPDATE public.candidatos SET score_test = NULL WHERE score_test = 0 AND estado IS DISTINCT FROM 'evaluado';
+
 -- Evaluaciones por enlace (reemplazan a WhatsApp). Solo se guarda el hash del token del enlace.
 CREATE TABLE IF NOT EXISTS public.evaluaciones_candidato (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
