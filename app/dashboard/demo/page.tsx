@@ -207,7 +207,7 @@ export default function DemoDashboard() {
                       </span>
                       {candidate.estado === 'precalificado' && (
                         <Button size="sm" variant="secondary" className="ml-auto">
-                          Contactar por WhatsApp
+                          Enviar evaluación
                         </Button>
                       )}
                     </div>

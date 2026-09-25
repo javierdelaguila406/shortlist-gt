@@ -3,8 +3,6 @@
  * Maneja plans (demo/premium) y códigos de licencia
  */
 
-import { supabase } from './supabase';
-
 export interface Plan {
   type: 'demo' | 'premium';
   maxVacantes: number;
@@ -38,100 +36,6 @@ export const PLANS: Record<string, Plan> = {
     ],
   },
 };
-
-/**
- * Obtener plan actual del usuario
- */
-export async function getUserPlan(userId: string): Promise<Plan> {
-  try {
-    const { data, error } = await supabase
-      .from('companies')
-      .select('plan')
-      .eq('user_id', userId)
-      .single();
-
-    if (error || !data) {
-      return PLANS.demo; // Valor por defecto: demo
-    }
-
-    return PLANS[data.plan || 'demo'] || PLANS.demo;
-  } catch (error) {
-    console.error('[LICENSE] Error getting user plan:', error);
-    return PLANS.demo;
-  }
-}
-
-/**
- * Verificar si el usuario puede realizar una acción
- */
-export async function checkPermission(
-  userId: string,
-  action: 'create_vacante' | 'add_candidato' | 'send_whatsapp' | 'generate_report'
-): Promise<{ allowed: boolean; reason?: string }> {
-  const plan = await getUserPlan(userId);
-
-  // WhatsApp y reportes solo en premium
-  if (action === 'send_whatsapp' || action === 'generate_report') {
-    if (plan.type === 'demo') {
-      return {
-        allowed: false,
-        reason: 'Esta feature solo está disponible en el plan Premium',
-      };
-    }
-    return { allowed: true };
-  }
-
-  // Contar recursos actuales (solo del usuario)
-  try {
-    // Get user's vacantes
-    const { count: vacanteCount, error: vacanteError } = await supabase
-      .from('vacantes')
-      .select('*', { count: 'exact', head: true })
-      .eq('usuario_id', userId);
-
-    // Get count of candidatos from user's vacantes
-    const { data: userVacantes } = await supabase
-      .from('vacantes')
-      .select('id')
-      .eq('usuario_id', userId);
-
-    let candidatoCount = 0;
-    if (userVacantes && userVacantes.length > 0) {
-      const vacanteIds = userVacantes.map(v => v.id);
-      const { count, error: candidatoError } = await supabase
-        .from('candidatos')
-        .select('*', { count: 'exact', head: true })
-        .in('vacante_id', vacanteIds);
-
-      if (!candidatoError && count !== null) {
-        candidatoCount = count;
-      }
-    }
-
-    if (action === 'create_vacante' && vacanteCount !== null) {
-      if (vacanteCount >= plan.maxVacantes) {
-        return {
-          allowed: false,
-          reason: `Has alcanzado el límite de ${plan.maxVacantes} vacante(s). Actualiza a Premium para crear más.`,
-        };
-      }
-    }
-
-    if (action === 'add_candidato' && candidatoCount > 0) {
-      if (candidatoCount >= plan.maxCandidatos) {
-        return {
-          allowed: false,
-          reason: `Has alcanzado el límite de ${plan.maxCandidatos} candidato(s). Actualiza a Premium para continuar.`,
-        };
-      }
-    }
-  } catch (error) {
-    console.error('[LICENSE] Error checking resources:', error);
-    // Permitir si hay error (seguridad: mejor permitir que bloquear)
-  }
-
-  return { allowed: true };
-}
 
 /**
  * Usar un código de licencia

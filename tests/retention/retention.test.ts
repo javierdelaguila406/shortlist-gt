@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({
-  calls: [] as string[],
-  mirrorDelete: vi.fn(async () => true),
-}));
+const state = vi.hoisted(() => ({ calls: [] as string[] }));
 
 class QueryBuilder {
   private operation = 'select';
@@ -23,7 +20,6 @@ class QueryBuilder {
 vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({ from: (table: string) => new QueryBuilder(table) }),
 }));
-vi.mock('@/lib/dual-sync', () => ({ syncDeleteVacante: state.mirrorDelete }));
 
 import { runRetentionJobs } from '@/lib/retention';
 
@@ -31,16 +27,17 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role';
   state.calls.length = 0;
-  state.mirrorDelete.mockClear();
 });
 
 describe('retención de datos', () => {
-  test('elimina candidatos antiguos y sincroniza el borrado de vacantes', async () => {
+  test('elimina candidatos y datos dependientes antes de borrar vacantes cerradas', async () => {
     const result = await runRetentionJobs(new Date('2026-09-21T00:00:00.000Z'));
 
     expect(result).toEqual({ candidateVacanciesProcessed: 1, vacanciesProcessed: 1 });
     expect(state.calls).toContain('candidatos:delete:eq:vacante_id:old-vacancy');
-    expect(state.mirrorDelete).toHaveBeenCalledWith('old-vacancy');
-    expect(state.calls).toContain('vacantes:delete:eq:estado:cerrada');
+    expect(state.calls).toContain('vacante_preguntas:delete:eq:vacante_id:old-vacancy');
+    expect(state.calls).toContain('evaluaciones_whatsapp:delete:eq:vacante_id:old-vacancy');
+    const vacancyDelete = state.calls.indexOf('vacantes:delete:eq:estado:cerrada');
+    expect(vacancyDelete).toBeGreaterThan(state.calls.lastIndexOf('vacante_preguntas:delete:eq:vacante_id:old-vacancy'));
   });
 });

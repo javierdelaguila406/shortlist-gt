@@ -2,35 +2,32 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 const database = vi.hoisted(() => ({
-  rateLimits: [] as Array<{ key: string; timestamp: string }>,
+  rateHits: {} as Record<string, number>,
+  rpcFails: false,
   audits: [] as Array<Record<string, unknown>>,
 }));
 
 class QueryBuilder {
-  private operation = 'select';
-  private key = '';
   constructor(private table: string) {}
-  select() { this.operation = 'select'; return this; }
-  eq(column: string, value: string) { if (column === 'key') this.key = value; return this; }
-  async gt(_column: string, value: string) {
-    return { data: database.rateLimits.filter(row => row.key === this.key && row.timestamp > value), error: null };
-  }
   async insert(value: Record<string, unknown>) {
-    if (this.table === 'rate_limit_log') database.rateLimits.push(value as { key: string; timestamp: string });
     if (this.table === 'audit_log') database.audits.push(value);
-    return { error: null };
-  }
-  delete() { this.operation = 'delete'; return this; }
-  async lt(_column: string, value: string) {
-    if (this.operation === 'delete' && this.table === 'rate_limit_log') {
-      database.rateLimits = database.rateLimits.filter(row => row.timestamp >= value);
-    }
     return { error: null };
   }
 }
 
 vi.mock('@supabase/supabase-js', () => ({
-  createClient: () => ({ from: (table: string) => new QueryBuilder(table) }),
+  createClient: () => ({
+    from: (table: string) => new QueryBuilder(table),
+    rpc: (_name: string, args: { p_key: string; p_limit: number }) => ({
+      single: async () => {
+        if (database.rpcFails) return { data: null, error: { message: 'unavailable' } };
+        const hits = database.rateHits[args.p_key] ?? 0;
+        if (hits >= args.p_limit) return { data: { allowed: false, retry_after_s: 30 }, error: null };
+        database.rateHits[args.p_key] = hits + 1;
+        return { data: { allowed: true, retry_after_s: 0 }, error: null };
+      },
+    }),
+  }),
 }));
 
 import { logAuditEvent } from '@/lib/audit';
@@ -39,7 +36,8 @@ import { persistentRateLimit, resetRateLimitStore } from '@/lib/rate-limit';
 beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role';
-  database.rateLimits = [];
+  database.rateHits = {};
+  database.rpcFails = false;
   database.audits = [];
   resetRateLimitStore();
 });
@@ -50,15 +48,19 @@ describe('rate limit persistente', () => {
       expect((await persistentRateLimit('export:user-a', 5, 3600000)).success).toBe(true);
     }
     resetRateLimitStore();
-    expect((await persistentRateLimit('export:user-a', 5, 3600000)).success).toBe(false);
+    const blocked = await persistentRateLimit('export:user-a', 5, 3600000);
+    expect(blocked).toMatchObject({ success: false, retryAfter: 30 });
     expect((await persistentRateLimit('export:user-b', 5, 3600000)).success).toBe(true);
   });
 
-  test('elimina registros con más de 24 horas', async () => {
-    database.rateLimits.push({ key: 'old', timestamp: '2020-01-01T00:00:00.000Z' });
-    await persistentRateLimit('new', 5, 3600000);
-    await new Promise(resolve => setTimeout(resolve, 0));
-    expect(database.rateLimits.some(row => row.key === 'old')).toBe(false);
+  test('falla cerrado si la base no responde', async () => {
+    database.rpcFails = true;
+    expect((await persistentRateLimit('login:1.2.3.4', 5, 3600000)).success).toBe(false);
+  });
+
+  test('con failOpen usa el contador local si la base no responde', async () => {
+    database.rpcFails = true;
+    expect((await persistentRateLimit('login:1.2.3.4', 5, 3600000, { failOpen: true })).success).toBe(true);
   });
 });
 
@@ -80,6 +82,6 @@ describe('cumplimiento y auditoría', () => {
     expect(migration).toContain('public.audit_log');
     expect(application.indexOf("from('consent_log')")).toBeLessThan(application.indexOf("from('candidatos')"));
     expect(retention).toContain('runRetentionJobs');
-    expect(retention).toContain('syncDeleteVacante');
+    expect(retention).toContain("storage.from('cvs').remove");
   });
 });

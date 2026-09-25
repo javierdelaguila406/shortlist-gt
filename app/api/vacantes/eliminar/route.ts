@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logAuditEvent } from '@/lib/audit';
-import { syncDeleteVacante } from '@/lib/dual-sync';
 import { requireUser } from '@/lib/supabase-server';
-import { getOwnedVacante } from '@/lib/authz';
+import { createAdminClient } from '@/lib/supabase-admin';
+import { cvObjectPath, getOwnedVacante } from '@/lib/authz';
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -44,6 +44,9 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
+    const { data: cvRows } = await auth.supabase.from('candidatos').select('cv_url').eq('vacante_id', vacante_id);
+    const cvPaths = (cvRows || []).map((row) => cvObjectPath(row.cv_url)).filter((path): path is string => Boolean(path));
+
     const { error: candidatosError } = await auth.supabase
       .from('candidatos')
       .delete()
@@ -55,6 +58,15 @@ export async function DELETE(request: NextRequest) {
         { error: 'Error al eliminar candidatos', success: false },
         { status: 500 }
       );
+    }
+
+    if (cvPaths.length > 0) {
+      try {
+        const { error: storageError } = await createAdminClient().storage.from('cvs').remove(cvPaths);
+        if (storageError) console.error('[API] CV files not removed', { vacancyId: vacante_id, count: cvPaths.length });
+      } catch {
+        console.error('[API] CV files not removed', { vacancyId: vacante_id, count: cvPaths.length });
+      }
     }
 
     const { error: vacantesError } = await auth.supabase
@@ -70,8 +82,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const mirrorDeleted = await syncDeleteVacante(vacante_id);
-    if (!mirrorDeleted) console.error('[SYNC] Mirror deletion failed', { vacancyId: vacante_id });
     await logAuditEvent({
       action: 'DELETE', userId: auth.user.id, resourceId: vacante_id,
       resourceType: 'vacante', changes: { reason: 'user_deletion' },

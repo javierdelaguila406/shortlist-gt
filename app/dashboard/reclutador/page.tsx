@@ -17,6 +17,8 @@ interface Candidate {
   email: string;
   telefono: string;
   score_ia: number;
+  score_test?: number | null;
+  cv_evaluado?: boolean;
   estado: string;
   vacante_id?: string;
   cv_url?: string;
@@ -70,6 +72,9 @@ export default function DemoDashboard() {
   const [vacantesRetry, setVacantesRetry] = useState(0);
   const [candidatesLoading, setCandidatesLoading] = useState(false);
   const [candidatesError, setCandidatesError] = useState<string | null>(null);
+  const [candidatesRefresh, setCandidatesRefresh] = useState(0);
+  const [evaluacionEnviada, setEvaluacionEnviada] = useState<{ link: string; expira_en: string; nombre: string; email: string } | null>(null);
+  const [enviandoEvaluacion, setEnviandoEvaluacion] = useState<string | null>(null);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -79,6 +84,7 @@ export default function DemoDashboard() {
       setShowDetailModal(false);
       setShowTemplateModal(false);
       setShowExportModal(false);
+      setEvaluacionEnviada(null);
     };
     document.addEventListener('keydown', closeOnEscape);
     return () => document.removeEventListener('keydown', closeOnEscape);
@@ -197,7 +203,29 @@ export default function DemoDashboard() {
     };
 
     loadCandidates();
-  }, [selectedVacanteId]);
+  }, [selectedVacanteId, candidatesRefresh]);
+
+  const handleEnviarEvaluacion = async (candidate: Candidate) => {
+    setEnviandoEvaluacion(candidate.id);
+    try {
+      const response = await fetch('/api/evaluaciones/enviar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidatoId: candidate.id }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.link) {
+        setEvaluacionEnviada({ link: data.link, expira_en: data.expira_en, nombre: candidate.nombre, email: candidate.email });
+        setCandidatesRefresh(value => value + 1);
+      } else {
+        alert(`❌ ${data.error || 'No se pudo generar la evaluación'}`);
+      }
+    } catch {
+      alert('❌ No se pudo generar la evaluación. Revisa tu conexión.');
+    } finally {
+      setEnviandoEvaluacion(null);
+    }
+  };
 
   const getFilteredCandidates = () => {
     // Use only Supabase candidates (no mock data)
@@ -592,7 +620,7 @@ export default function DemoDashboard() {
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-white">{stats.precalificados}</p>
-              <p className="text-sm text-zinc-500 mt-1">Score 80+</p>
+              <p className="text-sm text-zinc-500 mt-1">Score 70+</p>
             </CardContent>
           </Card>
 
@@ -651,9 +679,21 @@ export default function DemoDashboard() {
                         <h3 className="font-semibold text-white text-lg">{candidate.nombre}</h3>
                         <p className="text-sm text-zinc-400 mt-1">{candidate.email}</p>
                       </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-emerald-500">{candidate.score_ia}</div>
-                        <div className="text-xs text-zinc-500">Score IA</div>
+                      <div className="flex gap-4 text-right">
+                        <div>
+                          <div className="text-2xl font-bold text-emerald-500">
+                            {candidate.cv_evaluado === false ? '—' : candidate.score_ia}
+                          </div>
+                          <div className="text-xs text-zinc-500">
+                            {candidate.cv_evaluado === false ? 'CV no evaluado' : 'Score CV'}
+                          </div>
+                        </div>
+                        {candidate.score_test !== null && candidate.score_test !== undefined && (
+                          <div>
+                            <div className="text-2xl font-bold text-sky-400">{candidate.score_test}</div>
+                            <div className="text-xs text-zinc-500">Prueba</div>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -683,35 +723,27 @@ export default function DemoDashboard() {
                       }`}>
                         {candidate.estado}
                       </span>
-                      {candidate.estado === 'precalificado' && (
+                      {candidate.estado !== 'evaluado' && (
                         <Button
                           size="sm"
                           variant="secondary"
                           className="ml-auto"
-                          onClick={() => {
-                            fetch('/api/evaluaciones/iniciar-whatsapp', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ candidatoId: candidate.id })
-                            })
-                              .then(r => r.json())
-                              .then(data => {
-                                if (data.success) {
-                                  alert(`✅ ${data.message}`);
-                                } else {
-                                  alert(`❌ Error: ${data.message}`);
-                                }
-                              })
-                              .catch(e => alert(`❌ Error: ${e.message}`));
+                          disabled={enviandoEvaluacion === candidate.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handleEnviarEvaluacion(candidate);
                           }}
                         >
-                          Contactar por WhatsApp
+                          {enviandoEvaluacion === candidate.id
+                            ? 'Generando…'
+                            : candidate.estado === 'evaluacion' ? 'Reenviar evaluación' : 'Enviar evaluación'}
                         </Button>
                       )}
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => {
+                        onClick={(event) => {
+                          event.stopPropagation();
                           if (window.confirm(`¿Eliminar a ${candidate.nombre}? Esta acción es irreversible.`)) {
                             fetch('/api/candidatos/eliminar', {
                               method: 'DELETE',
@@ -924,6 +956,60 @@ export default function DemoDashboard() {
         </div>
       )}
 
+      {evaluacionEnviada && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card role="dialog" aria-modal="true" aria-labelledby="evaluacion-title" className="w-full max-w-xl bg-zinc-900 border-zinc-800">
+            <CardHeader className="border-b border-zinc-800">
+              <CardTitle className="text-xl"><span id="evaluacion-title">Evaluación para {evaluacionEnviada.nombre}</span></CardTitle>
+              <CardDescription>
+                Comparte este enlace con el candidato. Es personal, sirve una sola vez y vence el{' '}
+                {new Date(evaluacionEnviada.expira_en).toLocaleDateString('es-GT', { day: 'numeric', month: 'long' })}.
+                Cuando responda, verás su puntaje en la lista de candidatos.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <label htmlFor="evaluacion-link" className="text-sm text-zinc-400">Enlace de la evaluación</label>
+              <input
+                id="evaluacion-link"
+                readOnly
+                value={evaluacionEnviada.link}
+                onFocus={(event) => event.currentTarget.select()}
+                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-emerald-400"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(evaluacionEnviada.link);
+                      alert('✅ Enlace copiado');
+                    } catch {
+                      alert('No se pudo copiar automáticamente. Selecciona el enlace y cópialo.');
+                    }
+                  }}
+                >
+                  Copiar enlace
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => {
+                    const asunto = `Evaluación para la vacante ${selectedVacante?.titulo ?? ''}`.trim();
+                    const cuerpo = `Hola ${evaluacionEnviada.nombre}:\n\nGracias por postularte. Te invitamos a completar esta evaluación:\n${evaluacionEnviada.link}\n\nEl enlace es personal y solo se puede enviar una vez.`;
+                    window.location.href = `mailto:${encodeURIComponent(evaluacionEnviada.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+                  }}
+                >
+                  Abrir en correo
+                </Button>
+                <Button variant="ghost" className="flex-1" onClick={() => setEvaluacionEnviada(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* LinkedIn Link Modal */}
       {showLinkedinLink && linkedinData && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1021,9 +1107,23 @@ export default function DemoDashboard() {
               {/* Score Overview */}
               <div className="border-b border-zinc-800 pb-4">
                 <h3 className="text-lg font-semibold text-white mb-3">Score IA Detallado</h3>
-                <div className="bg-zinc-800/40 rounded-lg p-4 mb-4">
-                  <div className="text-4xl font-bold text-emerald-500">{selectedCandidate.score_ia}/100</div>
-                  <p className="text-sm text-zinc-400 mt-1">Puntuación General</p>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="bg-zinc-800/40 rounded-lg p-4">
+                    <div className="text-4xl font-bold text-emerald-500">
+                      {selectedCandidate.cv_evaluado === false ? '—' : `${selectedCandidate.score_ia}/100`}
+                    </div>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      {selectedCandidate.cv_evaluado === false ? 'CV no evaluado: revisar manualmente' : 'Score del CV'}
+                    </p>
+                  </div>
+                  <div className="bg-zinc-800/40 rounded-lg p-4">
+                    <div className="text-4xl font-bold text-sky-400">
+                      {selectedCandidate.score_test !== null && selectedCandidate.score_test !== undefined ? `${selectedCandidate.score_test}/100` : '—'}
+                    </div>
+                    <p className="text-sm text-zinc-400 mt-1">
+                      {selectedCandidate.estado === 'evaluado' ? 'Prueba técnica' : 'Prueba pendiente'}
+                    </p>
+                  </div>
                 </div>
                 <div className="space-y-3">
                   {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (

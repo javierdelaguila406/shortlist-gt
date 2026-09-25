@@ -10,7 +10,15 @@ const fixtures = vi.hoisted(() => ({
     { id: 'candidate-a', vacante_id: 'vacante-a', email: 'a@example.com', vacantes: { usuario_id: 'user-a' } },
     { id: 'candidate-b', vacante_id: 'vacante-b', email: 'b@example.com', vacantes: { usuario_id: 'user-b' } },
   ],
+  rateHits: {} as Record<string, number>,
 }));
+
+function rateLimitHit(args: { p_key: string; p_limit: number }) {
+  const hits = fixtures.rateHits[args.p_key] ?? 0;
+  if (hits >= args.p_limit) return { data: { allowed: false, retry_after_s: 60 }, error: null };
+  fixtures.rateHits[args.p_key] = hits + 1;
+  return { data: { allowed: true, retry_after_s: 0 }, error: null };
+}
 
 class QueryBuilder {
   private operation = 'select';
@@ -50,6 +58,15 @@ class QueryBuilder {
       return { data: single ? { plan: 'premium' } : [{ plan: 'premium' }], error: null };
     }
 
+    if (this.table === 'vacante_preguntas') {
+      const preguntas = {
+        pre_entrevista: [{ pregunta: '¿Por qué te interesa?' }],
+        prueba_tecnica: [{ pregunta: 'QA', opciones: ['a', 'b'], respuesta_correcta: 1 }],
+        preguntas_video: [],
+      };
+      return { data: preguntas, error: null };
+    }
+
     return { data: single ? null : [], error: null };
   }
 }
@@ -65,17 +82,19 @@ vi.mock('@supabase/supabase-js', () => ({
       },
     },
     from: (table: string) => new QueryBuilder(table),
-    rpc: () => ({ single: async () => ({ data: { email: null, plan: 'premium' }, error: null }) }),
+    rpc: (name: string, args: { p_key: string; p_limit: number }) => ({
+      single: async () => (name === 'rate_limit_hit'
+        ? rateLimitHit(args)
+        : { data: { email: null, plan: 'premium' }, error: null }),
+    }),
     storage: { from: () => ({ remove: async () => ({ error: null }) }) },
   }),
 }));
 
-vi.mock('@/lib/whatsapp', () => ({ sendEvaluationStart: vi.fn(), isWhatsAppEnabled: vi.fn(() => false) }));
-
 import { GET as listCandidates } from '@/app/api/candidatos/listar/route';
 import { GET as getCandidate } from '@/app/api/candidatos/[id]/route';
 import { PUT as customizeQuestions } from '@/app/api/evaluaciones/personalizar-preguntas/route';
-import { POST as startWhatsapp } from '@/app/api/evaluaciones/iniciar-whatsapp/route';
+import { POST as sendEvaluation } from '@/app/api/evaluaciones/enviar/route';
 import { DELETE as deleteVacancy } from '@/app/api/vacantes/eliminar/route';
 import { POST as exportCandidate } from '@/app/api/candidatos/exportar/route';
 import { DELETE as deleteCandidate } from '@/app/api/candidatos/eliminar/route';
@@ -88,6 +107,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-test-key';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-test-key';
+  fixtures.rateHits = {};
   resetRateLimitStore();
 });
 
@@ -213,15 +233,34 @@ describe('authorization boundaries', () => {
     expect((await customizeQuestions(request)).status).toBe(400);
   });
 
-  test('Usuario A NO puede iniciar WhatsApp ni leer datos de candidato de Usuario B (N-02)', async () => {
-    const request = new NextRequest('http://localhost/api/evaluaciones/iniciar-whatsapp', {
+  test('Usuario A NO puede enviar evaluación a un candidato de Usuario B', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/enviar', {
       method: 'POST',
       headers: { ...auth('token-a'), 'Content-Type': 'application/json' },
       body: JSON.stringify({ candidatoId: 'candidate-b' }),
     });
-    const response = await startWhatsapp(request);
+    const response = await sendEvaluation(request);
     expect([403, 404]).toContain(response.status);
     expect(JSON.stringify(await response.json())).not.toContain('b@example.com');
+  });
+
+  test('Usuario A genera un enlace de evaluación para su candidato', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/enviar', {
+      method: 'POST',
+      headers: { ...auth('token-a'), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidatoId: 'candidate-a' }),
+    });
+    const response = await sendEvaluation(request);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.link).toMatch(/^http:\/\/localhost\/evaluacion\/[A-Za-z0-9_-]{43}$/);
+  });
+
+  test('Enviar evaluación sin sesión es rechazado', async () => {
+    const request = new NextRequest('http://localhost/api/evaluaciones/enviar', {
+      method: 'POST', body: JSON.stringify({ candidatoId: 'candidate-a' }),
+    });
+    expect((await sendEvaluation(request)).status).toBe(401);
   });
 });
 

@@ -27,9 +27,9 @@ export default function TerminosPage() {
             </p>
             <ul className="list-disc list-inside text-zinc-400 space-y-2">
               <li>Permite a candidatos postularse a vacantes</li>
-              <li>Analiza CVs mediante Inteligencia Artificial (OpenAI GPT-4o-mini)</li>
+              <li>Analiza CVs automáticamente comparándolos con la descripción de cada vacante</li>
               <li>Genera puntajes de compatibilidad automáticos</li>
-              <li>Facilita comunicación vía WhatsApp Cloud API</li>
+              <li>Permite enviar evaluaciones en línea a los candidatos mediante un enlace personal</li>
               <li>Proporciona un dashboard para reclutadores</li>
             </ul>
           </section>
@@ -123,8 +123,8 @@ export default function TerminosPage() {
               Al usar la Plataforma, aceptas el procesamiento de tu información como se describe en dicha política.
             </p>
             <p className="text-zinc-400">
-              Entiendes que tu CV será analizado por modelos de IA de terceros (OpenAI) y que tu número de teléfono será utilizado
-              por Meta WhatsApp Cloud API para comunicaciones.
+              Entiendes que tu CV y tus respuestas a la evaluación serán analizados automáticamente por SHORTLIST.GT para calcular
+              puntajes orientativos, sin enviarlos a servicios externos de inteligencia artificial.
             </p>
           </section>
 

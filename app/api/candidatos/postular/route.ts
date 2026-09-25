@@ -1,157 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import { createAdminClient } from '@/lib/supabase-admin';
-import { rateLimit } from '@/lib/rate-limit';
+import { persistentRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
-import { syncCreateCandidato } from '@/lib/dual-sync';
 import { logAuditEvent as persistAuditEvent } from '@/lib/audit';
+import { MAX_CV_BYTES, extractPdfText, isPdf } from '@/lib/pdf';
+import { evaluarCV } from '@/lib/cv-score';
+import { PLAN_LIMIT_MESSAGES, isPlanLimitError } from '@/lib/plan-limits';
 
-const persistentRateLimit = rateLimit;
-
-// Función para extraer email del texto
-function extractEmailFromText(text: string): string | null {
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const matches = text.match(emailRegex);
-  if (matches && matches.length > 0) {
-    // Retornar el primer email válido (no temporal)
-    return matches[0];
-  }
-  return null;
+function clientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for');
+  return forwarded?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown';
 }
-
-
-function calculateScore(cvText: string, plazaTitulo: string, plazaDesc: string): number {
-  console.log('[SCORING] Calculando score inteligente...');
-
-  if (!cvText || cvText.trim().length < 20) {
-    console.log('[SCORING] Candidate document too short');
-    return 25;
-  }
-
-  const cv = cvText.toLowerCase();
-  const plaza = (plazaTitulo + ' ' + plazaDesc).toLowerCase();
-
-  let score = 30; // Base
-
-  // 1. ANÁLISIS DE EXPERIENCIA (20 puntos max)
-  const expMatch = cv.match(/(\d+)\s*(?:años|years|experience|años de experiencia)/gi);
-  if (expMatch) {
-    const years = parseInt(expMatch[0]) || 0;
-    if (years >= 5) score += 20;
-    else if (years >= 3) score += 15;
-    else if (years >= 1) score += 10;
-    else score += 5;
-  } else if (/\b(experiencia|experience|trabajé|worked|desarrollé|developed)\b/i.test(cv)) {
-    score += 8;
-  }
-
-  // 2. EDUCACIÓN (15 puntos max)
-  if (/\b(licenciatura|licenciado|degree|bachelor|ingeniero|engineer|máster|master)\b/i.test(cv)) {
-    score += 15;
-  } else if (/\b(técnico|técnica|diploma|certificado|certified)\b/i.test(cv)) {
-    score += 8;
-  }
-
-  // 3. COINCIDENCIA CON VACANTE (35 puntos max)
-  const keywords = plaza.match(/\b\w{4,}\b/g) || [];
-  const uniqueKeywords = new Set(keywords);
-
-  let keywordMatches = 0;
-  for (const kw of uniqueKeywords) {
-    if (cv.includes(kw)) keywordMatches++;
-  }
-
-  if (uniqueKeywords.size > 0) {
-    const keywordScore = (keywordMatches / uniqueKeywords.size) * 35;
-    score += Math.min(35, keywordScore);
-  }
-
-  // 4. PALABRAS CLAVE DE ALTO PESO (10 puntos bonus)
-  const highValueKeywords = [
-    'liderazgo', 'leadership', 'gestión', 'management',
-    'análisis', 'analysis', 'diseño', 'design',
-    'implementación', 'implementation', 'éxito', 'success',
-    'proyecto', 'project', 'equipo', 'team', 'cliente', 'client'
-  ];
-
-  let highValueMatches = 0;
-  for (const kw of highValueKeywords) {
-    if (cv.includes(kw)) highValueMatches++;
-  }
-
-  if (highValueMatches > 0) {
-    score += Math.min(10, highValueMatches * 2);
-  }
-
-  // 5. FORMATOS PROFESIONALES (5 puntos bonus)
-  if (cv.includes('email') || cv.includes('linkedin') || cv.includes('teléfono') || cv.includes('phone')) {
-    score += 5;
-  }
-
-  const finalScore = Math.min(100, Math.max(25, Math.round(score)));
-  console.log('[SCORING] Candidate score calculated', { score: finalScore, keywordMatches });
-  return finalScore;
-}
-
 
 export async function POST(request: NextRequest) {
   try {
-    // ========== RATE LIMITING ==========
-    const ipAddress = request.headers.get('x-forwarded-for') ||
-                     request.headers.get('x-real-ip') ||
-                     '127.0.0.1';
-    const rateLimitResult = await persistentRateLimit(`postular:${ipAddress}`, 5, 3600000); // 5 postulaciones por hora
-
+    const ipAddress = clientIp(request);
+    const rateLimitResult = await persistentRateLimit(`postular:${ipAddress}`, 5, 3600000);
     if (!rateLimitResult.success) {
       console.warn('[SECURITY] Application rate limit exceeded');
       return NextResponse.json(
         { error: 'Demasiadas postulaciones. Intenta más tarde.', success: false },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(rateLimitResult.retryAfter || 3600),
-          }
-        }
+        { status: 429, headers: { 'Retry-After': String(rateLimitResult.retryAfter || 3600) } }
       );
     }
 
-    // Parse formData with error handling
     let formData;
     try {
       formData = await request.formData();
-    } catch (parseError) {
-      console.error('[API] Invalid form data:', parseError);
-      return NextResponse.json(
-        { error: 'Datos del formulario inválidos', success: false },
-        { status: 400 }
-      );
+    } catch {
+      return NextResponse.json({ error: 'Datos del formulario inválidos', success: false }, { status: 400 });
     }
+
     const nombre = sanitizeInput(formData.get('nombre') as string);
     const email = sanitizeInput(formData.get('email') as string);
     const telefono = sanitizeInput(formData.get('telefono') as string);
-    const experiencia_anos = formData.get('experiencia_anos') as string;
-    const vacante_id = formData.get('vacante_id') as string;
-    const cvText = formData.get('cvText') as string;
-    const habilidades = formData.get('habilidades') as string;
-    const cv = formData.get('cv') as File;
+    const experienciaTexto = formData.get('experiencia_anos');
+    const vacante_id = formData.get('vacante_id');
+    const cv = formData.get('cv');
     const consentimiento = formData.get('consentimiento') === 'true';
 
     if (!consentimiento) {
       return NextResponse.json({ error: 'Debes aceptar los términos de privacidad', success: false }, { status: 400 });
     }
-
-    // ========== VALIDACIÓN DE SEGURIDAD ==========
     if (!validateEmail(email)) {
       logAuditEvent('postular', 'candidato', 'N/A', 'failure', { reason: 'invalid_email' }, undefined, ipAddress);
       return NextResponse.json({ error: 'Email inválido', success: false }, { status: 400 });
     }
-
-    // Generar candidato_id al inicio (necesario para Storage)
-    // Usar randomUUID() para evitar colisiones
-    const candidato_id = `candidato-${randomUUID()}`;
-
-    if (!nombre || !telefono || !vacante_id) {
+    if (!nombre || !telefono || typeof vacante_id !== 'string' || !vacante_id) {
       return NextResponse.json({ error: 'Faltan campos requeridos', success: false }, { status: 400 });
+    }
+    const experienciaNumero = typeof experienciaTexto === 'string' && experienciaTexto.trim() !== ''
+      ? Number.parseInt(experienciaTexto, 10)
+      : null;
+    if (experienciaNumero !== null && (!Number.isInteger(experienciaNumero) || experienciaNumero < 0 || experienciaNumero > 70)) {
+      return NextResponse.json({ error: 'Años de experiencia inválidos', success: false }, { status: 400 });
+    }
+
+    if (!(cv instanceof File) || cv.size === 0) {
+      return NextResponse.json({ error: 'Adjunta tu CV en PDF', success: false }, { status: 400 });
+    }
+    if (cv.size > MAX_CV_BYTES) {
+      return NextResponse.json({ error: 'El CV no puede superar 5 MB', success: false }, { status: 413 });
+    }
+    const cvBytes = Buffer.from(await cv.arrayBuffer());
+    if (!isPdf(cvBytes)) {
+      return NextResponse.json({ error: 'El archivo debe ser un PDF', success: false }, { status: 400 });
     }
 
     // Ruta pública sin usuario: el servidor valida todo y escribe con service role (RLS no permite INSERT a anon).
@@ -167,26 +81,16 @@ export async function POST(request: NextRequest) {
       .select('titulo, descripcion, estado, usuario_id')
       .eq('id', vacante_id)
       .maybeSingle();
-
     if (!vacanteData) {
       return NextResponse.json({ error: 'Vacante no encontrada', success: false }, { status: 404 });
     }
-
     if (vacanteData.estado !== 'activa') {
-      return NextResponse.json({
-        error: 'La vacante no está recibiendo aplicaciones',
-        success: false
-      }, { status: 410 }); // 410 Gone - El recurso ya no está disponible
+      return NextResponse.json({ error: 'La vacante no está recibiendo aplicaciones', success: false }, { status: 410 });
     }
 
-    let consentUserId = candidato_id;
-    const consentAuthHeader = request.headers.get('authorization');
-    if (consentAuthHeader?.startsWith('Bearer ')) {
-      const { data: consentAuth } = await admin.auth.getUser(consentAuthHeader.slice(7));
-      if (consentAuth.user) consentUserId = consentAuth.user.id;
-    }
+    const candidato_id = `candidato-${randomUUID()}`;
     const { error: consentError } = await admin.from('consent_log').insert({
-      usuario_id: consentUserId,
+      usuario_id: candidato_id,
       vacante_id,
       tipo: 'postulacion',
       aceptado: true,
@@ -195,201 +99,69 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
     if (consentError) {
-      console.error('[Consent] Persistent record failed', { userId: consentUserId, vacancyId: vacante_id });
+      console.error('[Consent] Persistent record failed', { vacancyId: vacante_id });
       return NextResponse.json({ error: 'No se pudo registrar el consentimiento', success: false }, { status: 500 });
     }
 
-    let extractedEmail = email || '';
-
-    // Usar cvText + habilidades para análisis
-    const finalCVText = (cvText || '').trim();
-    let cvUrl = '';
-
-    // El frontend extrae el PDF con pdfjs - confiamos en eso
-    const documentLength = finalCVText.length;
-    console.log('[API] Candidate document received', { length: documentLength });
-
-    // Extraer email del PDF si no vino en formulario (ANTES de agregar habilidades)
-    if (finalCVText && !email) {
-      const pdfEmail = extractEmailFromText(finalCVText);
-      if (pdfEmail && validateEmail(pdfEmail)) {
-        extractedEmail = pdfEmail;
-        console.log('[API] Valid email extracted from document');
-      } else if (pdfEmail) {
-        // Don't log invalid email (PII protection)
-        console.warn('[API] Invalid email format extracted from document');
-      }
+    // El puntaje sale del PDF que se guarda, nunca de texto enviado por el navegador.
+    let cvTexto = '';
+    try {
+      cvTexto = await extractPdfText(cvBytes);
+    } catch {
+      console.warn('[API] Candidate document could not be read; marked as not evaluated');
     }
+    const { evaluado, score, estado } = evaluarCV(cvTexto, vacanteData.titulo, vacanteData.descripcion || '');
 
-    // Usar solo el CV extraído para scoring (no incluir habilidades manuales)
-    let textForScoring = finalCVText.trim();
-    // Solo agregar habilidades si el CV está muy vacío
-    if (textForScoring.length < 50 && habilidades) {
-      textForScoring = (textForScoring + ' ' + habilidades).trim();
-      console.log('[API] Supplementing short candidate document');
+    const cvPath = `${vacante_id}/${candidato_id}.pdf`;
+    const { error: uploadError } = await admin.storage
+      .from('cvs')
+      .upload(cvPath, cvBytes, { contentType: 'application/pdf', upsert: false });
+    if (uploadError) {
+      console.error('[API] Candidate document storage failed', { code: uploadError.name });
+      return NextResponse.json({ error: 'No se pudo guardar el CV. Intenta más tarde.', success: false }, { status: 500 });
     }
-
-    // Validar que tenemos email válido (REQUERIDO)
-    if (!extractedEmail || extractedEmail.trim().length === 0 || !validateEmail(extractedEmail)) {
-      return NextResponse.json({
-        error: 'Email válido es requerido. Proporciona tu email o asegúrate que esté en el PDF.',
-        success: false
-      }, { status: 400 });
-    }
-
-    if (cv instanceof File && cv.size > 0) {
-      const cvPath = `${vacante_id}/${candidato_id}.pdf`;
-      const { error: uploadError } = await admin.storage
-        .from('cvs')
-        .upload(cvPath, Buffer.from(await cv.arrayBuffer()), {
-          contentType: 'application/pdf',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        console.error('[API] Candidate document storage failed', { code: uploadError.name });
-        return NextResponse.json(
-          { error: 'No se pudo guardar el CV. Intenta más tarde.', success: false },
-          { status: 500 }
-        );
-      }
-      cvUrl = cvPath;
-    }
-
-    // Calcular score
-    const score_ia = calculateScore(textForScoring, vacanteData.titulo, vacanteData.descripcion || '');
-    const estado = score_ia >= 70 ? 'precalificado' : 'pendiente';
-
-    console.log('[API] Saving candidate', { score: score_ia, estado });
-
-    const candidatoData = {
-      id: candidato_id,
-      vacante_id: vacante_id,
-      nombre: nombre,
-      email: extractedEmail,
-      telefono: telefono,
-      experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : null,
-      cv_url: cvUrl,
-      estado: estado,
-      score_ia: score_ia,
-    };
 
     const { data: candidato, error } = await admin
       .from('candidatos')
-      .insert(candidatoData)
-      .select()
+      .insert({
+        id: candidato_id,
+        vacante_id,
+        nombre,
+        email,
+        telefono,
+        experiencia_anos: experienciaNumero,
+        cv_url: cvPath,
+        estado,
+        score_ia: score,
+        cv_evaluado: evaluado,
+      })
+      .select('id')
       .single();
 
     if (error) {
-      console.error('[API] Database error (internal):', {
-        message: error.message,
-        code: error.code,
-        timestamp: new Date().toISOString()
-      });
-      return NextResponse.json({
-        error: 'Error al guardar candidato. Intenta más tarde.',
-        success: false
-      }, { status: 500 });
+      await admin.storage.from('cvs').remove([cvPath]);
+      if (isPlanLimitError(error)) {
+        return NextResponse.json({ error: PLAN_LIMIT_MESSAGES.candidatos, success: false }, { status: 403 });
+      }
+      console.error('[API] Database error (internal):', { code: error.code, timestamp: new Date().toISOString() });
+      return NextResponse.json({ error: 'Error al guardar candidato. Intenta más tarde.', success: false }, { status: 500 });
     }
 
-    console.log('[API] Candidato guardado exitosamente:', candidato.id);
-
-    // Sincronizar con Godaddy en background (sin bloquear respuesta)
-    // Obtener email del reclutador (dueño de la vacante)
-    const { data: vacanteOwner } = await admin
-      .from('companies')
-      .select('email')
-      .eq('user_id', vacanteData.usuario_id)
-      .single();
-
-    // Background sync con reintentos automáticos
-    const maxRetries = 3;
-    const syncWithRetry = async (retryCount = 0) => {
-      try {
-        await syncCreateCandidato({
-          id: candidato.id,
-          vacante_id: vacante_id,
-          nombre: nombre,
-          email: extractedEmail,
-          telefono: telefono,
-          cv_url: cvUrl,
-          score_ia: score_ia,
-          experiencia_anos: experiencia_anos ? parseInt(experiencia_anos) : undefined,
-          recruiterEmail: vacanteOwner?.email,
-        });
-        console.log('[SYNC] Background sync successful for candidato:', candidato.id);
-      } catch (err) {
-        if (retryCount < maxRetries) {
-          console.warn(`[SYNC] Retry ${retryCount + 1}/${maxRetries} for candidato:`, candidato.id);
-          await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // exponential backoff
-          await syncWithRetry(retryCount + 1);
-        } else {
-          console.error('[SYNC] Max retries exceeded for candidato:', candidato.id, err);
-          // Registrar en audit que sync falló
-          await persistAuditEvent({
-            action: 'UPDATE',
-            userId: consentUserId,
-            resourceId: candidato.id,
-            resourceType: 'candidato',
-            changes: { sync_status: 'failed', error: String(err) },
-          }).catch(e => console.error('[AUDIT] Error logging sync failure:', e));
-        }
-      }
-    };
-
-    // Ejecutar en background sin bloquear
-    syncWithRetry().catch(err => {
-      console.error('[SYNC] Unexpected error in sync retry loop:', err);
-    });
-
-    // ========== AUDIT LOG ==========
-    logAuditEvent(
-      'postular',
-      'candidato',
-      candidato.id,
-      'success',
-      { vacante_id, score: score_ia, estado },
-      undefined,
-      ipAddress
-    );
+    logAuditEvent('postular', 'candidato', candidato.id, 'success', { vacante_id, score, estado }, undefined, ipAddress);
     await persistAuditEvent({
-      action: 'CREATE', userId: consentUserId, resourceId: candidato.id,
+      action: 'CREATE', userId: candidato_id, resourceId: candidato.id,
       resourceType: 'candidato', changes: { vacante_id, estado },
     });
 
-    return NextResponse.json({
-      success: true,
-      candidatoId: candidato.id,
-      candidato: {
-        id: candidato.id,
-        email: extractedEmail,
-        score_ia,
-        estado,
-        cv_url: cvUrl
-      },
-    });
+    return NextResponse.json({ success: true, candidatoId: candidato.id });
   } catch (error) {
-    // Log detailed error internally but return generic message
     console.error('[API] Unexpected error in postular:', {
       message: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
-
-    // Determine error type for appropriate response
-    let statusCode = 500;
-    let userMessage = 'Ocurrió un error al procesar tu postulación. Intenta más tarde.';
-
-    if (error instanceof SyntaxError) {
-      statusCode = 400;
-      userMessage = 'Datos inválidos proporcionados';
-    } else if (error instanceof TypeError) {
-      statusCode = 400;
-      userMessage = 'Error al procesar los datos';
-    }
-
     return NextResponse.json(
-      { error: userMessage, success: false },
-      { status: statusCode }
+      { error: 'Ocurrió un error al procesar tu postulación. Intenta más tarde.', success: false },
+      { status: 500 }
     );
   }
 }

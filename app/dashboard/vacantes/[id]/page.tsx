@@ -120,7 +120,7 @@ export default function VacantePage() {
   const topCandidatos = candidatos.slice(0, 3);
   const stats = {
     total: candidatos.length,
-    en_whatsapp: candidatos.filter((c) => c.score_video > 0).length,
+    evaluados: candidatos.filter((c) => c.score_test !== null && c.score_test !== undefined).length,
     top_performers: topCandidatos.length,
   };
 
@@ -162,8 +162,8 @@ export default function VacantePage() {
             <CardContent className="pt-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-sm text-zinc-400">En WhatsApp</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stats.en_whatsapp}</p>
+                  <p className="text-sm text-zinc-400">Con prueba completada</p>
+                  <p className="text-3xl font-bold text-white mt-2">{stats.evaluados}</p>
                 </div>
                 <MessageSquare className="w-8 h-8 text-indigo-500" />
               </div>

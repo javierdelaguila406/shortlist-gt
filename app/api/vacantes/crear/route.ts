@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { syncCreateVacante } from '@/lib/dual-sync';
 import { logAuditEvent } from '@/lib/audit';
 import { requireUser } from '@/lib/supabase-server';
+import { PLAN_LIMIT_MESSAGES, isPlanLimitError } from '@/lib/plan-limits';
 
 const ESTADOS_PERMITIDOS = ['activa', 'pausada', 'cerrada'];
 
@@ -33,15 +33,6 @@ export async function POST(request: NextRequest) {
     }
     const userId = auth.user.id;
 
-    let userEmail = '';
-    const { data: companies, error: companyError } = await auth.supabase
-      .from('companies')
-      .select('email')
-      .eq('user_id', userId);
-    if (!companyError && companies && companies.length > 0) {
-      userEmail = companies[0].email;
-    }
-
     const newId = `vacante-${Date.now()}`;
     const vacante = {
       id: newId,
@@ -59,6 +50,9 @@ export async function POST(request: NextRequest) {
       .select();
 
     if (insertError) {
+      if (isPlanLimitError(insertError)) {
+        return NextResponse.json({ error: PLAN_LIMIT_MESSAGES.vacantes, success: false, plan: 'demo' }, { status: 403 });
+      }
       console.error('[API] Database error (internal):', {
         message: insertError.message,
         code: insertError.code,
@@ -71,17 +65,6 @@ export async function POST(request: NextRequest) {
     }
 
     await logAuditEvent({ action: 'CREATE', userId, resourceId: newId, resourceType: 'vacante', changes: { estado: vacante.estado } });
-
-    syncCreateVacante({
-      id: newId,
-      usuario_id: userId,
-      titulo: titulo.trim(),
-      descripcion: descripcion || '',
-      departamento: departamento || '',
-      userEmail,
-    }).catch(err => {
-      console.error('[SYNC] Background sync error:', err);
-    });
 
     console.log('[API] Vacante creada:', newId);
     return NextResponse.json({

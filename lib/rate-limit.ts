@@ -46,34 +46,30 @@ export function resetRateLimitStore(): void {
   store.clear();
 }
 
+// Contar e insertar ocurre dentro de rate_limit_hit bajo un bloqueo: solicitudes simultáneas no se saltan el límite.
+// Si la base no responde, falla cerrado salvo que la llamada pida lo contrario.
 export async function persistentRateLimit(
   identifier: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
+  options: { failOpen?: boolean } = {}
 ): Promise<{ success: boolean; remaining: number; retryAfter?: number }> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !serviceRole) return rateLimit(identifier, limit, windowMs);
-
   const key = `ratelimit:${identifier}`;
   try {
-    const client = createClient(url, serviceRole);
-    const now = new Date();
-    const windowStart = new Date(now.getTime() - windowMs).toISOString();
-    const cleanupBefore = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-    const { data, error } = await client.from('rate_limit_log').select('timestamp').eq('key', key).gt('timestamp', windowStart);
-    if (error) throw error;
-    const attempts = data?.length || 0;
-    if (attempts >= limit) {
-      const oldest = data?.map(item => new Date(item.timestamp).getTime()).sort()[0] || now.getTime();
-      return { success: false, remaining: 0, retryAfter: Math.max(1, Math.ceil((oldest + windowMs - now.getTime()) / 1000)) };
-    }
-    const { error: insertError } = await client.from('rate_limit_log').insert({ key, timestamp: now.toISOString() });
-    if (insertError) throw insertError;
-    void client.from('rate_limit_log').delete().lt('timestamp', cleanupBefore);
-    return { success: true, remaining: limit - attempts - 1 };
+    if (!url || !serviceRole) throw new Error('rate limit not configured');
+    const client = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { data, error } = await client
+      .rpc('rate_limit_hit', { p_key: key, p_limit: limit, p_window_ms: windowMs })
+      .single();
+    if (error || !data) throw error ?? new Error('rate limit unavailable');
+    const row = data as { allowed: boolean; retry_after_s: number };
+    return row.allowed
+      ? { success: true, remaining: 0 }
+      : { success: false, remaining: 0, retryAfter: row.retry_after_s };
   } catch {
-    console.error('[RateLimit] Persistent operation failed; using local fallback', { key });
-    return rateLimit(identifier, limit, windowMs);
+    console.error('[RateLimit] Persistent limiter unavailable', { key });
+    return options.failOpen ? rateLimit(identifier, limit, windowMs) : { success: false, remaining: 0, retryAfter: 60 };
   }
 }

@@ -5,9 +5,6 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.js';
 
 interface FormData {
   nombre: string;
@@ -15,7 +12,6 @@ interface FormData {
   telefono: string;
   experiencia_anos: string;
   cv: File | null;
-  cvText: string;
   consentimiento: boolean;
 }
 
@@ -25,6 +21,7 @@ interface Vacante {
   descripcion?: string;
   departamento?: string;
   estado?: string;
+  empresa?: string | null;
 }
 
 export default function PostularPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
@@ -68,14 +65,12 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     telefono: '',
     experiencia_anos: '',
     cv: null,
-    cvText: '',
     consentimiento: false,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [cvFileName, setCvFileName] = useState('');
   const [submitError, setSubmitError] = useState('');
-  const [extractingPDF, setExtractingPDF] = useState(false);
 
   if (vacanteLoading) {
     return (
@@ -131,38 +126,20 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert('CV debe ser menor a 5MB');
-        return;
-      }
-      setFormData(prev => ({ ...prev, cv: file }));
-      setCvFileName(file.name);
-      setExtractingPDF(true);
-
-      try {
-        const buffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
-        let text = '';
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = textContent.items.map((item: any) => item.str).join(' ');
-          text += pageText + ' ';
-        }
-
-        setFormData(prev => ({ ...prev, cvText: text }));
-        console.log('PDF extraído:', text.length, 'caracteres');
-      } catch (error) {
-        console.error('Error extrayendo PDF:', error);
-        setFormData(prev => ({ ...prev, cvText: '' }));
-      } finally {
-        setExtractingPDF(false);
-      }
+    if (!file) return;
+    if (file.type && file.type !== 'application/pdf') {
+      setSubmitError('El CV debe estar en formato PDF');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      setSubmitError('El CV debe pesar menos de 5 MB');
+      return;
+    }
+    setSubmitError('');
+    setFormData(prev => ({ ...prev, cv: file }));
+    setCvFileName(file.name);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,7 +169,6 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       formDataToSend.append('telefono', formData.telefono);
       formDataToSend.append('experiencia_anos', formData.experiencia_anos);
       formDataToSend.append('vacante_id', resolverData.vacante_id);
-      formDataToSend.append('cvText', formData.cvText);
       formDataToSend.append('consentimiento', String(formData.consentimiento));
       if (formData.cv) formDataToSend.append('cv', formData.cv);
 
@@ -204,31 +180,9 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Save to localStorage for dashboard (deprecated but keeping for compatibility)
-        try {
-          const candidatoData = {
-            id: data.candidatoId,
-            vacante_id: params.slug,
-            nombre: formData.nombre,
-            email: data.candidato.email,  // ✅ Usa email del backend (extraído del PDF)
-            telefono: formData.telefono,
-            cv_url: data.candidato.cv_url || '',  // ✅ Usa URL del PDF de Storage
-            estado: data.candidato.estado,  // ✅ Usa estado del backend
-            score_ia: data.candidato.score_ia,  // ✅ Usa score del backend
-          };
-          const saved = localStorage.getItem('candidatos_postulantes') || '[]';
-          const list = JSON.parse(saved);
-          list.push(candidatoData);
-          localStorage.setItem('candidatos_postulantes', JSON.stringify(list));
-          console.log('[POSTULAR] Candidato guardado en localStorage:', candidatoData);
-          console.log('[POSTULAR] Candidato guardado en Supabase también');
-        } catch (e) {
-          console.error('[POSTULAR] Error al guardar en localStorage:', e);
-        }
         setSubmitted(true);
       } else {
         setSubmitError(data.error || 'Error al enviar la solicitud. Intenta de nuevo.');
-        console.error('[POSTULAR] Error en respuesta:', data);
       }
     } catch (err) {
       setSubmitError('Error de conexión. Verifica tu internet e intenta de nuevo.');
@@ -324,7 +278,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
                         required
                       />
                       <span className="text-sm text-zinc-300">
-                        Autorizo compartir mi nombre, teléfono y CV con <strong>Forniture City</strong> para evaluar mi candidatura a esta posición.
+                        Autorizo compartir mi nombre, teléfono y CV con <strong>{vacante.empresa || 'la empresa que publicó esta vacante'}</strong> para evaluar mi candidatura a esta posición.
                       </span>
                     </label>
                   </div>

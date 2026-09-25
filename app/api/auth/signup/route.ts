@@ -3,7 +3,7 @@ import { createHash } from 'crypto';
 import { supabase } from '@/lib/supabase';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { signupSchema } from '@/lib/validations';
-import { syncCreateUser } from '@/lib/dual-sync';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,15 +75,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crear registro de empresa en plan DEMO (sincronizar con Supabase y Godaddy)
     if (authData.user) {
       try {
-        await syncCreateUser({
-          id: authData.user.id,
-          email: email,
-          nombre: nombre,
-          plan: 'demo',
-        });
+        const { error: companyError } = await createAdminClient()
+          .from('companies')
+          .upsert({ user_id: authData.user.id, email, nombre, plan: 'demo' }, { onConflict: 'user_id', ignoreDuplicates: true });
+        if (companyError) throw companyError;
       } catch (dbError) {
         console.error('[SECURITY] Error creating company record:', {
           error: dbError instanceof Error ? dbError.message : 'Unknown error',

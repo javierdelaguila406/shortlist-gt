@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { syncDeleteVacante } from './dual-sync';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { cvObjectPath } from './authz';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -22,8 +22,7 @@ export async function runRetentionJobs(now = new Date()) {
   if (candidateLookupError) throw candidateLookupError;
 
   for (const vacancy of oneYearVacancies || []) {
-    const { error } = await supabase.from('candidatos').delete().eq('vacante_id', vacancy.id);
-    if (error) throw error;
+    await deleteCandidates(supabase, vacancy.id);
   }
 
   const { data: expiredVacancies, error: vacancyLookupError } = await supabase
@@ -33,9 +32,13 @@ export async function runRetentionJobs(now = new Date()) {
     .lt('updated_at', ninetyDaysAgo);
   if (vacancyLookupError) throw vacancyLookupError;
 
+  // Las claves foráneas de estas tablas no borran en cascada.
   for (const vacancy of expiredVacancies || []) {
-    const mirrorDeleted = await syncDeleteVacante(vacancy.id);
-    if (!mirrorDeleted) throw new Error(`Mirror deletion failed for vacancy ${vacancy.id}`);
+    await deleteCandidates(supabase, vacancy.id);
+    for (const table of ['evaluaciones_whatsapp', 'vacante_preguntas']) {
+      const { error } = await supabase.from(table).delete().eq('vacante_id', vacancy.id);
+      if (error) throw error;
+    }
   }
 
   const { error: vacancyDeleteError } = await supabase
@@ -54,4 +57,17 @@ export async function runRetentionJobs(now = new Date()) {
     candidateVacanciesProcessed: oneYearVacancies?.length || 0,
     vacanciesProcessed: expiredVacancies?.length || 0,
   };
+}
+
+async function deleteCandidates(supabase: SupabaseClient, vacancyId: string) {
+  const { data: rows } = await supabase.from('candidatos').select('cv_url').eq('vacante_id', vacancyId);
+  const paths = ((rows || []) as { cv_url: string | null }[])
+    .map((row) => cvObjectPath(row.cv_url))
+    .filter((path): path is string => Boolean(path));
+
+  const { error: evaluationsError } = await supabase.from('evaluaciones_whatsapp').delete().eq('vacante_id', vacancyId);
+  if (evaluationsError) throw evaluationsError;
+  const { error } = await supabase.from('candidatos').delete().eq('vacante_id', vacancyId);
+  if (error) throw error;
+  if (paths.length > 0) await supabase.storage.from('cvs').remove(paths);
 }

@@ -30,7 +30,7 @@ export default function PrivacidadPage() {
                 <ul className="list-disc list-inside text-zinc-400 space-y-1">
                   <li>Nombre completo</li>
                   <li>Correo electrónico</li>
-                  <li>Número de teléfono WhatsApp</li>
+                  <li>Número de teléfono</li>
                 </ul>
               </div>
               <div>
@@ -39,7 +39,7 @@ export default function PrivacidadPage() {
                   <li>Currículum Vitae (CV) en formato PDF</li>
                   <li>Expectativa salarial</li>
                   <li>Disponibilidad para trabajar</li>
-                  <li>Videos de presentación (si se solicitan)</li>
+                  <li>Respuestas a la evaluación en línea (si la empresa te envía una)</li>
                 </ul>
               </div>
               <div>
@@ -56,21 +56,19 @@ export default function PrivacidadPage() {
 
           {/* Uso de IA */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Procesamiento mediante Inteligencia Artificial</h2>
+            <h2 className="text-2xl font-bold text-white mb-4">3. Evaluación Automatizada</h2>
             <p className="mb-4">
-              <strong>Transparencia en el uso de LLMs:</strong> Tu CV y respuestas serán procesados automáticamente por modelos de
-              lenguaje (Large Language Models - LLMs) de <strong>OpenAI (GPT-4o-mini)</strong> para:
+              Tu CV y, si la empresa te envía una evaluación, tus respuestas se procesan automáticamente con reglas propias de
+              SHORTLIST.GT para:
             </p>
             <div className="bg-yellow-950/30 border border-yellow-800/50 rounded-lg p-6 space-y-3">
               <ul className="list-disc list-inside text-zinc-300 space-y-2">
-                <li>Extraer competencias técnicas y blandas</li>
-                <li>Calcular un puntaje de compatibilidad (0-100)</li>
-                <li>Generar análisis estructurado de tu perfil</li>
-                <li>Proporcionar feedback automático sobre tu candidatura</li>
+                <li>Calcular un puntaje de compatibilidad (0-100) comparando tu CV con la descripción de la vacante</li>
+                <li>Calificar las preguntas de opción múltiple de la evaluación con las respuestas definidas por la empresa</li>
               </ul>
               <p className="text-sm text-zinc-400 mt-4">
-                ⚠️ <strong>Nota importante:</strong> El procesamiento de IA es realizado por terceros especializados. No compartimos tu
-                información personal con OpenAI más allá de lo necesario para este análisis.
+                ⚠️ <strong>Nota importante:</strong> Tu CV no se envía a servicios externos de inteligencia artificial. Los puntajes
+                son orientativos: la decisión sobre tu candidatura la toma una persona de la empresa.
               </p>
             </div>
           </section>
@@ -80,20 +78,6 @@ export default function PrivacidadPage() {
             <h2 className="text-2xl font-bold text-white mb-4">4. Terceros que Procesan tus Datos</h2>
             <p className="mb-4">Tus datos son procesados por los siguientes proveedores de servicios:</p>
             <div className="space-y-4">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-emerald-400 mb-2">Meta WhatsApp Cloud API</h3>
-                <p className="text-sm text-zinc-400">
-                  Utilizamos WhatsApp para comunicarnos contigo sobre el estado de tu postulación. Meta actúa como encargado de tratamiento
-                  bajo los términos de sus políticas de privacidad.
-                </p>
-              </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-emerald-400 mb-2">OpenAI (Análisis de IA)</h3>
-                <p className="text-sm text-zinc-400">
-                  Tu CV es enviado a OpenAI para análisis de competencias mediante GPT-4o-mini. Los datos se procesan de acuerdo con
-                  la política de privacidad de OpenAI y se eliminan después del análisis.
-                </p>
-              </div>
               <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
                 <h3 className="font-semibold text-emerald-400 mb-2">Supabase (Base de Datos)</h3>
                 <p className="text-sm text-zinc-400">
@@ -177,7 +161,7 @@ export default function PrivacidadPage() {
               <p>Conservamos tus datos de acuerdo con los siguientes períodos:</p>
               <ul className="list-disc list-inside text-zinc-400 space-y-2">
                 <li><strong>Datos de candidatura:</strong> 12 meses después de la postulación (o hasta que solicites su eliminación)</li>
-                <li><strong>Datos de interacción WhatsApp:</strong> 6 meses después de la última comunicación</li>
+                <li><strong>Respuestas de evaluación:</strong> el mismo plazo que tu candidatura</li>
                 <li><strong>Logs técnicos:</strong> 3 meses para propósitos de seguridad y auditoría</li>
                 <li><strong>Rechazados:</strong> 6 meses, luego eliminados automáticamente</li>
               </ul>

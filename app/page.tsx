@@ -30,8 +30,8 @@ export default function Home() {
           <span className="block text-emerald-500">Impulsado por IA</span>
         </h1>
         <p className="text-xl text-zinc-400 max-w-2xl mx-auto mb-8">
-          Encuentra los mejores talentos 10x más rápido. SHORTLIST.GT utiliza IA para evaluar
-          candidatos, WhatsApp para comunicación y análisis profundo de competencias.
+          Encuentra los mejores talentos más rápido. SHORTLIST.GT califica cada CV contra tu vacante
+          y envía evaluaciones en línea a tus candidatos con un solo enlace.
         </p>
         <div className="flex gap-4 justify-center flex-wrap">
           <Link href="/acceso">
@@ -58,11 +58,11 @@ export default function Home() {
           <Card>
             <CardHeader>
               <Brain className="w-8 h-8 text-emerald-500 mb-2" />
-              <CardTitle className="text-lg">Análisis IA</CardTitle>
+              <CardTitle className="text-lg">Análisis de CV</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-zinc-400">
-                Procesamos CVs con GPT-4 para extraer competencias y calcular match scores.
+                Comparamos cada CV con la descripción de la vacante y calculamos un puntaje de compatibilidad.
               </p>
             </CardContent>
           </Card>
@@ -71,11 +71,11 @@ export default function Home() {
           <Card>
             <CardHeader>
               <Zap className="w-8 h-8 text-indigo-500 mb-2" />
-              <CardTitle className="text-lg">WhatsApp API</CardTitle>
+              <CardTitle className="text-lg">Evaluaciones por enlace</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-zinc-400">
-                Comunicación automática con candidatos vía WhatsApp Cloud API.
+                Envía a cada candidato un enlace personal con su prueba y recibe el puntaje en tu panel.
               </p>
             </CardContent>
           </Card>
@@ -88,7 +88,7 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-zinc-400">
-                Calificación automática basada en CV, videos y respuestas de tests.
+                Calificación automática basada en el CV y en las respuestas de la evaluación.
               </p>
             </CardContent>
           </Card>
@@ -113,10 +113,8 @@ export default function Home() {
         <h2 className="text-3xl font-bold text-white mb-8 text-center">Stack Tecnológico</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { name: 'Next.js 15', desc: 'Frontend moderno' },
+            { name: 'Next.js 16', desc: 'Frontend moderno' },
             { name: 'Supabase', desc: 'Base de datos' },
-            { name: 'OpenAI GPT-4', desc: 'IA y análisis' },
-            { name: 'WhatsApp API', desc: 'Mensajería' },
             { name: 'Tailwind CSS', desc: 'Estilos' },
             { name: 'TypeScript', desc: 'Type-safe' },
             { name: 'Framer Motion', desc: 'Animaciones' },

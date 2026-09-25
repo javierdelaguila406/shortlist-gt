@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { syncUpdatePlan } from '@/lib/dual-sync';
 import { persistentRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
@@ -72,15 +71,8 @@ export async function POST(request: NextRequest) {
     }
 
     const result = redemption as { email: string | null; plan: string };
-    const userEmail = result.email || '';
-
-    // Sincronizar en background (sin bloquear respuesta)
-    syncUpdatePlan(userId, userEmail, 'premium', normalizedCode).catch(err => {
-      console.error('[SYNC] Background sync error updating plan:', err);
-    });
 
     console.log('[API] License code used successfully:', {
-      codigo: normalizedCode,
       userId,
       timestamp: new Date().toISOString(),
     });

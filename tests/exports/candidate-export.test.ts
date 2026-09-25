@@ -5,7 +5,15 @@ import { PDFParse } from 'pdf-parse';
 
 const fixtures = vi.hoisted(() => ({
   candidates: [] as Array<Record<string, unknown>>,
+  rateHits: {} as Record<string, number>,
 }));
+
+function rateLimitHit(args: { p_key: string; p_limit: number }) {
+  const hits = fixtures.rateHits[args.p_key] ?? 0;
+  if (hits >= args.p_limit) return { data: { allowed: false, retry_after_s: 60 }, error: null };
+  fixtures.rateHits[args.p_key] = hits + 1;
+  return { data: { allowed: true, retry_after_s: 0 }, error: null };
+}
 
 class QueryBuilder {
   private filters: Record<string, unknown> = {};
@@ -35,6 +43,7 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     auth: { getUser: async (token: string) => ({ data: { user: token ? { id: 'user-a' } : null }, error: null }) },
     from: (table: string) => new QueryBuilder(table),
+    rpc: (_name: string, args: { p_key: string; p_limit: number }) => ({ single: async () => rateLimitHit(args) }),
   }),
 }));
 
@@ -55,6 +64,7 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://example.supabase.co';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role';
   fixtures.candidates = [];
+  fixtures.rateHits = {};
   resetRateLimitStore();
 });
 

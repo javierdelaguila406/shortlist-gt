@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 
 const database = vi.hoisted(() => ({
   vacancies: [] as Array<Record<string, unknown>>,
+  insertError: null as null | { message: string; code?: string },
 }));
 
 class QueryBuilder {
@@ -13,6 +14,7 @@ class QueryBuilder {
 
   select() {
     if (this.operation === 'insert' && this.table === 'vacantes') {
+      if (database.insertError) return Promise.resolve({ data: null, error: database.insertError });
       database.vacancies.push(...this.payload);
       return Promise.resolve({ data: this.payload, error: null });
     }
@@ -27,7 +29,7 @@ class QueryBuilder {
 
   eq() { return this; }
   then(resolve: (value: unknown) => unknown) {
-    return Promise.resolve({ data: this.table === 'companies' ? [] : database.vacancies, error: null }).then(resolve);
+    return Promise.resolve({ data: database.vacancies, error: null }).then(resolve);
   }
 }
 
@@ -42,8 +44,6 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-vi.mock('@/lib/dual-sync', () => ({ syncCreateVacante: vi.fn().mockResolvedValue(undefined) }));
-
 import { POST as createVacancy } from '@/app/api/vacantes/crear/route';
 
 const request = (body: Record<string, unknown>) => new NextRequest('http://localhost/api/vacantes/crear', {
@@ -54,6 +54,7 @@ const request = (body: Record<string, unknown>) => new NextRequest('http://local
 
 beforeEach(() => {
   database.vacancies.length = 0;
+  database.insertError = null;
 });
 
 describe('persistencia de vacantes', () => {
@@ -74,5 +75,13 @@ describe('persistencia de vacantes', () => {
 
     expect(response.status).toBe(400);
     expect(database.vacancies).toHaveLength(0);
+  });
+
+  test('traduce el límite del plan Demo que aplica la base a un 403 claro', async () => {
+    database.insertError = { message: 'plan_limit:vacantes', code: 'P0001' };
+    const response = await createVacancy(request({ titulo: 'Segunda vacante' }));
+
+    expect(response.status).toBe(403);
+    expect((await response.json()).error).toContain('plan Demo permite 1 vacante');
   });
 });

@@ -179,6 +179,11 @@ export async function POST(request: NextRequest) {
         : NextResponse.json({ error: 'Candidato no encontrado' }, { status: 404 });
     }
 
+    const { data: evaluaciones } = await supabase
+      .from('evaluaciones_candidato')
+      .select('estado, score_test, respuestas, created_at, completada_en')
+      .eq('candidato_id', candidatoData.id);
+
     // Compilar datos en formato JSON compatible con GDPR
     const exportedData = {
       metadata: {
@@ -200,20 +205,24 @@ export async function POST(request: NextRequest) {
         disponibilidad: candidatoData.disponibilidad,
         expectativa_salarial: candidatoData.salario
       },
-      evaluacion_ia: {
-        score_total: candidatoData.score_ia,
-        feedback: candidatoData.feedback_ia,
-        resumen_ejecutivo: candidatoData.resumen_ejecutivo,
-        analisis_ia: candidatoData.analisis_ia || {},
+      evaluacion_cv: {
+        score_cv: candidatoData.score_ia,
+        cv_evaluado: candidatoData.cv_evaluado,
+        experiencia_anos: candidatoData.experiencia_anos,
         fecha_analisis: candidatoData.created_at
       },
+      evaluaciones: (evaluaciones || []).map((evaluacion) => ({
+        estado: evaluacion.estado,
+        score_prueba: evaluacion.score_test,
+        respuestas: evaluacion.respuestas,
+        enviada: evaluacion.created_at,
+        completada: evaluacion.completada_en,
+      })),
       aviso_legal: {
-        procesamiento_ia: 'Los datos han sido procesados mediante modelos de IA (OpenAI GPT-4o-mini) para análisis de compatibilidad',
+        procesamiento_automatizado: 'El puntaje del CV se calcula automáticamente comparando el texto del CV con la descripción de la vacante; el de la prueba, con las respuestas definidas por la empresa. Las decisiones las toma una persona.',
         terceros_involucrados: [
-          'OpenAI (análisis de IA)',
           'Supabase (almacenamiento)',
-          'Vercel (hosting)',
-          'Meta WhatsApp Cloud API (comunicaciones)'
+          'Vercel (hosting)'
         ],
         derecho_olvido: 'Puedes solicitar la eliminación completa de tus datos enviando un email a privacidad@shortlist.gt'
       }
