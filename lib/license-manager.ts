@@ -1,5 +1,7 @@
 // Sistema de gestión de licencias para SHORTLIST.GT
 
+import { supabase } from '@/lib/supabase';
+
 interface UserLicense {
   codigo: string;
   tipo: 'DEMO' | 'TRIAL' | 'PREMIUM';
@@ -104,9 +106,21 @@ export async function validateLicenseCode(codigo: string): Promise<{
   error?: string;
 }> {
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      return {
+        valid: false,
+        error: 'Inicia sesión para validar tu código de licencia',
+      };
+    }
+
     const response = await fetch('/api/auth/validate-license', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify({ codigo: codigo.trim().toUpperCase() }),
     });
 
