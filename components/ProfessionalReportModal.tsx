@@ -273,7 +273,8 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
       };
 
-      (html2pdf() as any).set(options).from(htmlContent).save();
+      const isolated = `<div style="all: initial; font-family: Arial, sans-serif; color: #000; background: #fff;">${htmlContent}</div>`;
+      (html2pdf() as any).set(options).from(isolated, 'string').save();
     } catch (error) {
       console.error('Error:', error);
       setReportError('Falló al generar reporte PDF');
