@@ -1,4 +1,4 @@
-export const MAX_CV_BYTES = 5 * 1024 * 1024;
+export { MAX_CV_BYTES, MAX_CV_LABEL } from './cv-limits';
 
 export function isPdf(bytes: Buffer): boolean {
   return bytes.subarray(0, 5).toString('latin1') === '%PDF-';

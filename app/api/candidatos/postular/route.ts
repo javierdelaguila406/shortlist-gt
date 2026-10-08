@@ -4,7 +4,7 @@ import { createAdminClient } from '@/lib/supabase-admin';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { sanitizeInput, validateEmail, logAuditEvent } from '@/lib/security-utils';
 import { logAuditEvent as persistAuditEvent } from '@/lib/audit';
-import { MAX_CV_BYTES, extractPdfText, isPdf } from '@/lib/pdf';
+import { MAX_CV_BYTES, MAX_CV_LABEL, extractPdfText, isPdf } from '@/lib/pdf';
 import { evaluarCV } from '@/lib/cv-score';
 import { PLAN_LIMIT_MESSAGES, isPlanLimitError } from '@/lib/plan-limits';
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Adjunta tu CV en PDF', success: false }, { status: 400 });
     }
     if (cv.size > MAX_CV_BYTES) {
-      return NextResponse.json({ error: 'El CV no puede superar 5 MB', success: false }, { status: 413 });
+      return NextResponse.json({ error: `El CV no puede superar ${MAX_CV_LABEL}`, success: false }, { status: 413 });
     }
     const cvBytes = Buffer.from(await cv.arrayBuffer());
     if (!isPdf(cvBytes)) {

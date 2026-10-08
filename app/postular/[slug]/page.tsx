@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { MAX_CV_BYTES, MAX_CV_LABEL } from '@/lib/cv-limits';
 
 interface FormData {
   nombre: string;
@@ -133,8 +134,8 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
       setSubmitError('El CV debe estar en formato PDF');
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setSubmitError('El CV debe pesar menos de 5 MB');
+    if (file.size > MAX_CV_BYTES) {
+      setSubmitError(`El CV debe pesar menos de ${MAX_CV_LABEL}`);
       return;
     }
     setSubmitError('');
@@ -255,7 +256,7 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
               </div>
 
               <div>
-                <label htmlFor="candidate-document" className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx 5MB</label>
+                <label htmlFor="candidate-document" className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx {MAX_CV_LABEL}</label>
                 <label htmlFor="candidate-document" className="flex flex-col items-center justify-center min-h-11 px-4 py-6 rounded-lg border-2 border-dashed border-zinc-700 hover:border-emerald-500 cursor-pointer transition-colors">
                   <input id="candidate-document" type="file" onChange={handleFileChange} accept=".pdf" className="sr-only" required />
                   <Upload className="w-8 h-8 text-zinc-400 mb-2" />
