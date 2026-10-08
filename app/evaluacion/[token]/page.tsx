@@ -3,6 +3,11 @@
 import { FormEvent, use, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
+import { textareaClass } from '@/components/ui/field';
+import { CheckCircle2, Loader } from 'lucide-react';
 
 type Preguntas = {
   abiertas: { pregunta: string }[];
@@ -82,97 +87,111 @@ export default function EvaluacionPage({ params }: { params: Promise<{ token: st
   };
 
   return (
-    <main className="min-h-full bg-zinc-950 px-4 py-10">
-      <div className="mx-auto max-w-2xl">
-        <p className="mb-6 text-center text-2xl font-bold text-white">
-          SHORTLIST<span className="text-emerald-500">.GT</span>
-        </p>
+    <main className="min-h-full w-full bg-background px-4 py-10 sm:py-14">
+      <div className="mx-auto flex max-w-2xl flex-col gap-6">
+        <div className="flex justify-center">
+          <Logo className="text-base" />
+        </div>
 
-        {estado === 'cargando' && <p role="status" className="text-center text-zinc-400">Cargando evaluación…</p>}
+        {estado === 'cargando' && (
+          <div role="status" className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <Loader className="size-4 animate-spin" aria-hidden="true" />
+            Cargando evaluación…
+          </div>
+        )}
 
         {estado === 'error' && (
-          <p role="alert" className="text-center text-red-400">
-            No se pudo cargar la evaluación. Recarga la página en unos minutos.
-          </p>
+          <Alert variant="destructive">No se pudo cargar la evaluación. Recarga la página en unos minutos.</Alert>
         )}
 
         {estado === 'no_disponible' && (
-          <Card>
-            <CardContent className="py-8 text-center text-zinc-300">{MOTIVOS[motivo] ?? MOTIVOS.invalida}</CardContent>
-          </Card>
+          <Reveal>
+            <Card className="py-6 text-center">
+              <p className="text-pretty">{MOTIVOS[motivo] ?? MOTIVOS.invalida}</p>
+            </Card>
+          </Reveal>
         )}
 
         {estado === 'enviada' && (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-lg font-semibold text-white">¡Respuestas enviadas!</p>
-              <p className="mt-2 text-zinc-400">La empresa revisará tu evaluación y se pondrá en contacto contigo.</p>
-            </CardContent>
-          </Card>
+          <Reveal>
+            <Card className="flex flex-col items-center gap-3 py-8 text-center">
+              <CheckCircle2 className="size-12 text-success" aria-hidden="true" />
+              <p className="text-lg font-semibold">¡Respuestas enviadas!</p>
+              <p className="text-sm text-muted-foreground text-pretty">
+                La empresa revisará tu evaluación y se pondrá en contacto contigo.
+              </p>
+            </Card>
+          </Reveal>
         )}
 
         {(estado === 'lista' || estado === 'enviando') && datos && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Evaluación: {datos.vacante}</CardTitle>
-              <CardDescription>
-                {datos.empresa ? `${datos.empresa} · ` : ''}
-                Disponible hasta el {new Date(datos.expira_en).toLocaleDateString('es-GT', { day: 'numeric', month: 'long' })}.
-                Solo puedes enviarla una vez.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={enviar} className="space-y-8">
-                {datos.preguntas.opcion_multiple.map((p, i) => (
-                  <fieldset key={`om-${i}`} className="space-y-3">
-                    <legend className="font-medium text-white">
-                      {i + 1}. {p.pregunta}
-                    </legend>
-                    {p.opciones.map((opcion, j) => (
-                      <label key={j} className="flex min-h-11 cursor-pointer items-center gap-3 rounded border border-zinc-700 px-3 py-2 text-zinc-200 hover:bg-zinc-800">
-                        <input
-                          type="radio"
-                          name={`om-${i}`}
-                          value={j}
-                          checked={opciones[i] === j}
-                          onChange={() => setOpciones((prev) => prev.map((v, k) => (k === i ? j : v)))}
+          <Reveal>
+            <Card>
+              <CardHeader>
+                <CardTitle>Evaluación: {datos.vacante}</CardTitle>
+                <CardDescription>
+                  {datos.empresa ? `${datos.empresa} · ` : ''}
+                  Disponible hasta el {new Date(datos.expira_en).toLocaleDateString('es-GT', { day: 'numeric', month: 'long' })}.
+                  Solo puedes enviarla una vez.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={enviar} className="flex flex-col gap-8">
+                  {datos.preguntas.opcion_multiple.map((p, i) => (
+                    <fieldset key={`om-${i}`} className="flex flex-col gap-3">
+                      <legend className="mb-1 font-medium text-pretty">
+                        {i + 1}. {p.pregunta}
+                      </legend>
+                      {p.opciones.map((opcion, j) => (
+                        <label
+                          key={j}
+                          className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm transition-colors hover:bg-muted has-checked:border-foreground has-checked:ring-1 has-checked:ring-foreground has-disabled:cursor-not-allowed has-disabled:opacity-60"
+                        >
+                          <input
+                            type="radio"
+                            name={`om-${i}`}
+                            value={j}
+                            checked={opciones[i] === j}
+                            onChange={() => setOpciones((prev) => prev.map((v, k) => (k === i ? j : v)))}
+                            disabled={estado === 'enviando'}
+                            className="size-4 accent-primary"
+                          />
+                          {opcion}
+                        </label>
+                      ))}
+                    </fieldset>
+                  ))}
+
+                  {datos.preguntas.abiertas.map((p, i) => {
+                    const numero = datos.preguntas.opcion_multiple.length + i + 1;
+                    return (
+                      <div key={`ab-${i}`} className="flex flex-col gap-2">
+                        <label htmlFor={`ab-${i}`} className="font-medium text-pretty">
+                          {numero}. {p.pregunta}
+                        </label>
+                        <textarea
+                          id={`ab-${i}`}
+                          value={abiertas[i]}
+                          onChange={(e) => setAbiertas((prev) => prev.map((v, k) => (k === i ? e.target.value : v)))}
+                          maxLength={2000}
+                          rows={4}
+                          required
                           disabled={estado === 'enviando'}
+                          className={textareaClass}
                         />
-                        {opcion}
-                      </label>
-                    ))}
-                  </fieldset>
-                ))}
+                      </div>
+                    );
+                  })}
 
-                {datos.preguntas.abiertas.map((p, i) => {
-                  const numero = datos.preguntas.opcion_multiple.length + i + 1;
-                  return (
-                    <div key={`ab-${i}`} className="space-y-2">
-                      <label htmlFor={`ab-${i}`} className="block font-medium text-white">
-                        {numero}. {p.pregunta}
-                      </label>
-                      <textarea
-                        id={`ab-${i}`}
-                        value={abiertas[i]}
-                        onChange={(e) => setAbiertas((prev) => prev.map((v, k) => (k === i ? e.target.value : v)))}
-                        maxLength={2000}
-                        rows={4}
-                        required
-                        disabled={estado === 'enviando'}
-                        className="w-full rounded border border-zinc-700 bg-zinc-900 p-3 text-zinc-100"
-                      />
-                    </div>
-                  );
-                })}
+                  {error && <Alert variant="destructive">{error}</Alert>}
 
-                {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
-
-                <Button type="submit" disabled={estado === 'enviando'} className="min-h-11 w-full bg-emerald-600 hover:bg-emerald-700">
-                  {estado === 'enviando' ? 'Enviando…' : 'Enviar respuestas'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+                  <Button type="submit" isLoading={estado === 'enviando'} className="w-full">
+                    Enviar respuestas
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </Reveal>
         )}
       </div>
     </main>

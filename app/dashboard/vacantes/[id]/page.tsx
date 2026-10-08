@@ -7,17 +7,21 @@ import {
   Users,
   MessageSquare,
   Trophy,
-  ExternalLink,
   Clock,
   DollarSign,
   Video,
   Send,
-  Phone,
+  CalendarDays,
+  Loader,
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge, MedalBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { RadialGauge } from '@/components/ui/radial-gauge';
+import { StatCard } from '@/components/ui/stat';
+import { AppHeader } from '@/components/app-header';
+import { Reveal } from '@/components/ui/reveal';
+import { cn } from '@/lib/utils';
 
 interface Candidato {
   id: string;
@@ -126,271 +130,191 @@ export default function VacantePage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin text-4xl mb-4">⚙️</div>
-          <p className="text-zinc-400">Cargando datos...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader className="size-6 animate-spin" aria-hidden="true" />
+          <p className="text-sm">Cargando datos…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">{vacante?.titulo}</h1>
-          <p className="text-zinc-400">{vacante?.descripcion}</p>
+    <div className="min-h-screen w-full">
+      <AppHeader subtitle="Detalle de vacante" />
+
+      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 pb-16 sm:px-6">
+        <Reveal className="flex flex-col gap-2">
+          <h1 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">{vacante?.titulo}</h1>
+          <p className="text-muted-foreground text-pretty">{vacante?.descripcion}</p>
+        </Reveal>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <StatCard label="Total aplicantes" value={stats.total} icon={<Users />} />
+          <StatCard label="Con prueba completada" value={stats.evaluados} icon={<MessageSquare />} />
+          <StatCard label="Top candidatos" value={stats.top_performers} icon={<Trophy />} />
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Total Aplicantes</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stats.total}</p>
-                </div>
-                <Users className="w-8 h-8 text-emerald-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Con prueba completada</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stats.evaluados}</p>
-                </div>
-                <MessageSquare className="w-8 h-8 text-indigo-500" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-zinc-400">Top Candidatos</p>
-                  <p className="text-3xl font-bold text-white mt-2">{stats.top_performers}</p>
-                </div>
-                <Trophy className="w-8 h-8 text-yellow-500" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel: Top 3 Candidates */}
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="flex min-w-0 flex-col gap-6 lg:col-span-1">
             <Card noPadding>
-              <CardHeader className="border-b border-zinc-800">
-                <CardTitle className="text-lg">Top Candidatos</CardTitle>
+              <CardHeader className="border-b px-4 py-4 sm:px-5">
+                <CardTitle className="text-base">Top candidatos</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-0">
-                  {topCandidatos.map((candidato, idx) => (
+              <div className="flex flex-col">
+                {topCandidatos.map((candidato, idx) => {
+                  const isSelected = selectedCandidato?.id === candidato.id;
+                  return (
                     <button
+                      type="button"
                       key={candidato.id}
                       onClick={() => setSelectedCandidato(candidato)}
-                      className={`
-                        w-full text-left p-4 border-b border-zinc-800/40 transition-colors
-                        ${
-                          selectedCandidato?.id === candidato.id
-                            ? 'bg-zinc-800/60 border-l-2 border-l-emerald-500'
-                            : 'hover:bg-zinc-800/30'
-                        }
-                      `}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        'flex flex-col gap-3 border-b p-4 text-left transition-colors outline-none last:border-b-0 focus-visible:bg-muted',
+                        isSelected ? 'bg-muted' : 'hover:bg-muted/60'
+                      )}
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <MedalBadge place={(idx + 1) as 1 | 2 | 3} />
-                          </div>
-                          <p className="font-semibold text-white">{candidato.nombre}</p>
-                          <p className="text-xs text-zinc-500 mt-1">{candidato.telefono}</p>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-col gap-2">
+                          <MedalBadge place={(idx + 1) as 1 | 2 | 3} />
+                          <p className="truncate font-semibold">{candidato.nombre}</p>
+                          <p className="text-xs text-muted-foreground tabular-nums">{candidato.telefono}</p>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-emerald-400">
-                            {Math.round(candidato.score_total)}
-                          </div>
-                          <p className="text-xs text-zinc-500">Score</p>
+                        <div className="shrink-0 text-right">
+                          <div className="text-2xl font-semibold tabular-nums">{Math.round(candidato.score_total)}</div>
+                          <p className="text-xs text-muted-foreground">Score</p>
                         </div>
                       </div>
-                      <div className="flex gap-2 mt-3">
-                        <Badge variant="success">
-                          {candidato.disponibilidad || 'N/A'}
-                        </Badge>
+                      <div>
+                        <Badge variant="success">{candidato.disponibilidad || 'N/A'}</Badge>
                       </div>
                     </button>
-                  ))}
-                </div>
-              </CardContent>
+                  );
+                })}
+              </div>
             </Card>
 
-            {/* All Candidates */}
-            <Card noPadding className="mt-6">
-              <CardHeader className="border-b border-zinc-800">
-                <CardTitle className="text-lg">Todos los Candidatos</CardTitle>
+            <Card noPadding>
+              <CardHeader className="border-b px-4 py-4 sm:px-5">
+                <CardTitle className="text-base">Todos los candidatos</CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="space-y-0 max-h-96 overflow-y-auto">
-                  {candidatos.map((candidato) => (
+              <div className="flex max-h-96 flex-col overflow-y-auto">
+                {candidatos.map((candidato) => {
+                  const isSelected = selectedCandidato?.id === candidato.id;
+                  return (
                     <button
+                      type="button"
                       key={candidato.id}
                       onClick={() => setSelectedCandidato(candidato)}
-                      className={`
-                        w-full text-left p-3 border-b border-zinc-800/40 transition-colors text-sm
-                        ${
-                          selectedCandidato?.id === candidato.id
-                            ? 'bg-zinc-800/60'
-                            : 'hover:bg-zinc-800/30'
-                        }
-                      `}
+                      aria-pressed={isSelected}
+                      className={cn(
+                        'flex items-center justify-between gap-3 border-b px-4 py-3 text-left text-sm transition-colors outline-none last:border-b-0 focus-visible:bg-muted',
+                        isSelected ? 'bg-muted' : 'hover:bg-muted/60'
+                      )}
                     >
-                      <div className="flex justify-between items-center">
-                        <p className="font-medium text-white">{candidato.nombre}</p>
-                        <p className="text-emerald-400 font-semibold">
-                          {Math.round(candidato.score_total)}
-                        </p>
-                      </div>
+                      <span className="truncate font-medium">{candidato.nombre}</span>
+                      <span className="shrink-0 font-semibold tabular-nums">{Math.round(candidato.score_total)}</span>
                     </button>
-                  ))}
-                </div>
-              </CardContent>
+                  );
+                })}
+              </div>
             </Card>
           </div>
 
-          {/* Right Panel: Candidate Details */}
           {selectedCandidato && (
-            <div className="lg:col-span-2 space-y-6">
-              {/* Candidate Header */}
+            <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
               <Card>
-                <CardHeader className="border-b border-zinc-800">
-                  <div className="flex items-start justify-between">
-                    <div>
+                <CardHeader className="border-b">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
                       <CardTitle className="text-2xl">{selectedCandidato.nombre}</CardTitle>
-                      <CardDescription className="mt-2">
-                        {selectedCandidato.telefono}
-                      </CardDescription>
+                      <CardDescription className="mt-1">{selectedCandidato.telefono}</CardDescription>
                     </div>
                     <Badge variant="info">{selectedCandidato.estado}</Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-2 gap-4">
+                <CardContent className="pt-5">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-zinc-400" />
+                      <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                       <div>
-                        <p className="text-xs text-zinc-500">Disponibilidad</p>
-                        <p className="text-sm font-semibold text-white">
-                          {selectedCandidato.disponibilidad}
-                        </p>
+                        <p className="text-xs text-muted-foreground">Disponibilidad</p>
+                        <p className="text-sm font-medium">{selectedCandidato.disponibilidad}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <DollarSign className="w-4 h-4 text-zinc-400" />
+                      <DollarSign className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                       <div>
-                        <p className="text-xs text-zinc-500">Expectativa Salarial</p>
-                        <p className="text-sm font-semibold text-white">
-                          {selectedCandidato.rango_salario}
-                        </p>
+                        <p className="text-xs text-muted-foreground">Expectativa salarial</p>
+                        <p className="text-sm font-medium tabular-nums">{selectedCandidato.rango_salario}</p>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Score Breakdown */}
               <Card>
-                <CardHeader className="border-b border-zinc-800">
-                  <CardTitle>Score Total</CardTitle>
+                <CardHeader className="border-b">
+                  <CardTitle className="text-lg">Score total</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="flex justify-center mb-6">
-                    <RadialGauge
-                      value={selectedCandidato.score_total}
-                      max={100}
-                      size="lg"
-                      label="Score General"
-                    />
+                <CardContent className="flex flex-col gap-6 pt-6">
+                  <div className="flex justify-center">
+                    <RadialGauge value={selectedCandidato.score_total} max={100} size="lg" label="Score general" />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-zinc-800/30 rounded-lg">
-                      <p className="text-xs text-zinc-400 mb-2">CV</p>
-                      <p className="text-2xl font-bold text-emerald-400">
-                        {Math.round(selectedCandidato.score_cv)}
-                      </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-xl bg-muted/50 p-4 text-center">
+                      <p className="mb-2 text-xs text-muted-foreground">CV</p>
+                      <p className="text-2xl font-semibold tabular-nums">{Math.round(selectedCandidato.score_cv)}</p>
                     </div>
-                    <div className="text-center p-4 bg-zinc-800/30 rounded-lg">
-                      <p className="text-xs text-zinc-400 mb-2">Video</p>
-                      <p className="text-2xl font-bold text-indigo-400">
-                        {Math.round(selectedCandidato.score_video)}
-                      </p>
+                    <div className="rounded-xl bg-muted/50 p-4 text-center">
+                      <p className="mb-2 text-xs text-muted-foreground">Video</p>
+                      <p className="text-2xl font-semibold tabular-nums">{Math.round(selectedCandidato.score_video)}</p>
                     </div>
-                    <div className="text-center p-4 bg-zinc-800/30 rounded-lg">
-                      <p className="text-xs text-zinc-400 mb-2">Test</p>
-                      <p className="text-2xl font-bold text-amber-400">
-                        {Math.round(selectedCandidato.score_test)}
-                      </p>
+                    <div className="rounded-xl bg-muted/50 p-4 text-center">
+                      <p className="mb-2 text-xs text-muted-foreground">Test</p>
+                      <p className="text-2xl font-semibold tabular-nums">{Math.round(selectedCandidato.score_test)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Videos */}
               <Card>
-                <CardHeader className="border-b border-zinc-800">
-                  <CardTitle className="flex items-center gap-2">
-                    <Video className="w-5 h-5" />
-                    Videos de Evaluación
+                <CardHeader className="border-b">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Video className="size-5 text-muted-foreground" aria-hidden="true" />
+                    Videos de evaluación
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-2 gap-4">
+                <CardContent className="pt-5">
+                  <div className="grid grid-cols-2 gap-3">
                     {[1, 2].map((i) => (
                       <div
                         key={i}
-                        className="aspect-video bg-zinc-800/50 rounded-lg flex items-center justify-center cursor-pointer hover:bg-zinc-800 transition-colors"
+                        className="flex aspect-video items-center justify-center rounded-xl border border-dashed bg-muted/40"
                       >
-                        <Video className="w-8 h-8 text-zinc-600" />
+                        <Video className="size-8 text-muted-foreground" aria-hidden="true" />
                       </div>
                     ))}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-4">
-                <Button size="lg" className="flex items-center justify-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  Agendar Entrevista
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Button size="lg" className="w-full">
+                  <CalendarDays className="size-4" />
+                  Agendar entrevista
                 </Button>
-                <Button size="lg" variant="secondary" className="flex items-center justify-center gap-2">
-                  <Send className="w-4 h-4" />
-                  Hacer Oferta
+                <Button size="lg" variant="secondary" className="w-full">
+                  <Send className="size-4" />
+                  Hacer oferta
                 </Button>
               </div>
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }
-
-const Calendar = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-    />
-  </svg>
-);

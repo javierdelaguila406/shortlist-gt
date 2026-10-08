@@ -1,4 +1,6 @@
 import React from 'react';
+import { Loader } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
@@ -8,44 +10,45 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles = {
-  primary: 'bg-emerald-600 hover:bg-emerald-700 text-white',
-  secondary: 'bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700',
-  ghost: 'hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100',
-  destructive: 'bg-rose-600 hover:bg-rose-700 text-white',
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  secondary: 'border bg-card text-foreground hover:bg-muted',
+  ghost: 'text-muted-foreground hover:bg-muted hover:text-foreground',
+  destructive: 'border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive/15',
 };
 
 const sizeStyles = {
-  sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2 text-base',
-  lg: 'px-6 py-3 text-lg',
+  sm: 'h-9 px-3 text-sm',
+  md: 'h-10 px-4 text-sm',
+  lg: 'h-11 px-6 text-base',
 };
 
 export function Button({
   variant = 'primary',
   size = 'md',
   isLoading = false,
-  className = '',
+  className,
   disabled = false,
   children,
   ...props
 }: ButtonProps) {
   return (
     <button
-      className={`
-        rounded-lg font-medium transition-all duration-200
-        disabled:opacity-50 disabled:cursor-not-allowed
-        ${variantStyles[variant]}
-        ${sizeStyles[size]}
-        ${className}
-      `}
+      className={cn(
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-all',
+        'active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
+        'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        variantStyles[variant],
+        sizeStyles[size],
+        className
+      )}
       disabled={disabled || isLoading}
       {...props}
     >
       {isLoading ? (
-        <span className="flex items-center gap-2">
-          <span className="animate-spin">⚙️</span>
+        <>
+          <Loader className="size-4 animate-spin" aria-hidden="true" />
           {children}
-        </span>
+        </>
       ) : (
         children
       )}

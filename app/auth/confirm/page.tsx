@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 function ConfirmContent() {
@@ -53,43 +53,43 @@ function ConfirmContent() {
   }, [searchParams, router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          {status === 'loading' && (
-            <>
-              <Loader className="w-12 h-12 text-emerald-500 mx-auto mb-4 animate-spin" />
-              <CardTitle>Confirmando Email</CardTitle>
-            </>
-          )}
-          {status === 'success' && (
-            <>
-              <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-              <CardTitle>¡Listo!</CardTitle>
-            </>
-          )}
-          {status === 'error' && (
-            <>
-              <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <CardTitle>Error</CardTitle>
-            </>
-          )}
-        </CardHeader>
-        <CardContent className="text-center">
-          <p className="text-zinc-400 text-sm">{message}</p>
-        </CardContent>
-      </Card>
-    </div>
+    <Card className="w-full max-w-sm">
+      <CardHeader className="items-center border-b-0 text-center">
+        {status === 'loading' && (
+          <>
+            <Loader className="mb-2 size-10 animate-spin text-muted-foreground" aria-hidden="true" />
+            <CardTitle>Confirmando email</CardTitle>
+          </>
+        )}
+        {status === 'success' && (
+          <>
+            <CheckCircle2 className="mb-2 size-10 text-success" aria-hidden="true" />
+            <CardTitle>¡Listo!</CardTitle>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <AlertCircle className="mb-2 size-10 text-destructive" aria-hidden="true" />
+            <CardTitle>Error</CardTitle>
+          </>
+        )}
+      </CardHeader>
+      <CardContent className="text-center">
+        <p role="status" className="text-sm text-muted-foreground text-pretty">{message}</p>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function ConfirmPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center">
-        <Loader className="w-12 h-12 text-emerald-500 animate-spin" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center">
+          <Loader className="size-8 animate-spin text-muted-foreground" aria-label="Cargando" />
+        </div>
+      }
+    >
       <ConfirmContent />
     </Suspense>
   );

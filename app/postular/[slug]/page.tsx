@@ -4,7 +4,11 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input } from '@/components/ui/field';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
+import { ArrowLeft, Upload, CheckCircle2, Loader, TriangleAlert } from 'lucide-react';
 import { MAX_CV_BYTES, MAX_CV_LABEL } from '@/lib/cv-limits';
 
 interface FormData {
@@ -23,6 +27,14 @@ interface Vacante {
   departamento?: string;
   estado?: string;
   empresa?: string | null;
+}
+
+function CenteredCard({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-10">
+      <Reveal className="w-full max-w-md">{children}</Reveal>
+    </div>
+  );
 }
 
 export default function PostularPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
@@ -75,46 +87,49 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
   if (vacanteLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <p role="status" className="text-zinc-400">Cargando vacante...</p>
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader className="size-4 animate-spin" aria-hidden="true" />
+          Cargando vacante...
+        </div>
       </div>
     );
   }
 
   if (vacanteError) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Card><CardContent className="pt-6 text-center space-y-4">
-          <p role="alert" className="text-red-400">Error: {vacanteError}</p>
+      <CenteredCard>
+        <Card className="flex flex-col items-center gap-4 text-center">
+          <Alert variant="destructive" className="w-full text-left">Error: {vacanteError}</Alert>
           <Button onClick={() => setRetryCount(value => value + 1)}>Reintentar</Button>
-        </CardContent></Card>
-      </div>
+        </Card>
+      </CenteredCard>
     );
   }
 
   if (!vacante) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-        <Card>
-          <CardContent className="pt-6 text-center">
-            <p className="text-zinc-400">Vacante no encontrada</p>
-            <Link href="/" className="mt-4 inline-block">
-              <Button>Volver al inicio</Button>
-            </Link>
-          </CardContent>
+      <CenteredCard>
+        <Card className="flex flex-col items-center gap-4 text-center">
+          <p className="text-muted-foreground">Vacante no encontrada</p>
+          <Link href="/">
+            <Button>Volver al inicio</Button>
+          </Link>
         </Card>
-      </div>
+      </CenteredCard>
     );
   }
 
   if (vacante.estado === 'cerrada') {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Card><CardContent className="pt-6 text-center space-y-4">
-          <p className="text-zinc-200">Esta vacante cerró, no puedes postularte</p>
-          <Link href="/"><Button>Volver al inicio</Button></Link>
-        </CardContent></Card>
-      </div>
+      <CenteredCard>
+        <Card className="flex flex-col items-center gap-4 text-center">
+          <p>Esta vacante cerró, no puedes postularte</p>
+          <Link href="/">
+            <Button>Volver al inicio</Button>
+          </Link>
+        </Card>
+      </CenteredCard>
     );
   }
 
@@ -195,103 +210,106 @@ export default function PostularPage({ params: paramsPromise }: { params: Promis
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-12 pb-12 text-center">
-            <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-white mb-2">¡Gracias por Aplicar!</h2>
-            <p className="text-zinc-400">Nos estaremos contactando contigo pronto.</p>
-          </CardContent>
+      <CenteredCard>
+        <Card className="flex flex-col items-center gap-3 py-6 text-center">
+          <CheckCircle2 className="size-12 text-success" aria-hidden="true" />
+          <h2 className="text-xl font-semibold tracking-tight">¡Gracias por aplicar!</h2>
+          <p className="text-sm text-muted-foreground">Nos estaremos contactando contigo pronto.</p>
         </Card>
-      </div>
+      </CenteredCard>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-4 overflow-x-hidden">
-      <div className="max-w-2xl mx-auto">
-        <Link href="/" className="text-zinc-400 hover:text-white mb-6 inline-block">
-          ← Volver
-        </Link>
+    <div className="min-h-screen w-full bg-background px-4 py-8 sm:py-12">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <div className="flex items-center justify-between gap-4">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Inicio
+          </Link>
+          <Logo className="text-base" />
+        </div>
 
-        <Card className="bg-zinc-900 border-zinc-800 mb-8">
-          <CardHeader>
-            <CardTitle className="text-2xl">SHORTLIST<span className="text-emerald-500">.GT</span></CardTitle>
-            <CardDescription>Vacante: {vacante.titulo}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-zinc-300 text-sm">{vacante.descripcion}</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardHeader>
-            <CardTitle>Formulario de Aplicación</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {submitError && (
-              <div className="bg-red-950/30 border border-red-800/40 rounded-lg p-4 mb-5">
-                <p className="text-sm text-red-300">{submitError}</p>
-              </div>
+        <Reveal>
+          <Card className="flex flex-col gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {vacante.empresa || 'Vacante'}
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold tracking-tight text-balance">{vacante.titulo}</h1>
+            </div>
+            {vacante.descripcion && (
+              <p className="text-sm text-muted-foreground text-pretty">{vacante.descripcion}</p>
             )}
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="candidate-name" className="block text-sm font-medium text-white mb-2">Nombre Completo *</label>
-                <input id="candidate-name" type="text" name="nombre" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
-              </div>
+          </Card>
 
-              <div>
-                <label htmlFor="candidate-email" className="block text-sm font-medium text-white mb-2">Email *</label>
-                <input id="candidate-email" type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
-              </div>
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Formulario de aplicación</CardTitle>
+              <CardDescription>Los campos marcados con * son obligatorios</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                {submitError && <Alert variant="destructive">{submitError}</Alert>}
 
-              <div>
-                <label htmlFor="candidate-phone" className="block text-sm font-medium text-white mb-2">Teléfono *</label>
-                <input id="candidate-phone" type="tel" name="telefono" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
-              </div>
+                <Field label="Nombre completo *" htmlFor="candidate-name">
+                  <Input id="candidate-name" type="text" name="nombre" autoComplete="name" value={formData.nombre} onChange={handleInputChange} placeholder="Juan Pérez" required />
+                </Field>
 
-              <div>
-                <label htmlFor="candidate-experience" className="block text-sm font-medium text-white mb-2">Años de Experiencia *</label>
-                <input id="candidate-experience" type="number" name="experiencia_anos" value={formData.experiencia_anos} onChange={handleInputChange} placeholder="Ej: 5" min="0" max="70" className="w-full min-h-11 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded text-white text-base" required />
-              </div>
+                <Field label="Email *" htmlFor="candidate-email">
+                  <Input id="candidate-email" type="email" name="email" autoComplete="email" value={formData.email} onChange={handleInputChange} placeholder="tu@email.com" required />
+                </Field>
 
-              <div>
-                <label htmlFor="candidate-document" className="block text-sm font-medium text-white mb-2">Currículum (PDF) * - Máx {MAX_CV_LABEL}</label>
-                <label htmlFor="candidate-document" className="flex flex-col items-center justify-center min-h-11 px-4 py-6 rounded-lg border-2 border-dashed border-zinc-700 hover:border-emerald-500 cursor-pointer transition-colors">
-                  <input id="candidate-document" type="file" onChange={handleFileChange} accept=".pdf" className="sr-only" required />
-                  <Upload className="w-8 h-8 text-zinc-400 mb-2" />
-                  <p className="text-sm text-white">{cvFileName || 'Selecciona tu CV (PDF)'}</p>
-                </label>
-              </div>
+                <Field label="Teléfono *" htmlFor="candidate-phone">
+                  <Input id="candidate-phone" type="tel" name="telefono" autoComplete="tel" value={formData.telefono} onChange={handleInputChange} placeholder="+502 XXXX XXXX" required />
+                </Field>
 
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4">
-                <div className="flex gap-3">
-                  <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input 
-                        id="candidate-consent"
-                        type="checkbox" 
-                        name="consentimiento" 
-                        checked={formData.consentimiento} 
-                        onChange={handleInputChange} 
-                        className="mt-1 w-4 h-4"
-                        required
-                      />
-                      <span className="text-sm text-zinc-300">
-                        Autorizo compartir mi nombre, teléfono y CV con <strong>{vacante.empresa || 'la empresa que publicó esta vacante'}</strong> para evaluar mi candidatura a esta posición.
-                      </span>
-                    </label>
-                  </div>
+                <Field label="Años de experiencia *" htmlFor="candidate-experience">
+                  <Input id="candidate-experience" type="number" name="experiencia_anos" value={formData.experiencia_anos} onChange={handleInputChange} placeholder="Ej: 5" min="0" max="70" required />
+                </Field>
+
+                <div className="flex flex-col gap-1.5">
+                  <p className="text-sm font-medium">Currículum (PDF) * · Máx {MAX_CV_LABEL}</p>
+                  <label
+                    htmlFor="candidate-document"
+                    className="flex cursor-pointer flex-col items-center gap-2 rounded-2xl border border-dashed bg-muted/40 px-4 py-8 text-center transition-colors hover:border-foreground/30 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/30"
+                  >
+                    <input id="candidate-document" type="file" onChange={handleFileChange} accept=".pdf" className="sr-only" required />
+                    <Upload className="size-6 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-sm font-medium">{cvFileName || 'Selecciona tu CV (PDF)'}</span>
+                    {cvFileName && <span className="text-xs text-muted-foreground">Toca para cambiarlo</span>}
+                  </label>
                 </div>
-              </div>
 
-              <Button type="submit" disabled={isSubmitting || !formData.consentimiento} className="w-full min-h-11 bg-emerald-600 hover:bg-emerald-700 py-2">
-                {isSubmitting ? 'Enviando...' : 'Enviar Solicitud'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <div className="flex gap-3 rounded-xl bg-warning-soft p-4 ring-1 ring-inset ring-warning/25">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />
+                  <label className="flex cursor-pointer items-start gap-3 text-sm">
+                    <input
+                      id="candidate-consent"
+                      type="checkbox"
+                      name="consentimiento"
+                      checked={formData.consentimiento}
+                      onChange={handleInputChange}
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                      required
+                    />
+                    <span>
+                      Autorizo compartir mi nombre, teléfono y CV con <strong>{vacante.empresa || 'la empresa que publicó esta vacante'}</strong> para evaluar mi candidatura a esta posición.
+                    </span>
+                  </label>
+                </div>
+
+                <Button type="submit" isLoading={isSubmitting} disabled={!formData.consentimiento} className="w-full">
+                  Enviar solicitud
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </Reveal>
       </div>
     </div>
   );

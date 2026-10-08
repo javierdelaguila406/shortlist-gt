@@ -4,7 +4,7 @@ interface LayoutProps {
 
 export default function AuthLayout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen w-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
+    <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-16">
       {children}
     </div>
   );

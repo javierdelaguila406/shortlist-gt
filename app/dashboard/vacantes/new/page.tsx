@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input, textareaClass } from '@/components/ui/field';
+import { Reveal } from '@/components/ui/reveal';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export default function NewVacantePage() {
@@ -90,166 +93,141 @@ function NewVacanteContent() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Card className="max-w-md">
-          <CardHeader className="text-center">
-            <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
-            <CardTitle>¡Vacante Creada!</CardTitle>
-            <CardDescription>
-              Tu nueva vacante ha sido creada exitosamente. Redirigiendo...
-            </CardDescription>
-          </CardHeader>
-        </Card>
+      <div className="flex min-h-screen w-full items-center justify-center bg-background px-4">
+        <Reveal className="w-full max-w-sm">
+          <Card className="items-center text-center">
+            <CheckCircle2 className="mb-2 size-10 text-success" aria-hidden="true" />
+            <CardHeader className="border-b-0 pb-0">
+              <CardTitle>Vacante creada</CardTitle>
+              <CardDescription>Tu nueva vacante se creó correctamente. Redirigiendo…</CardDescription>
+            </CardHeader>
+          </Card>
+        </Reveal>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6">
-      <div className="max-w-2xl mx-auto">
-        <Link href="/dashboard" className="text-emerald-500 hover:text-emerald-400 mb-6 inline-flex">
-          ← Volver al Dashboard
+    <div className="min-h-screen w-full bg-background px-4 py-8 sm:px-6">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+        <Link
+          href="/dashboard"
+          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" />
+          Volver al panel
         </Link>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Crear Nueva Vacante</CardTitle>
-            <CardDescription>
-              Completa el formulario para crear una nueva posición
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="flex gap-3 p-4 bg-rose-950/30 border border-rose-800/40 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-rose-300">{error}</p>
-                </div>
-              )}
+        <Reveal>
+          <Card>
+            <CardHeader>
+              <CardTitle>Crear nueva vacante</CardTitle>
+              <CardDescription>Completa el formulario para publicar una nueva posición</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                {error && <Alert variant="destructive">{error}</Alert>}
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Título de la Posición
-                </label>
-                <input
-                  type="text"
-                  name="titulo"
-                  value={formData.titulo}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="Senior React Developer"
-                  required
-                />
-              </div>
-
-              {/* Slug */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  URL Slug
-                </label>
-                <input
-                  type="text"
-                  name="slug"
-                  value={formData.slug}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                  placeholder="senior-react-developer"
-                  required
-                />
-                <p className="text-xs text-zinc-500 mt-2">
-                  URL pública: /postular/{formData.slug}
-                </p>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  Descripción
-                </label>
-                <textarea
-                  name="descripcion"
-                  value={formData.descripcion}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 h-32"
-                  placeholder="Describe la posición, responsabilidades y requisitos..."
-                />
-              </div>
-
-              {/* Department and Location */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Departamento
-                  </label>
-                  <input
+                <Field label="Título de la posición" htmlFor="vac-titulo">
+                  <Input
+                    id="vac-titulo"
                     type="text"
-                    name="departamento"
-                    value={formData.departamento}
+                    name="titulo"
+                    value={formData.titulo}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Desarrollo"
+                    placeholder="Senior React Developer"
+                    required
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Ubicación
-                  </label>
-                  <input
+                </Field>
+
+                <Field
+                  label="URL slug"
+                  htmlFor="vac-slug"
+                  hint={`URL pública: /postular/${formData.slug}`}
+                >
+                  <Input
+                    id="vac-slug"
                     type="text"
-                    name="ubicacion"
-                    value={formData.ubicacion}
+                    name="slug"
+                    value={formData.slug}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    placeholder="Guatemala"
+                    placeholder="senior-react-developer"
+                    required
                   />
-                </div>
-              </div>
+                </Field>
 
-              {/* Salary Range */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Salario Mínimo
-                  </label>
-                  <input
-                    type="number"
-                    name="salario_minimo"
-                    value={formData.salario_minimo}
+                <Field label="Descripción" htmlFor="vac-descripcion">
+                  <textarea
+                    id="vac-descripcion"
+                    name="descripcion"
+                    value={formData.descripcion}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    placeholder="35000"
+                    placeholder="Describe la posición, responsabilidades y requisitos…"
+                    rows={5}
+                    className={textareaClass}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    Salario Máximo
-                  </label>
-                  <input
-                    type="number"
-                    name="salario_maximo"
-                    value={formData.salario_maximo}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-                    placeholder="50000"
-                  />
-                </div>
-              </div>
+                </Field>
 
-              {/* Buttons */}
-              <div className="flex gap-4 pt-6">
-                <Button type="submit" isLoading={isLoading} className="flex-1">
-                  Crear Vacante
-                </Button>
-                <Link href="/dashboard" className="flex-1">
-                  <Button variant="secondary" className="w-full">
-                    Cancelar
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Departamento" htmlFor="vac-departamento">
+                    <Input
+                      id="vac-departamento"
+                      type="text"
+                      name="departamento"
+                      value={formData.departamento}
+                      onChange={handleChange}
+                      placeholder="Desarrollo"
+                    />
+                  </Field>
+                  <Field label="Ubicación" htmlFor="vac-ubicacion">
+                    <Input
+                      id="vac-ubicacion"
+                      type="text"
+                      name="ubicacion"
+                      value={formData.ubicacion}
+                      onChange={handleChange}
+                      placeholder="Guatemala"
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Salario mínimo" htmlFor="vac-salario-min">
+                    <Input
+                      id="vac-salario-min"
+                      type="number"
+                      name="salario_minimo"
+                      value={formData.salario_minimo}
+                      onChange={handleChange}
+                      placeholder="35000"
+                    />
+                  </Field>
+                  <Field label="Salario máximo" htmlFor="vac-salario-max">
+                    <Input
+                      id="vac-salario-max"
+                      type="number"
+                      name="salario_maximo"
+                      value={formData.salario_maximo}
+                      onChange={handleChange}
+                      placeholder="50000"
+                    />
+                  </Field>
+                </div>
+
+                <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end">
+                  <Link href="/dashboard" className="sm:w-auto">
+                    <Button variant="secondary" className="w-full sm:w-auto">
+                      Cancelar
+                    </Button>
+                  </Link>
+                  <Button type="submit" isLoading={isLoading} className="w-full sm:w-auto">
+                    Crear vacante
                   </Button>
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </Reveal>
       </div>
     </div>
   );

@@ -163,7 +163,7 @@ export const mockUsuario = {
   id: 'demo-user-1',
   email: 'demo@shortlist.gt',
   nombre_completo: 'Demo Reclutador',
-  empresa: 'SHORTLIST.GT Demo',
+  empresa: 'Nuvora Demo',
   telefono: '+502 1234 5678',
 };
 

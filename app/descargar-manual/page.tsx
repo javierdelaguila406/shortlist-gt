@@ -68,28 +68,28 @@ export default function DescargarManualPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-8 space-y-6">
+        <div className="bg-card border border-border rounded-lg p-8 space-y-6">
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-white">
-              SHORTLIST<span className="text-emerald-500">.GT</span>
+            <h1 className="text-3xl font-semibold text-foreground">
+              Nuvora
             </h1>
-            <p className="text-zinc-400">Manual de Usuario</p>
+            <p className="text-muted-foreground">Manual de Usuario</p>
           </div>
 
-          <div className="bg-zinc-800 rounded-lg p-4 space-y-3">
-            <div className="flex items-center gap-2 text-zinc-300">
+          <div className="bg-muted rounded-lg p-4 space-y-3">
+            <div className="flex items-center gap-2 text-foreground">
               <span className="text-2xl">📖</span>
               <div>
                 <p className="font-semibold">Manual Completo</p>
-                <p className="text-sm text-zinc-500">Guía de uso de la plataforma</p>
+                <p className="text-sm text-muted-foreground">Guía de uso de la plataforma</p>
               </div>
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500 text-red-300 rounded-lg p-3 text-sm">
+            <div className="bg-destructive/10 border border-destructive/30 text-destructive rounded-lg p-3 text-sm">
               {error}
             </div>
           )}
@@ -97,7 +97,7 @@ export default function DescargarManualPage() {
           <button
             onClick={descargarPDF}
             disabled={loading}
-            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-900 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            className="w-full bg-primary hover:bg-primary/90 disabled:opacity-50 text-primary-foreground font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
           >
             <Download className="w-5 h-5" />
             {loading ? 'Generando PDF...' : 'Descargar PDF'}
@@ -105,13 +105,13 @@ export default function DescargarManualPage() {
 
           <Link
             href="/"
-            className="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+            className="w-full bg-muted hover:bg-muted text-foreground font-semibold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
             Volver al inicio
           </Link>
 
-          <p className="text-xs text-zinc-500 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             ✨ PDF completo con guías, tutoriales y funcionalidades
           </p>
         </div>

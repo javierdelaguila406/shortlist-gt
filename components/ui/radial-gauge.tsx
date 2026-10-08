@@ -24,57 +24,44 @@ export function RadialGauge({
   const config = sizeConfig[size];
   const circumference = 2 * Math.PI * config.radius;
   const strokeDashoffset = circumference - (value / max) * circumference;
+  const center = config.radius + config.strokeWidth;
 
-  const getColor = () => {
-    if (value >= 80) return '#10b981'; // Emerald
-    if (value >= 60) return '#f59e0b'; // Amber
-    return '#ef4444'; // Rose
-  };
+  const colorClass = value >= 80 ? 'stroke-success' : value >= 60 ? 'stroke-warning' : 'stroke-destructive';
 
   return (
     <div className="flex flex-col items-center justify-center">
       <svg
-        width={config.radius * 2 + config.strokeWidth * 2}
-        height={config.radius * 2 + config.strokeWidth * 2}
-        className="drop-shadow-lg"
+        width={center * 2}
+        height={center * 2}
+        role="img"
+        aria-label={`${label ?? 'Puntuación'}: ${Math.round(value)} de ${max}`}
       >
-        {/* Background circle */}
+        <circle cx={center} cy={center} r={config.radius} fill="none" strokeWidth={config.strokeWidth} className="stroke-muted" />
         <circle
-          cx={config.radius + config.strokeWidth}
-          cy={config.radius + config.strokeWidth}
+          cx={center}
+          cy={center}
           r={config.radius}
           fill="none"
-          stroke="rgba(161, 161, 170, 0.1)"
-          strokeWidth={config.strokeWidth}
-        />
-        {/* Progress circle */}
-        <circle
-          cx={config.radius + config.strokeWidth}
-          cy={config.radius + config.strokeWidth}
-          r={config.radius}
-          fill="none"
-          stroke={getColor()}
           strokeWidth={config.strokeWidth}
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
           strokeLinecap="round"
-          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
-          transform={`rotate(-90 ${config.radius + config.strokeWidth} ${config.radius + config.strokeWidth})`}
+          className={colorClass}
+          style={{ transition: 'stroke-dashoffset 0.5s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          transform={`rotate(-90 ${center} ${center})`}
         />
-        {/* Center text */}
         <text
-          x={config.radius + config.strokeWidth}
-          y={config.radius + config.strokeWidth + config.fontSize / 3}
+          x={center}
+          y={center + config.fontSize / 3}
           textAnchor="middle"
-          fill="rgb(244, 245, 247)"
+          className="fill-foreground font-semibold tabular-nums"
           fontSize={config.fontSize}
-          fontWeight="bold"
         >
           {Math.round(value)}
         </text>
       </svg>
-      {label && <div className="mt-4 text-sm font-semibold text-zinc-300">{label}</div>}
-      {subtitle && <div className="text-xs text-zinc-500">{subtitle}</div>}
+      {label && <div className="mt-4 text-sm font-medium">{label}</div>}
+      {subtitle && <div className="text-xs text-muted-foreground">{subtitle}</div>}
     </div>
   );
 }

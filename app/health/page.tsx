@@ -2,57 +2,36 @@ import Link from 'next/link';
 
 export default function HealthCheck() {
   return (
-    <div style={{
-      width: '100%',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: '#000',
-      color: '#fff',
-      fontFamily: 'sans-serif',
-      padding: '20px',
-      textAlign: 'center',
-    }}>
-      <h1 style={{ fontSize: '24px', marginBottom: '20px' }}>✅ Servidor Funcionando</h1>
-      <p style={{ fontSize: '16px', marginBottom: '30px', color: '#888' }}>
-        Si ves este mensaje, el servidor está respondiendo correctamente en tu móvil.
-      </p>
-
-      <div style={{
-        backgroundColor: '#111',
-        padding: '20px',
-        borderRadius: '8px',
-        marginBottom: '30px',
-        maxWidth: '100%',
-        wordBreak: 'break-word',
-      }}>
-        <p style={{ margin: '10px 0', fontSize: '14px' }}>
-          <strong>User Agent:</strong><br />
-          {typeof navigator !== 'undefined' ? navigator.userAgent : 'No disponible'}
-        </p>
-        <p style={{ margin: '10px 0', fontSize: '14px' }}>
-          <strong>Viewport:</strong><br />
-          {typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'No disponible'}
-        </p>
-        <p style={{ margin: '10px 0', fontSize: '14px' }}>
-          <strong>Hora del Servidor:</strong><br />
-          {new Date().toLocaleString()}
+    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 bg-background px-4 py-10 text-center">
+      <div className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Servidor funcionando</h1>
+        <p className="text-sm text-muted-foreground text-pretty">
+          Si ves este mensaje, el servidor está respondiendo correctamente en tu móvil.
         </p>
       </div>
 
-      <Link href="/" style={{
-        display: 'inline-block',
-        padding: '12px 24px',
-        backgroundColor: '#10b981',
-        color: '#000',
-        textDecoration: 'none',
-        borderRadius: '6px',
-        fontWeight: 'bold',
-        fontSize: '16px',
-      }}>
-        Ir a la Página Principal
+      <dl className="w-full max-w-md break-words rounded-2xl border bg-card p-5 text-left text-sm">
+        <div className="flex flex-col gap-1 py-2">
+          <dt className="font-medium">User agent</dt>
+          <dd className="text-muted-foreground">{typeof navigator !== 'undefined' ? navigator.userAgent : 'No disponible'}</dd>
+        </div>
+        <div className="flex flex-col gap-1 py-2">
+          <dt className="font-medium">Viewport</dt>
+          <dd className="text-muted-foreground tabular-nums">
+            {typeof window !== 'undefined' ? `${window.innerWidth}x${window.innerHeight}` : 'No disponible'}
+          </dd>
+        </div>
+        <div className="flex flex-col gap-1 py-2">
+          <dt className="font-medium">Hora del servidor</dt>
+          <dd className="text-muted-foreground tabular-nums">{new Date().toLocaleString()}</dd>
+        </div>
+      </dl>
+
+      <Link
+        href="/"
+        className="rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        Ir a la página principal
       </Link>
     </div>
   );

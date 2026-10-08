@@ -1,20 +1,20 @@
 export default function PrivacidadPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 text-zinc-100">
-      <div className="max-w-4xl mx-auto px-6 py-16">
+    <div className="min-h-screen     text-foreground">
+      <div className="max-w-3xl mx-auto px-6 py-16">
         {/* Header */}
         <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">Política de Privacidad</h1>
-          <p className="text-zinc-400">Efectiva desde: Septiembre de 2024 | Última actualización: Septiembre de 2026</p>
+          <h1 className="text-4xl font-semibold text-foreground mb-4">Política de Privacidad</h1>
+          <p className="text-muted-foreground">Efectiva desde: Septiembre de 2024 | Última actualización: Septiembre de 2026</p>
         </div>
 
         {/* Content */}
-        <div className="space-y-8 text-zinc-300">
+        <div className="space-y-8 text-foreground">
           {/* Introducción */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">1. Introducción</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">1. Introducción</h2>
             <p className="mb-4">
-              En <strong>SHORTLIST.GT</strong>, respetamos tu privacidad y nos comprometemos a proteger tus datos personales.
+              En <strong>Nuvora</strong>, respetamos tu privacidad y nos comprometemos a proteger tus datos personales.
               Esta Política de Privacidad explica cómo recopilamos, utilizamos, compartimos y protegemos tu información cuando utilizas
               nuestro sitio web y servicios de reclutamiento inteligente.
             </p>
@@ -22,20 +22,20 @@ export default function PrivacidadPage() {
 
           {/* Qué datos recolectamos */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">2. Datos Personales que Recolectamos</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">2. Datos Personales que Recolectamos</h2>
             <p className="mb-4">Cuando te postulas a una vacante, recolectamos y procesamos los siguientes datos:</p>
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 space-y-4">
+            <div className="bg-card border border-border rounded-lg p-6 space-y-4">
               <div>
-                <h3 className="font-semibold text-white mb-2">2.1 Datos de Identificación</h3>
-                <ul className="list-disc list-inside text-zinc-400 space-y-1">
+                <h3 className="font-semibold text-foreground mb-2">2.1 Datos de Identificación</h3>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   <li>Nombre completo</li>
                   <li>Correo electrónico</li>
                   <li>Número de teléfono</li>
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold text-white mb-2">2.2 Datos Ocupacionales</h3>
-                <ul className="list-disc list-inside text-zinc-400 space-y-1">
+                <h3 className="font-semibold text-foreground mb-2">2.2 Datos Ocupacionales</h3>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   <li>Currículum Vitae (CV) en formato PDF</li>
                   <li>Expectativa salarial</li>
                   <li>Disponibilidad para trabajar</li>
@@ -43,8 +43,8 @@ export default function PrivacidadPage() {
                 </ul>
               </div>
               <div>
-                <h3 className="font-semibold text-white mb-2">2.3 Datos Técnicos</h3>
-                <ul className="list-disc list-inside text-zinc-400 space-y-1">
+                <h3 className="font-semibold text-foreground mb-2">2.3 Datos Técnicos</h3>
+                <ul className="list-disc list-inside text-muted-foreground space-y-1">
                   <li>Dirección IP</li>
                   <li>Información del navegador</li>
                   <li>Timestamps de acceso</li>
@@ -56,17 +56,17 @@ export default function PrivacidadPage() {
 
           {/* Uso de IA */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">3. Evaluación Automatizada</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">3. Evaluación Automatizada</h2>
             <p className="mb-4">
               Tu CV y, si la empresa te envía una evaluación, tus respuestas se procesan automáticamente con reglas propias de
-              SHORTLIST.GT para:
+              Nuvora para:
             </p>
-            <div className="bg-yellow-950/30 border border-yellow-800/50 rounded-lg p-6 space-y-3">
-              <ul className="list-disc list-inside text-zinc-300 space-y-2">
+            <div className="bg-warning-soft border border-warning/30 rounded-lg p-6 space-y-3">
+              <ul className="list-disc list-inside text-foreground space-y-2">
                 <li>Calcular un puntaje de compatibilidad (0-100) comparando tu CV con la descripción de la vacante</li>
                 <li>Calificar las preguntas de opción múltiple de la evaluación con las respuestas definidas por la empresa</li>
               </ul>
-              <p className="text-sm text-zinc-400 mt-4">
+              <p className="text-sm text-muted-foreground mt-4">
                 ⚠️ <strong>Nota importante:</strong> Tu CV no se envía a servicios externos de inteligencia artificial. Los puntajes
                 son orientativos: la decisión sobre tu candidatura la toma una persona de la empresa.
               </p>
@@ -75,19 +75,19 @@ export default function PrivacidadPage() {
 
           {/* Terceros */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">4. Terceros que Procesan tus Datos</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">4. Terceros que Procesan tus Datos</h2>
             <p className="mb-4">Tus datos son procesados por los siguientes proveedores de servicios:</p>
             <div className="space-y-4">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-emerald-400 mb-2">Supabase (Base de Datos)</h3>
-                <p className="text-sm text-zinc-400">
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-brand mb-2">Supabase (Base de Datos)</h3>
+                <p className="text-sm text-muted-foreground">
                   Tus datos se almacenan en servidores de Supabase encriptados (AES-256) en data centers certificados ISO 27001.
                   Supabase es un encargado de tratamiento certificado.
                 </p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-emerald-400 mb-2">Vercel (Hosting)</h3>
-                <p className="text-sm text-zinc-400">
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-brand mb-2">Vercel (Hosting)</h3>
+                <p className="text-sm text-muted-foreground">
                   La plataforma se aloja en Vercel, que proporciona infraestructura segura y cumple con estándares SOC 2 Type II.
                   Los datos en tránsito están protegidos por TLS 1.3.
                 </p>
@@ -97,9 +97,9 @@ export default function PrivacidadPage() {
 
           {/* Base Legal */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">5. Base Legal del Tratamiento</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">5. Base Legal del Tratamiento</h2>
             <p className="mb-4">Procesamos tus datos con base en:</p>
-            <ul className="list-disc list-inside text-zinc-400 space-y-2">
+            <ul className="list-disc list-inside text-muted-foreground space-y-2">
               <li><strong>Consentimiento explícito:</strong> Al marcar el checkbox en el formulario de postulación</li>
               <li><strong>Ejecución de contrato:</strong> Para procesar tu candidatura a la vacante</li>
               <li><strong>Interés legítimo:</strong> Mejorar nuestros servicios y prevenir fraude</li>
@@ -108,46 +108,46 @@ export default function PrivacidadPage() {
 
           {/* Derechos del Titular */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">6. Tus Derechos como Titular de Datos</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">6. Tus Derechos como Titular de Datos</h2>
             <p className="mb-4">Tienes los siguientes derechos bajo regulaciones de protección de datos (GDPR, LGPD, etc.):</p>
             <div className="space-y-3">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">📋 Derecho de Acceso</h3>
-                <p className="text-sm text-zinc-400">Solicitar una copia de todos tus datos personales que almacenamos.</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">📋 Derecho de Acceso</h3>
+                <p className="text-sm text-muted-foreground">Solicitar una copia de todos tus datos personales que almacenamos.</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">✏️ Derecho de Rectificación</h3>
-                <p className="text-sm text-zinc-400">Corregir o actualizar información inexacta o incompleta.</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">✏️ Derecho de Rectificación</h3>
+                <p className="text-sm text-muted-foreground">Corregir o actualizar información inexacta o incompleta.</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">🗑️ Derecho al Olvido (Eliminación)</h3>
-                <p className="text-sm text-zinc-400">
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">🗑️ Derecho al Olvido (Eliminación)</h3>
+                <p className="text-sm text-muted-foreground">
                   Solicitar la eliminación completa de tus datos personales. Eliminaremos tu información en un plazo de 30 días
                   después de verificar tu identidad.
                 </p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">🚫 Derecho de Oposición</h3>
-                <p className="text-sm text-zinc-400">Oponerte al procesamiento de tus datos para fines de marketing o análisis.</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">🚫 Derecho de Oposición</h3>
+                <p className="text-sm text-muted-foreground">Oponerte al procesamiento de tus datos para fines de marketing o análisis.</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">📊 Derecho de Portabilidad</h3>
-                <p className="text-sm text-zinc-400">Recibir tus datos en formato estructurado, legible y transferible.</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">📊 Derecho de Portabilidad</h3>
+                <p className="text-sm text-muted-foreground">Recibir tus datos en formato estructurado, legible y transferible.</p>
               </div>
             </div>
           </section>
 
           {/* Cómo Ejercer Derechos */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">7. Cómo Ejercer tus Derechos</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">7. Cómo Ejercer tus Derechos</h2>
             <p className="mb-4">
               Para ejercer cualquiera de tus derechos, envía una solicitud por correo electrónico a:
             </p>
-            <div className="bg-zinc-900/50 border border-emerald-800/50 rounded-lg p-6">
-              <p className="font-mono text-emerald-400 text-center text-lg font-semibold">
-                privacidad@shortlist.gt
+            <div className="bg-card border border-success/30 rounded-lg p-6">
+              <p className="font-mono text-brand text-center text-lg font-semibold">
+                nuvoratalentgt@outlook.com
               </p>
-              <p className="text-sm text-zinc-400 text-center mt-4">
+              <p className="text-sm text-muted-foreground text-center mt-4">
                 Debes incluir tu nombre completo, correo de registro y una descripción clara de tu solicitud.
                 Verificaremos tu identidad y responderemos en un plazo de 10 días hábiles.
               </p>
@@ -156,10 +156,10 @@ export default function PrivacidadPage() {
 
           {/* Retención de Datos */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">8. Retención de Datos</h2>
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 space-y-3">
+            <h2 className="text-2xl font-semibold text-foreground mb-4">8. Retención de Datos</h2>
+            <div className="bg-card border border-border rounded-lg p-6 space-y-3">
               <p>Conservamos tus datos de acuerdo con los siguientes períodos:</p>
-              <ul className="list-disc list-inside text-zinc-400 space-y-2">
+              <ul className="list-disc list-inside text-muted-foreground space-y-2">
                 <li><strong>Datos de candidatura:</strong> 12 meses después de la postulación (o hasta que solicites su eliminación)</li>
                 <li><strong>Respuestas de evaluación:</strong> el mismo plazo que tu candidatura</li>
                 <li><strong>Logs técnicos:</strong> 3 meses para propósitos de seguridad y auditoría</li>
@@ -170,32 +170,32 @@ export default function PrivacidadPage() {
 
           {/* Seguridad */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">9. Medidas de Seguridad</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">9. Medidas de Seguridad</h2>
             <p className="mb-4">Implementamos las siguientes medidas para proteger tu información:</p>
             <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">🔒 Encriptación</h3>
-                <p className="text-sm text-zinc-400">AES-256 en reposo, TLS 1.3 en tránsito</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">🔒 Encriptación</h3>
+                <p className="text-sm text-muted-foreground">AES-256 en reposo, TLS 1.3 en tránsito</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">🔑 Control de Acceso</h3>
-                <p className="text-sm text-zinc-400">Autenticación multi-factor, RBAC granular</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">🔑 Control de Acceso</h3>
+                <p className="text-sm text-muted-foreground">Autenticación multi-factor, RBAC granular</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">📋 Auditoría</h3>
-                <p className="text-sm text-zinc-400">Logs de acceso, monitoreo de anomalías</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">📋 Auditoría</h3>
+                <p className="text-sm text-muted-foreground">Logs de acceso, monitoreo de anomalías</p>
               </div>
-              <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
-                <h3 className="font-semibold text-white mb-2">🛡️ Cumplimiento</h3>
-                <p className="text-sm text-zinc-400">ISO 27001, SOC 2 Type II, GDPR</p>
+              <div className="bg-card border border-border rounded-lg p-4">
+                <h3 className="font-semibold text-foreground mb-2">🛡️ Cumplimiento</h3>
+                <p className="text-sm text-muted-foreground">ISO 27001, SOC 2 Type II, GDPR</p>
               </div>
             </div>
           </section>
 
           {/* Cambios */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">10. Cambios en esta Política</h2>
-            <p className="text-zinc-400">
+            <h2 className="text-2xl font-semibold text-foreground mb-4">10. Cambios en esta Política</h2>
+            <p className="text-muted-foreground">
               Podemos actualizar esta Política de Privacidad ocasionalmente. Publicaremos los cambios en esta página
               con una fecha de &quot;Última actualización&quot; revisada. Tu uso continuado del sitio constituye aceptación de los cambios.
             </p>
@@ -203,24 +203,24 @@ export default function PrivacidadPage() {
 
           {/* Contacto */}
           <section>
-            <h2 className="text-2xl font-bold text-white mb-4">11. Contacto y Denuncias</h2>
+            <h2 className="text-2xl font-semibold text-foreground mb-4">11. Contacto y Denuncias</h2>
             <p className="mb-4">
               Si tienes preguntas sobre esta política o deseas reportar una infracción de privacidad:
             </p>
-            <div className="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 space-y-3">
-              <p className="text-zinc-300">
-                <strong>Email:</strong> <span className="text-emerald-400">privacidad@shortlist.gt</span>
+            <div className="bg-card border border-border rounded-lg p-6 space-y-3">
+              <p className="text-foreground">
+                <strong>Email:</strong> <span className="text-brand">nuvoratalentgt@outlook.com</span>
               </p>
-              <p className="text-zinc-300">
+              <p className="text-foreground">
                 <strong>También puedes denunciar ante la autoridad de protección de datos de tu país.</strong>
               </p>
             </div>
           </section>
 
           {/* Footer */}
-          <div className="mt-16 pt-8 border-t border-zinc-800">
-            <p className="text-center text-sm text-zinc-500">
-              © 2024 SHORTLIST.GT. Todos los derechos reservados.
+          <div className="mt-16 pt-8 border-t border-border">
+            <p className="text-center text-sm text-muted-foreground">
+              © 2024 Nuvora. Todos los derechos reservados.
             </p>
           </div>
         </div>

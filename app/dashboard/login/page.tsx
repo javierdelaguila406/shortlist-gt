@@ -3,8 +3,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input } from '@/components/ui/field';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { ArrowLeft, Mail, Lock } from 'lucide-react';
 
 export default function ReclutadorLogin() {
   const [email, setEmail] = useState('');
@@ -40,82 +45,68 @@ export default function ReclutadorLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            SHORTLIST<span className="text-emerald-500">.GT</span>
-          </h1>
-          <p className="text-zinc-400">Acceso Reclutadores</p>
-        </div>
+    <div className="flex min-h-screen w-full items-center justify-center bg-background px-4 py-12">
+      <div className="w-full max-w-sm">
+        <Link
+          href="/"
+          className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden="true" /> Inicio
+        </Link>
 
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardHeader>
-            <CardTitle>Ingresa a tu cuenta</CardTitle>
-            <CardDescription>Accede al dashboard de reclutamiento</CardDescription>
-          </CardHeader>
+        <Reveal>
+          <div className="mb-8 flex flex-col items-center gap-3 text-center">
+            <Logo className="text-xl" />
+            <p className="text-sm text-muted-foreground">Acceso reclutadores</p>
+          </div>
 
-          <CardContent>
-            {error && (
-              <div className="bg-red-950/50 border border-red-800 text-red-200 px-4 py-3 rounded-lg mb-6 text-sm">
-                {error}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ingresa a tu cuenta</CardTitle>
+              <CardDescription>Accede al panel de reclutamiento</CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {error && <Alert variant="destructive">{error}</Alert>}
+
+                <Field label="Email" htmlFor="rec-email" icon={<Mail />}>
+                  <Input
+                    id="rec-email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                    required
+                  />
+                </Field>
+
+                <Field label="Contraseña" htmlFor="rec-password" icon={<Lock />}>
+                  <Input
+                    id="rec-password"
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                </Field>
+
+                <Button type="submit" isLoading={isLoading} className="mt-2 w-full">
+                  Ingresar
+                </Button>
+              </form>
+
+              <div className="mt-6 rounded-lg bg-muted p-4">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">Credenciales demo</p>
+                <p className="font-mono text-xs text-muted-foreground">Email: reclutador@demo.com</p>
+                <p className="font-mono text-xs text-muted-foreground">Contraseña: demo123</p>
               </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                  placeholder="tu@email.com"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">Contraseña</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                  placeholder="••••••••"
-                  required
-                />
-              </div>
-
-              <Button
-                type="submit"
-                isLoading={isLoading}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-              >
-                Ingresar
-              </Button>
-            </form>
-
-            {/* Demo credentials */}
-            <div className="mt-6 p-4 bg-emerald-950/30 border border-emerald-800/50 rounded-lg">
-              <p className="text-xs text-emerald-200 mb-2">
-                <strong>🔓 Credenciales Demo:</strong>
-              </p>
-              <p className="text-xs text-emerald-300 font-mono">
-                Email: reclutador@demo.com
-              </p>
-              <p className="text-xs text-emerald-300 font-mono">
-                Contraseña: demo123
-              </p>
-            </div>
-
-            <div className="mt-6 text-center">
-              <Link href="/" className="text-sm text-zinc-400 hover:text-white transition">
-                ← Volver al inicio
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </Reveal>
       </div>
     </div>
   );

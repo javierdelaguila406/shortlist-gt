@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
           'Supabase (almacenamiento)',
           'Vercel (hosting)'
         ],
-        derecho_olvido: 'Puedes solicitar la eliminación completa de tus datos enviando un email a privacidad@shortlist.gt'
+        derecho_olvido: 'Puedes solicitar la eliminación completa de tus datos enviando un email a nuvoratalentgt@outlook.com'
       }
     };
 
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
       {
         status: 200,
         headers: {
-          'Content-Disposition': `attachment; filename="shortlist-gt-datos-personales-${new Date().toISOString().split('T')[0]}.json"`,
+          'Content-Disposition': `attachment; filename="nuvora-datos-personales-${new Date().toISOString().split('T')[0]}.json"`,
           'Content-Type': 'application/json'
         }
       }

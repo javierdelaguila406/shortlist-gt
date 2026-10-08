@@ -45,7 +45,7 @@ export function getDemoLicense(): UserLicense {
   return {
     codigo: 'DEMO-2024',
     tipo: 'DEMO',
-    empresa: 'Demo SHORTLIST',
+    empresa: 'Demo Nuvora',
     maxVacantes: 999,
     vacantesCreadoras: 0,
     fechaActivacion: new Date().toISOString(),

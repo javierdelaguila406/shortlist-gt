@@ -54,13 +54,13 @@ export function Footer() {
             <h4 className="font-semibold text-white mb-4">Contacto</h4>
             <ul className="space-y-2">
               <li>
-                <a href="mailto:privacidad@shortlist.gt" className="text-sm text-zinc-400 hover:text-emerald-400 transition">
-                  privacidad@shortlist.gt
+                <a href="mailto:nuvoratalentgt@outlook.com" className="text-sm text-zinc-400 hover:text-emerald-400 transition">
+                  nuvoratalentgt@outlook.com
                 </a>
               </li>
               <li>
-                <a href="mailto:legal@shortlist.gt" className="text-sm text-zinc-400 hover:text-emerald-400 transition">
-                  legal@shortlist.gt
+                <a href="mailto:nuvoratalentgt@outlook.com" className="text-sm text-zinc-400 hover:text-emerald-400 transition">
+                  nuvoratalentgt@outlook.com
                 </a>
               </li>
             </ul>

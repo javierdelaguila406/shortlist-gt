@@ -2,14 +2,23 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-// Removed mockData imports - using only Supabase data
+import { Badge } from '@/components/ui/badge';
+import { Alert } from '@/components/ui/alert';
+import { EmptyState } from '@/components/ui/empty-state';
+import { StatCard } from '@/components/ui/stat';
+import { Field, Input, selectClass, textareaClass } from '@/components/ui/field';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '@/components/ui/modal';
+import { AppHeader } from '@/components/app-header';
+import { Reveal } from '@/components/ui/reveal';
 import { ProfessionalReportModal } from '@/components/ProfessionalReportModal';
 import { LicenseStatusBadge } from '@/components/LicenseStatusBadge';
 import { TEMPLATES_PREGUNTAS } from '@/lib/templates-preguntas';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, X, Copy, Link2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { getPostulationPath } from '@/lib/ui';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus, Download, Link2, Sparkles, FileText, Lock, Loader, Mail, Smartphone, Copy, ClipboardList, CalendarDays, Phone, Send, Share2, MessageSquare, FlaskConical, Video } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -218,10 +227,10 @@ export default function DemoDashboard() {
         setEvaluacionEnviada({ link: data.link, expira_en: data.expira_en, nombre: candidate.nombre, email: candidate.email });
         setCandidatesRefresh(value => value + 1);
       } else {
-        alert(`❌ ${data.error || 'No se pudo generar la evaluación'}`);
+        toast.error(data.error || 'No se pudo generar la evaluación');
       }
     } catch {
-      alert('❌ No se pudo generar la evaluación. Revisa tu conexión.');
+      toast.error('No se pudo generar la evaluación. Revisa tu conexión.');
     } finally {
       setEnviandoEvaluacion(null);
     }
@@ -268,7 +277,7 @@ export default function DemoDashboard() {
       });
       const created = await createResponse.json().catch(() => ({}));
       if (!createResponse.ok || !created.success) {
-        alert(`❌ ${created.error || 'No se pudo crear la vacante'}`);
+        toast.error(created.error || 'No se pudo crear la vacante');
         return;
       }
       const newId: string = created.vacante_id;
@@ -288,11 +297,11 @@ export default function DemoDashboard() {
         setLinkedinData(data);
         setShowLinkedinLink(true);
       } else {
-        alert('✅ Vacante creada. No se pudo generar el enlace para compartir; inténtalo desde "Ver Link".');
+        toast.warning('Vacante creada, pero no se pudo generar el enlace. Inténtalo desde "Ver link".');
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error creando vacante');
+      toast.error('Error creando vacante');
     }
   };
 
@@ -325,10 +334,7 @@ export default function DemoDashboard() {
       setSelectedCandidate(null);
 
       // Mostrar éxito con detalles
-      alert(`✅ Plaza Cerrada Exitosamente\n\n` +
-            `Plaza: "${vacante?.titulo || 'Sin título'}"\n` +
-            `Enlace de aplicación: BLOQUEADO\n` +
-            `Historial: Conservado para consultas futuras`);
+      toast.success('Plaza cerrada', { description: `${vacante?.titulo || 'Sin título'}: enlace bloqueado, historial conservado` });
 
       console.log('[CERRAR-VACANTE] Plaza cerrada exitosamente:', {
         vacanteId,
@@ -336,7 +342,7 @@ export default function DemoDashboard() {
       });
     } catch (error) {
       console.error('[CERRAR-VACANTE] Error:', error);
-      alert(`❌ Error cerrando la plaza\n\n${error instanceof Error ? error.message : 'Error desconocido'}`);
+      toast.error('Error cerrando la plaza', { description: error instanceof Error ? error.message : 'Error desconocido' });
     } finally {
       setDeletingVacante(null);
     }
@@ -414,13 +420,13 @@ export default function DemoDashboard() {
         }
       }
 
-      alert(`✅ Template "${selectedTemplatePreview.nombre}" asignado y personalizado`);
+      toast.success(`Template "${selectedTemplatePreview.nombre}" asignado y personalizado`);
       setShowTemplateModal(false);
       setSelectedTemplatePreview(null);
       setEditandoPreguntas(null);
     } catch (error) {
       console.error('[GUARDAR-TEMPLATE] Error:', error);
-      alert('❌ Error: ' + (error instanceof Error ? error.message : 'Error desconocido'));
+      toast.error('No se pudo asignar el template', { description: error instanceof Error ? error.message : 'Error desconocido' });
     } finally {
       setGuardandoPreguntas(false);
     }
@@ -446,94 +452,78 @@ export default function DemoDashboard() {
       const data = await response.json();
       if (response.ok) {
         setPreguntasGeneradas(data.data);
-        alert('✅ Preguntas generadas exitosamente\n\n' +
-              `Pre-entrevista: ${data.data.pre_entrevista?.length || 0} preguntas\n` +
-              `Prueba técnica: ${data.data.prueba_tecnica?.length || 0} preguntas\n` +
-              `Preguntas video: ${data.data.preguntas_video?.length || 0} preguntas`);
+        toast.success('Preguntas generadas exitosamente', { description: `Pre-entrevista: ${data.data.pre_entrevista?.length || 0} · Prueba técnica: ${data.data.prueba_tecnica?.length || 0} · Video: ${data.data.preguntas_video?.length || 0}` });
       } else {
-        alert('❌ Error generando preguntas: ' + (data.error || 'Error desconocido'));
+        toast.error('Error generando preguntas', { description: data.error || 'Error desconocido' });
       }
     } catch (error) {
       console.error('[GENERAR-PREGUNTAS] Error:', error);
-      alert('❌ Error generando preguntas');
+      toast.error('Error generando preguntas');
     } finally {
       setGenerandoPreguntas(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 overflow-x-hidden">
-      {/* Header */}
-      <div className="border-b border-zinc-800/40 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-white">
-                SHORTLIST<span className="text-emerald-500">.GT</span>
-              </h1>
-              <p className="text-sm text-zinc-400 mt-1">Dashboard Reclutador</p>
-            </div>
-            <div className="flex items-center gap-4">
-              <LicenseStatusBadge />
-              <Link href="/">
-                <Button variant="ghost" size="sm">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Volver
-                </Button>
-              </Link>
-            </div>
-          </div>
-
-          {/* Vacancy Selector & Info */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <Briefcase className="w-4 h-4 text-zinc-400" />
-              <select
-                aria-label="Seleccionar vacante"
-                value={selectedVacanteId}
-                onChange={(e) => {
-                  setSelectedVacanteId(e.target.value);
-                  setSelectedCandidate(null);
-                }}
-                className="px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500"
+    <div className="min-h-screen w-full overflow-x-hidden">
+      <AppHeader
+        subtitle="Panel de reclutador"
+        actions={
+          <>
+            <LicenseStatusBadge />
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="size-4" />
+                Volver
+              </Button>
+            </Link>
+          </>
+        }
+      >
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 border-t px-4 py-3 sm:px-6">
+          <Briefcase className="size-4 text-muted-foreground" aria-hidden="true" />
+          <select
+            aria-label="Seleccionar vacante"
+            value={selectedVacanteId}
+            onChange={(e) => {
+              setSelectedVacanteId(e.target.value);
+              setSelectedCandidate(null);
+            }}
+            className={cn(selectClass, 'min-w-0 max-w-full flex-1 sm:min-w-64 sm:flex-none')}
+          >
+            {vacantes.map(vacante => (
+              <option key={vacante.id} value={vacante.id}>
+                {vacante.titulo}
+              </option>
+            ))}
+          </select>
+          {vacantesLoading && <span role="status" className="text-sm text-muted-foreground">Cargando vacantes...</span>}
+          {!vacantesLoading && vacantesError && (
+            <span role="alert" className="text-sm text-destructive">
+              Error: {vacantesError}{' '}
+              <button
+                type="button"
+                className="min-h-10 px-2 underline underline-offset-4"
+                onClick={() => setVacantesRetry(value => value + 1)}
               >
-                {vacantes.map(vacante => (
-                  <option key={vacante.id} value={vacante.id}>
-                    {vacante.titulo}
-                  </option>
-                ))}
-              </select>
-              {vacantesLoading && <span role="status" className="text-sm text-zinc-400">Cargando vacantes...</span>}
-              {!vacantesLoading && vacantesError && (
-                <span role="alert" className="text-sm text-red-400">
-                  Error: {vacantesError}{' '}
-                  <button className="underline min-h-11 px-2" onClick={() => setVacantesRetry(value => value + 1)}>Reintentar</button>
-                </span>
-              )}
-              {!vacantesLoading && !vacantesError && vacantes.length === 0 && (
-                <span className="text-sm text-zinc-400">No hay vacantes disponibles</span>
-              )}
-              <span className="text-xs text-zinc-500">({filteredCandidates.length} candidatos)</span>
-            </div>
-          </div>
+                Reintentar
+              </button>
+            </span>
+          )}
+          {!vacantesLoading && !vacantesError && vacantes.length === 0 && (
+            <span className="text-sm text-muted-foreground">No hay vacantes disponibles</span>
+          )}
+          <span className="text-xs text-muted-foreground tabular-nums">({filteredCandidates.length} candidatos)</span>
         </div>
-      </div>
+      </AppHeader>
 
-      {/* Quick Actions Bar */}
-      <div className="border-b border-zinc-800/40 bg-zinc-900/50">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            {/* Crear Vacante */}
-            <button
-              onClick={() => setShowCreateVacante(true)}
-              className="flex min-h-11 flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-emerald-600/20 border border-zinc-700 hover:border-emerald-500 transition-colors"
-            >
-              <Plus className="w-5 h-5 text-emerald-500" />
-              <span className="text-xs font-medium text-zinc-300">Crear Vacante</span>
-            </button>
-
-            {/* Ver Link */}
-            <button
+      <section id="acciones" aria-label="Acciones de la vacante" className="scroll-mt-44 border-b bg-muted/40">
+        <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            <ActionTile icon={<Plus />} label="Crear vacante" onClick={() => setShowCreateVacante(true)} />
+            <ActionTile
+              icon={<Link2 />}
+              label="Ver link"
               onClick={() => {
                 if (!selectedVacante) return;
                 const postulationLink = `${window.location.origin}${getPostulationPath(selectedVacante.id)}`;
@@ -544,259 +534,206 @@ export default function DemoDashboard() {
                 });
                 setShowLinkedinLink(true);
               }}
-              className="flex min-h-11 flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-blue-600/20 border border-zinc-700 hover:border-blue-500 transition-colors"
-            >
-              <Link2 className="w-5 h-5 text-blue-400" />
-              <span className="text-xs font-medium text-zinc-300">Ver Link</span>
-            </button>
-
-            {/* Asignar Template */}
-            <button
+            />
+            <ActionTile
+              icon={<ClipboardList />}
+              label="Template"
               onClick={() => {
                 loadTemplates();
                 setShowTemplateModal(true);
               }}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-purple-600/20 border border-zinc-700 hover:border-purple-500 transition-colors"
-            >
-              <span className="text-lg">📋</span>
-              <span className="text-xs font-medium text-zinc-300">Template</span>
-            </button>
-
-            {/* Generar Preguntas */}
-            <button
-              onClick={() => handleGenerarPreguntas(selectedVacanteId)}
+            />
+            <ActionTile
+              icon={generandoPreguntas ? <Loader className="animate-spin" /> : <Sparkles />}
+              label={generandoPreguntas ? 'Generando…' : 'Preguntas'}
               disabled={generandoPreguntas}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-indigo-600/20 border border-zinc-700 hover:border-indigo-500 transition-colors disabled:opacity-50"
-            >
-              <span className="text-lg">{generandoPreguntas ? '⏳' : '🤖'}</span>
-              <span className="text-xs font-medium text-zinc-300">{generandoPreguntas ? 'Generando...' : 'Preguntas'}</span>
-            </button>
-
-            {/* Exportar Reporte */}
-            <button
-              onClick={() => setShowExportModal(true)}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-green-600/20 border border-zinc-700 hover:border-green-500 transition-colors"
-            >
-              <Download className="w-5 h-5 text-green-400" />
-              <span className="text-xs font-medium text-zinc-300">Reporte</span>
-            </button>
-
-            {/* Eliminar */}
-            <button
-              onClick={() => handleDeleteVacante(selectedVacanteId)}
+              onClick={() => handleGenerarPreguntas(selectedVacanteId)}
+            />
+            <ActionTile icon={<Download />} label="Reporte" onClick={() => setShowExportModal(true)} />
+            <ActionTile
+              icon={deletingVacante === selectedVacanteId ? <Loader className="animate-spin" /> : <Lock />}
+              label={deletingVacante === selectedVacanteId ? 'Cerrando…' : 'Cerrar plaza'}
               disabled={deletingVacante === selectedVacanteId}
-              className="flex flex-col items-center gap-2 p-3 rounded-lg bg-zinc-800/50 hover:bg-orange-600/20 border border-zinc-700 hover:border-orange-500 transition-colors disabled:opacity-50"
-            >
-              <span className="text-lg">🔒</span>
-              <span className="text-xs font-medium text-zinc-300">{deletingVacante === selectedVacanteId ? 'Cerrando...' : 'Cerrar Plaza'}</span>
-            </button>
+              onClick={() => handleDeleteVacante(selectedVacanteId)}
+            />
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Total Candidatos</span>
-                <Users className="w-5 h-5 text-emerald-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.total}</p>
-              <p className="text-sm text-zinc-500 mt-1">Para {selectedVacante?.titulo || 'Sin vacante'}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Precalificados</span>
-                <Star className="w-5 h-5 text-amber-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.precalificados}</p>
-              <p className="text-sm text-zinc-500 mt-1">Score 70+</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>En Evaluación</span>
-                <TrendingUp className="w-5 h-5 text-indigo-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.en_evaluacion}</p>
-              <p className="text-sm text-zinc-500 mt-1">En proceso</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Promedio Score IA</span>
-                <Star className="w-5 h-5 text-rose-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.promedio}</p>
-              <p className="text-sm text-zinc-500 mt-1">De 100</p>
-            </CardContent>
-          </Card>
+      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 pb-24 sm:px-6 md:pb-16">
+        <div id="resumen" className="grid scroll-mt-44 grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="Total candidatos"
+            value={stats.total}
+            hint={`Para ${selectedVacante?.titulo || 'Sin vacante'}`}
+            icon={<Users />}
+          />
+          <StatCard label="Precalificados" value={stats.precalificados} hint="Score 70+" icon={<Star />} />
+          <StatCard label="En evaluación" value={stats.en_evaluacion} hint="En proceso" icon={<TrendingUp />} />
+          <StatCard label="Promedio score IA" value={stats.promedio} hint="De 100" icon={<Sparkles />} />
         </div>
 
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Candidates List */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top 3 Candidatos</CardTitle>
-                <CardDescription>Clasificados por Score IA y Fit Cultural</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {candidatesLoading ? (
-                  <p role="status" className="text-zinc-400 text-sm">Cargando candidatos...</p>
-                ) : candidatesError ? (
-                  <p role="alert" className="text-red-400 text-sm">Error: {candidatesError}</p>
-                ) : filteredCandidates.length === 0 ? (
-                  <p className="text-zinc-400 text-sm">No hay candidatos para esta plaza</p>
-                ) : (
-                  filteredCandidates.map((candidate) => (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <section id="candidatos" className="flex min-w-0 scroll-mt-44 flex-col gap-3 lg:col-span-2">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight">Top candidatos</h2>
+              <p className="text-sm text-muted-foreground">Clasificados por score IA y fit cultural</p>
+            </div>
+
+            {candidatesLoading ? (
+              <div role="status" className="flex flex-col gap-3">
+                <span className="sr-only">Cargando candidatos…</span>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="h-40 animate-pulse rounded-2xl border bg-muted" />
+                ))}
+              </div>
+            ) : candidatesError ? (
+              <Alert variant="destructive">Error: {candidatesError}</Alert>
+            ) : filteredCandidates.length === 0 ? (
+              <EmptyState
+                icon={<Users />}
+                title="No hay candidatos para esta vacante"
+                description="Cuando alguien se postule, aparecerá aquí."
+              />
+            ) : (
+              filteredCandidates.map((candidate) => {
+                const isSelected = selectedCandidate?.id === candidate.id;
+                return (
                   <div
                     key={candidate.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedCandidate(candidate)}
-                    className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget) return;
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setSelectedCandidate(candidate);
+                      }
+                    }}
+                    className="cursor-pointer rounded-2xl outline-none transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-white text-lg">{candidate.nombre}</h3>
-                        <p className="text-sm text-zinc-400 mt-1">{candidate.email}</p>
-                      </div>
-                      <div className="flex gap-4 text-right">
-                        <div>
-                          <div className="text-2xl font-bold text-emerald-500">
-                            {candidate.cv_evaluado === false ? '—' : candidate.score_ia}
-                          </div>
-                          <div className="text-xs text-zinc-500">
-                            {candidate.cv_evaluado === false ? 'CV no evaluado' : 'Score CV'}
-                          </div>
+                    <Card
+                      className={cn(
+                        'flex flex-col gap-4 transition-all hover:-translate-y-px hover:border-foreground/15 hover:shadow-md',
+                        isSelected && 'ring-1 ring-foreground'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-semibold">{candidate.nombre}</h3>
+                          <p className="truncate text-sm text-muted-foreground">{candidate.email}</p>
                         </div>
-                        {candidate.estado === 'evaluado' && candidate.score_test !== null && candidate.score_test !== undefined && (
-                          <div>
-                            <div className="text-2xl font-bold text-sky-400">{candidate.score_test}</div>
-                            <div className="text-xs text-zinc-500">Prueba</div>
-                          </div>
-                        )}
+                        <div className="flex shrink-0 gap-5 text-right">
+                          <Metric
+                            value={candidate.cv_evaluado === false ? '—' : candidate.score_ia}
+                            label={candidate.cv_evaluado === false ? 'CV no evaluado' : 'Score CV'}
+                          />
+                          {candidate.estado === 'evaluado' && candidate.score_test !== null && candidate.score_test !== undefined && (
+                            <Metric value={candidate.score_test} label="Prueba" />
+                          )}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {candidate.habilidades && candidate.habilidades.slice(0, 3).map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
-                          {skill}
-                        </span>
-                      ))}
-                      {candidate.habilidades && candidate.habilidades.length > 3 && (
-                        <span className="px-2 py-1 bg-zinc-800 text-xs text-zinc-400">
-                          +{candidate.habilidades.length - 3}
-                        </span>
+                      {candidate.habilidades && candidate.habilidades.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {candidate.habilidades.slice(0, 3).map((skill) => (
+                            <Badge key={skill}>{skill}</Badge>
+                          ))}
+                          {candidate.habilidades.length > 3 && <Badge>+{candidate.habilidades.length - 3}</Badge>}
+                        </div>
                       )}
-                    </div>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400">
-                      <div>📞 {candidate.telefono}</div>
-                      <div>📅 {candidate.experiencia_anos} años exp.</div>
-                    </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="size-3.5" aria-hidden="true" />
+                          {candidate.telefono}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <CalendarDays className="size-3.5" aria-hidden="true" />
+                          {candidate.experiencia_anos} años exp.
+                        </span>
+                      </div>
 
-                    <div className="mt-3 pt-3 border-t border-zinc-700 flex gap-2">
-                      <span className={`text-xs px-2 py-1 rounded font-medium ${
-                        candidate.estado === 'precalificado'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}>
-                        {candidate.estado}
-                      </span>
-                      {candidate.estado !== 'evaluado' && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="ml-auto"
-                          disabled={enviandoEvaluacion === candidate.id}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleEnviarEvaluacion(candidate);
-                          }}
-                        >
-                          {enviandoEvaluacion === candidate.id
-                            ? 'Generando…'
-                            : candidate.estado === 'evaluacion' ? 'Reenviar evaluación' : 'Enviar evaluación'}
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (window.confirm(`¿Eliminar a ${candidate.nombre}? Esta acción es irreversible.`)) {
-                            fetch('/api/candidatos/eliminar', {
-                              method: 'DELETE',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ candidatoId: candidate.id })
-                            })
-                              .then(r => r.json())
-                              .then(data => {
-                                if (data.success) {
-                                  alert('✅ Candidato eliminado');
-                                  window.location.reload();
-                                } else {
-                                  alert(`❌ Error: ${data.error}`);
-                                }
-                              })
-                              .catch(e => alert(`❌ Error: ${e.message}`));
-                          }
-                        }}
-                      >
-                        Eliminar
-                      </Button>
-                    </div>
+                      <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+                        <Badge variant={estadoVariant(candidate.estado)}>{candidate.estado}</Badge>
+                        <div className="ml-auto flex flex-wrap gap-2">
+                          {candidate.estado !== 'evaluado' && (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={enviandoEvaluacion === candidate.id}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleEnviarEvaluacion(candidate);
+                              }}
+                            >
+                              {enviandoEvaluacion === candidate.id
+                                ? 'Generando…'
+                                : candidate.estado === 'evaluacion'
+                                  ? 'Reenviar evaluación'
+                                  : 'Enviar evaluación'}
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              if (window.confirm(`¿Eliminar a ${candidate.nombre}? Esta acción es irreversible.`)) {
+                                fetch('/api/candidatos/eliminar', {
+                                  method: 'DELETE',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ candidatoId: candidate.id })
+                                })
+                                  .then(r => r.json())
+                                  .then(data => {
+                                    if (data.success) {
+                                      toast.success('Candidato eliminado');
+                                      setSelectedCandidate(current => (current?.id === candidate.id ? null : current));
+                                      setCandidatesRefresh(value => value + 1);
+                                    } else {
+                                      toast.error('No se pudo eliminar el candidato', { description: data.error });
+                                    }
+                                  })
+                                  .catch(e => toast.error('No se pudo eliminar el candidato', { description: e.message }));
+                              }
+                            }}
+                          >
+                            Eliminar
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
                   </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                );
+              })
+            )}
+          </section>
 
-          {/* Candidate Details */}
           {selectedCandidate && (
-            <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle className="text-lg">{selectedCandidate.nombre}</CardTitle>
-                  <CardDescription>Análisis Detallado</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Contact Info */}
-                  <div className="bg-zinc-800/50 rounded-lg p-3 space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="text-zinc-400">📧</span>
-                      <a href={`mailto:${selectedCandidate.email}`} className="text-emerald-400 hover:underline truncate">
-                        {selectedCandidate.email}
+            <aside className="min-w-0 lg:col-span-1">
+              <Reveal>
+                <Card className="flex flex-col gap-6 lg:sticky lg:top-44">
+                  <CardHeader className="border-b-0 pb-0">
+                    <CardTitle className="text-lg">{selectedCandidate.nombre}</CardTitle>
+                    <CardDescription>Análisis detallado</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-6 pt-0">
+                    <div className="flex flex-col gap-2 rounded-xl bg-muted/50 p-3 text-sm">
+                      <a
+                        href={`mailto:${selectedCandidate.email}`}
+                        className="inline-flex min-w-0 items-center gap-2 underline-offset-4 hover:underline"
+                      >
+                        <Mail className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        <span className="truncate">{selectedCandidate.email}</span>
                       </a>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-zinc-400">📱</span>
-                      <span className="text-white">{selectedCandidate.telefono}</span>
-                    </div>
-                    {selectedCandidate.cv_url && (
-                      <div className="flex items-center gap-2 pt-2 border-t border-zinc-700">
-                        <span className="text-zinc-400">📄</span>
+                      <span className="inline-flex items-center gap-2">
+                        <Smartphone className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                        {selectedCandidate.telefono}
+                      </span>
+                      {selectedCandidate.cv_url && (
                         <button
                           type="button"
                           onClick={async () => {
@@ -805,394 +742,348 @@ export default function DemoDashboard() {
                             if (response.ok && data.url) {
                               window.open(data.url, '_blank', 'noopener,noreferrer');
                             } else {
-                              alert(`❌ ${data.error || 'No se pudo abrir el CV'}`);
+                              toast.error(data.error || 'No se pudo abrir el CV');
                             }
                           }}
-                          className="text-emerald-400 hover:underline text-xs"
+                          className="inline-flex min-h-10 items-center gap-2 pt-1 text-left underline-offset-4 hover:underline"
                         >
+                          <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                           Ver PDF del CV
                         </button>
+                      )}
+                    </div>
+
+                    <section>
+                      <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Puntuaciones por competencia
+                      </h4>
+                      <div className="flex flex-col gap-3">
+                        {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                          <div key={key} className="flex flex-col gap-1.5">
+                            <div className="flex justify-between text-xs">
+                              <span className="capitalize text-muted-foreground">{key.replace(/_/g, ' ')}</span>
+                              <span className="font-medium tabular-nums">{value}/100</span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-success" style={{ width: `${value}%` }} />
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </section>
 
-                  {/* Score Breakdown */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-3">Puntuaciones por Competencia</h4>
-                    <div className="space-y-2">
-                      {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
-                        <div key={key} className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-zinc-400 capitalize">{key.replace(/_/g, ' ')}</span>
-                            <span className="text-white font-medium">{value}/100</span>
-                          </div>
-                          <div className="w-full bg-zinc-800 h-1.5 rounded">
-                            <div
-                              className="h-full bg-emerald-500 rounded"
-                              style={{ width: `${value}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Feedback IA</h4>
+                      <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.feedback_ia}</p>
+                    </section>
 
-                  {/* Feedback */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Feedback IA</h4>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      {selectedCandidate.feedback_ia}
-                    </p>
-                  </div>
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Resumen ejecutivo</h4>
+                      <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.resumen_ejecutivo}</p>
+                    </section>
 
-                  {/* Resume */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Resumen Ejecutivo</h4>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      {selectedCandidate.resumen_ejecutivo}
-                    </p>
-                  </div>
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Habilidades técnicas</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCandidate.habilidades?.map((skill) => (
+                          <Badge key={skill}>{skill}</Badge>
+                        ))}
+                      </div>
+                    </section>
 
-                  {/* Skills */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Habilidades Técnicas</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedCandidate.habilidades && selectedCandidate.habilidades.map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* CTA */}
-                  <Button
-                    className="w-full mt-4"
-                    onClick={() => setShowDetailModal(true)}
-                  >
-                    Ver Perfil Completo
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                    <Button className="w-full" onClick={() => setShowDetailModal(true)}>
+                      Ver perfil completo
+                    </Button>
+                  </CardContent>
+                </Card>
+              </Reveal>
+            </aside>
           )}
         </div>
-      </div>
+      </main>
 
-      {/* Create Vacante Modal */}
+      <nav
+        aria-label="Secciones"
+        className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/80 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden"
+      >
+        <ul className="mx-auto grid max-w-md grid-cols-3">
+          {[
+            { href: '#resumen', label: 'Resumen', icon: <TrendingUp /> },
+            { href: '#candidatos', label: 'Candidatos', icon: <Users /> },
+            { href: '#acciones', label: 'Acciones', icon: <Sparkles /> },
+          ].map((item) => (
+            <li key={item.href}>
+              <a
+                href={item.href}
+                className="flex min-h-14 flex-col items-center justify-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground [&>svg]:size-5"
+              >
+                {item.icon}
+                {item.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       {showCreateVacante && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <Card role="dialog" aria-modal="true" aria-labelledby="create-vacancy-title" className="w-full max-w-md bg-zinc-900 border-zinc-800 my-auto">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle><span id="create-vacancy-title">Nueva Vacante</span></CardTitle>
-              <button aria-label="Cerrar creación de vacante" onClick={() => setShowCreateVacante(false)} className="text-zinc-400 hover:text-white min-w-11 min-h-11 flex items-center justify-center">
-                <X className="w-5 h-5" />
-              </button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label htmlFor="vacancy-title" className="block text-sm font-medium text-white mb-2">Título *</label>
-                <input
-                  id="vacancy-title"
-                  autoFocus
-                  type="text"
-                  placeholder="Ej: Desarrollador Senior React"
-                  value={newVacante.titulo}
-                  onChange={(e) => setNewVacante({ ...newVacante, titulo: e.target.value })}
-                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-base placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="vacancy-description" className="block text-sm font-medium text-white mb-2">Descripción</label>
-                <textarea
-                  id="vacancy-description"
-                  placeholder="Descripción de la posición..."
-                  value={newVacante.descripcion}
-                  onChange={(e) => setNewVacante({ ...newVacante, descripcion: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 h-20 resize-none"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="vacancy-department" className="block text-sm font-medium text-white mb-2">Departamento</label>
-                <input
-                  id="vacancy-department"
-                  type="text"
-                  placeholder="Ej: Tecnología"
-                  value={newVacante.departamento}
-                  onChange={(e) => setNewVacante({ ...newVacante, departamento: e.target.value })}
-                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-base placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="vacancy-linkedin" className="block text-sm font-medium text-white mb-2">Link LinkedIn (Opcional)</label>
-                <input
-                  id="vacancy-linkedin"
-                  type="url"
-                  placeholder="Ej: https://linkedin.com/jobs/view/123456"
-                  value={newVacante.linkedinLink}
-                  onChange={(e) => setNewVacante({ ...newVacante, linkedinLink: e.target.value })}
-                  className="w-full min-h-11 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 text-base"
-                />
-                <p className="text-xs text-zinc-400 mt-1">Link de la vacante en LinkedIn para compartir</p>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <Button
-                  onClick={handleCreateVacante}
-                  disabled={!newVacante.titulo.trim()}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  Crear Vacante
-                </Button>
-                <Button onClick={() => setShowCreateVacante(false)} variant="secondary" className="flex-1">
-                  Cancelar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Modal labelledBy="create-vacancy-title" className="sm:max-w-md">
+          <ModalHeader
+            id="create-vacancy-title"
+            title="Nueva vacante"
+            onClose={() => setShowCreateVacante(false)}
+            closeLabel="Cerrar creación de vacante"
+          />
+          <ModalBody className="flex flex-col gap-4">
+            <Field label="Título *" htmlFor="vacancy-title">
+              <Input
+                id="vacancy-title"
+                autoFocus
+                type="text"
+                placeholder="Ej: Desarrollador senior React"
+                value={newVacante.titulo}
+                onChange={(e) => setNewVacante({ ...newVacante, titulo: e.target.value })}
+              />
+            </Field>
+            <Field label="Descripción" htmlFor="vacancy-description">
+              <textarea
+                id="vacancy-description"
+                rows={3}
+                placeholder="Descripción de la posición…"
+                value={newVacante.descripcion}
+                onChange={(e) => setNewVacante({ ...newVacante, descripcion: e.target.value })}
+                className={textareaClass}
+              />
+            </Field>
+            <Field label="Departamento" htmlFor="vacancy-department">
+              <Input
+                id="vacancy-department"
+                type="text"
+                placeholder="Ej: Tecnología"
+                value={newVacante.departamento}
+                onChange={(e) => setNewVacante({ ...newVacante, departamento: e.target.value })}
+              />
+            </Field>
+            <Field
+              label="Link LinkedIn (opcional)"
+              htmlFor="vacancy-linkedin"
+              hint="Link de la vacante en LinkedIn para compartir"
+            >
+              <Input
+                id="vacancy-linkedin"
+                type="url"
+                placeholder="Ej: https://linkedin.com/jobs/view/123456"
+                value={newVacante.linkedinLink}
+                onChange={(e) => setNewVacante({ ...newVacante, linkedinLink: e.target.value })}
+              />
+            </Field>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="secondary" onClick={() => setShowCreateVacante(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateVacante} disabled={!newVacante.titulo.trim()}>
+              Crear vacante
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {evaluacionEnviada && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card role="dialog" aria-modal="true" aria-labelledby="evaluacion-title" className="w-full max-w-xl bg-zinc-900 border-zinc-800">
-            <CardHeader className="border-b border-zinc-800">
-              <CardTitle className="text-xl"><span id="evaluacion-title">Evaluación para {evaluacionEnviada.nombre}</span></CardTitle>
-              <CardDescription>
-                Comparte este enlace con el candidato. Es personal, sirve una sola vez y vence el{' '}
-                {new Date(evaluacionEnviada.expira_en).toLocaleDateString('es-GT', { day: 'numeric', month: 'long' })}.
-                Cuando responda, verás su puntaje en la lista de candidatos.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <label htmlFor="evaluacion-link" className="text-sm text-zinc-400">Enlace de la evaluación</label>
-              <input
+        <Modal labelledBy="evaluacion-title" className="sm:max-w-xl">
+          <ModalHeader
+            id="evaluacion-title"
+            title={`Evaluación para ${evaluacionEnviada.nombre}`}
+            description={`Comparte este enlace con el candidato. Es personal, sirve una sola vez y vence el ${new Date(evaluacionEnviada.expira_en).toLocaleDateString('es-GT', { day: 'numeric', month: 'long' })}. Cuando responda, verás su puntaje en la lista de candidatos.`}
+            onClose={() => setEvaluacionEnviada(null)}
+          />
+          <ModalBody className="flex flex-col gap-4">
+            <Field label="Enlace de la evaluación" htmlFor="evaluacion-link">
+              <Input
                 id="evaluacion-link"
                 readOnly
                 value={evaluacionEnviada.link}
                 onFocus={(event) => event.currentTarget.select()}
-                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-emerald-400"
+                className="font-mono text-sm"
               />
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(evaluacionEnviada.link);
-                      alert('✅ Enlace copiado');
-                    } catch {
-                      alert('No se pudo copiar automáticamente. Selecciona el enlace y cópialo.');
-                    }
-                  }}
-                >
-                  Copiar enlace
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => {
-                    const asunto = `Evaluación para la vacante ${selectedVacante?.titulo ?? ''}`.trim();
-                    const cuerpo = `Hola ${evaluacionEnviada.nombre}:\n\nGracias por postularte. Te invitamos a completar esta evaluación:\n${evaluacionEnviada.link}\n\nEl enlace es personal y solo se puede enviar una vez.`;
-                    window.location.href = `mailto:${encodeURIComponent(evaluacionEnviada.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-                  }}
-                >
-                  Abrir en correo
-                </Button>
-                <Button variant="ghost" className="flex-1" onClick={() => setEvaluacionEnviada(null)}>
-                  Cerrar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </Field>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setEvaluacionEnviada(null)}>
+              Cerrar
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                const asunto = `Evaluación para la vacante ${selectedVacante?.titulo ?? ''}`.trim();
+                const cuerpo = `Hola ${evaluacionEnviada.nombre}:\n\nGracias por postularte. Te invitamos a completar esta evaluación:\n${evaluacionEnviada.link}\n\nEl enlace es personal y solo se puede enviar una vez.`;
+                window.location.href = `mailto:${encodeURIComponent(evaluacionEnviada.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+              }}
+            >
+              <Send className="size-4" />
+              Abrir en correo
+            </Button>
+            <Button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(evaluacionEnviada.link);
+                  toast.success('Enlace copiado');
+                } catch {
+                  toast.error('No se pudo copiar automáticamente', { description: 'Selecciona el enlace y cópialo.' });
+                }
+              }}
+            >
+              <Copy className="size-4" />
+              Copiar enlace
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
-      {/* LinkedIn Link Modal */}
       {showLinkedinLink && linkedinData && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card role="dialog" aria-modal="true" aria-labelledby="share-vacancy-title" className="w-full max-w-2xl bg-zinc-900 border-zinc-800">
-            <CardHeader className="border-b border-zinc-800">
-              <CardTitle className="text-2xl"><span id="share-vacancy-title">🔗 Link para LinkedIn</span></CardTitle>
-              <CardDescription>Usa este link para compartir la vacante en LinkedIn</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-6">
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-6">
-                <p className="text-sm text-zinc-400 mb-3">LINK DE APLICACIÓN:</p>
-                <div className="flex items-center gap-2 bg-zinc-800 rounded-lg p-3">
-                  <code className="text-emerald-400 text-sm break-all flex-1">{linkedinData.aplicarLink}</code>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(linkedinData.aplicarLink);
-                      alert('Link copiado al portapapeles');
-                    }}
-                    className="bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded text-white text-sm flex-shrink-0"
-                  >
-                    Copiar
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-sm text-zinc-400 mb-3">TEXTO PARA LINKEDIN:</p>
-                <textarea
-                  value={linkedinData.linkedInText}
-                  readOnly
-                  rows={6}
-                  className="w-full px-4 py-3 bg-zinc-800 border border-zinc-700 rounded text-white text-sm"
-                />
-                <button
+        <Modal labelledBy="share-vacancy-title" className="sm:max-w-2xl">
+          <ModalHeader
+            id="share-vacancy-title"
+            title="Link para LinkedIn"
+            description="Usa este link para compartir la vacante en LinkedIn"
+            onClose={() => setShowLinkedinLink(false)}
+          />
+          <ModalBody className="flex flex-col gap-6">
+            <section className="flex flex-col gap-2 rounded-xl border bg-muted/50 p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Link de aplicación</p>
+              <div className="flex items-center gap-2 rounded-lg bg-card p-2 ring-1 ring-border">
+                <code className="min-w-0 flex-1 break-all px-1 text-sm">{linkedinData.aplicarLink}</code>
+                <Button
+                  size="sm"
+                  variant="secondary"
                   onClick={() => {
-                    navigator.clipboard.writeText(linkedinData.linkedInText + '\n\n' + linkedinData.aplicarLink);
-                    alert('Texto copiado al portapapeles');
+                    navigator.clipboard.writeText(linkedinData.aplicarLink);
+                    toast.success('Link copiado al portapapeles');
                   }}
-                  className="mt-2 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white text-sm w-full"
                 >
-                  Copiar Texto + Link
-                </button>
+                  <Copy className="size-4" />
+                  Copiar
+                </Button>
               </div>
+            </section>
 
-              <div>
-                <p className="text-sm text-zinc-400 mb-3">LINK DE COMPARTIR:</p>
-                <a
-                  href={linkedinData.linkedinShareUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded text-white font-medium"
-                >
-                  Abrir en LinkedIn
-                </a>
-              </div>
-
-              <button
-                onClick={() => setShowLinkedinLink(false)}
-                className="w-full bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded text-white"
-              >
-                Cerrar
-              </button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Full Profile Modal */}
-      {showDetailModal && selectedCandidate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-zinc-900 border-zinc-800">
-            <CardHeader className="flex flex-row items-center justify-between sticky top-0 bg-zinc-900 border-b border-zinc-800">
-              <div>
-                <CardTitle className="text-2xl">{selectedCandidate.nombre}</CardTitle>
-                <CardDescription>Perfil Completo del Candidato</CardDescription>
-              </div>
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="text-zinc-400 hover:text-white"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-6">
-              {/* Contact Info */}
-              <div className="border-b border-zinc-800 pb-4">
-                <h3 className="text-lg font-semibold text-white mb-3">Información de Contacto</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="text-zinc-400">Email:</span> <span className="text-white">{selectedCandidate.email}</span></p>
-                  <p><span className="text-zinc-400">Teléfono:</span> <span className="text-white">{selectedCandidate.telefono}</span></p>
-                  <p><span className="text-zinc-400">Experiencia:</span> <span className="text-white">{selectedCandidate.experiencia_anos} años</span></p>
-                </div>
-              </div>
-
-              {/* Score Overview */}
-              <div className="border-b border-zinc-800 pb-4">
-                <h3 className="text-lg font-semibold text-white mb-3">Score IA Detallado</h3>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-zinc-800/40 rounded-lg p-4">
-                    <div className="text-4xl font-bold text-emerald-500">
-                      {selectedCandidate.cv_evaluado === false ? '—' : `${selectedCandidate.score_ia}/100`}
-                    </div>
-                    <p className="text-sm text-zinc-400 mt-1">
-                      {selectedCandidate.cv_evaluado === false ? 'CV no evaluado: revisar manualmente' : 'Score del CV'}
-                    </p>
-                  </div>
-                  <div className="bg-zinc-800/40 rounded-lg p-4">
-                    <div className="text-4xl font-bold text-sky-400">
-                      {selectedCandidate.estado === 'evaluado' && selectedCandidate.score_test !== null && selectedCandidate.score_test !== undefined
-                        ? `${selectedCandidate.score_test}/100`
-                        : '—'}
-                    </div>
-                    <p className="text-sm text-zinc-400 mt-1">
-                      {selectedCandidate.estado !== 'evaluado'
-                        ? 'Prueba pendiente'
-                        : selectedCandidate.score_test === null || selectedCandidate.score_test === undefined
-                          ? 'Solo respuestas abiertas: revisar'
-                          : 'Prueba técnica'}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
-                    <div key={key}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="text-zinc-300 capitalize">{key.replace(/_/g, ' ')}</span>
-                        <span className="text-emerald-400 font-medium">{value}/100</span>
-                      </div>
-                      <div className="w-full bg-zinc-800 h-2 rounded overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 rounded"
-                          style={{ width: `${value}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* AI Feedback */}
-              <div className="border-b border-zinc-800 pb-4">
-                <h3 className="text-lg font-semibold text-white mb-3">Análisis IA</h3>
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                  {selectedCandidate.feedback_ia}
-                </p>
-              </div>
-
-              {/* Executive Summary */}
-              <div className="border-b border-zinc-800 pb-4">
-                <h3 className="text-lg font-semibold text-white mb-3">Resumen Ejecutivo</h3>
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                  {selectedCandidate.resumen_ejecutivo}
-                </p>
-              </div>
-
-              {/* Skills */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3">Habilidades</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedCandidate.habilidades && selectedCandidate.habilidades.map((skill) => (
-                    <span
-                      key={skill}
-                      className="px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-sm rounded"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Close Button */}
+            <section className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Texto para LinkedIn</p>
+              <textarea value={linkedinData.linkedInText} readOnly rows={6} className={textareaClass} />
               <Button
-                onClick={() => setShowDetailModal(false)}
-                className="w-full mt-6"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  navigator.clipboard.writeText(linkedinData.linkedInText + '\n\n' + linkedinData.aplicarLink);
+                  toast.success('Texto copiado al portapapeles');
+                }}
               >
-                Cerrar
+                Copiar texto + link
               </Button>
-            </CardContent>
-          </Card>
-        </div>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compartir</p>
+              <a
+                href={linkedinData.linkedinShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                <Share2 className="size-4" aria-hidden="true" />
+                Abrir en LinkedIn
+              </a>
+            </section>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" onClick={() => setShowLinkedinLink(false)}>
+              Cerrar
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
-      {/* Export Modal */}
+      {showDetailModal && selectedCandidate && (
+        <Modal labelledBy="profile-title" className="sm:max-w-2xl">
+          <ModalHeader
+            id="profile-title"
+            title={selectedCandidate.nombre}
+            description="Perfil completo del candidato"
+            onClose={() => setShowDetailModal(false)}
+          />
+          <ModalBody className="flex flex-col gap-8">
+            <section className="flex flex-col gap-2 text-sm">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Información de contacto</h3>
+              <p><span className="text-muted-foreground">Email:</span> {selectedCandidate.email}</p>
+              <p><span className="text-muted-foreground">Teléfono:</span> {selectedCandidate.telefono}</p>
+              <p><span className="text-muted-foreground">Experiencia:</span> {selectedCandidate.experiencia_anos} años</p>
+            </section>
+
+            <section className="flex flex-col gap-4">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Score IA detallado</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-muted/50 p-4">
+                  <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                    {selectedCandidate.cv_evaluado === false ? '—' : `${selectedCandidate.score_ia}/100`}
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground text-pretty">
+                    {selectedCandidate.cv_evaluado === false ? 'CV no evaluado: revisar manualmente' : 'Score del CV'}
+                  </p>
+                </div>
+                <div className="rounded-xl bg-muted/50 p-4">
+                  <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                    {selectedCandidate.estado === 'evaluado' && selectedCandidate.score_test !== null && selectedCandidate.score_test !== undefined
+                      ? `${selectedCandidate.score_test}/100`
+                      : '—'}
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground text-pretty">
+                    {selectedCandidate.estado !== 'evaluado'
+                      ? 'Prueba pendiente'
+                      : selectedCandidate.score_test === null || selectedCandidate.score_test === undefined
+                        ? 'Solo respuestas abiertas: revisar'
+                        : 'Prueba técnica'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-3">
+                {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-sm">
+                      <span className="capitalize text-muted-foreground">{key.replace(/_/g, ' ')}</span>
+                      <span className="font-medium tabular-nums">{value}/100</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-success" style={{ width: `${value}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Análisis IA</h3>
+              <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.feedback_ia}</p>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Resumen ejecutivo</h3>
+              <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.resumen_ejecutivo}</p>
+            </section>
+
+            <section className="flex flex-col gap-2">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Habilidades</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {selectedCandidate.habilidades?.map((skill) => (
+                  <Badge key={skill} variant="info">{skill}</Badge>
+                ))}
+              </div>
+            </section>
+          </ModalBody>
+          <ModalFooter>
+            <Button onClick={() => setShowDetailModal(false)}>Cerrar</Button>
+          </ModalFooter>
+        </Modal>
+      )}
+
       <ProfessionalReportModal
         isOpen={showExportModal}
         onClose={() => setShowExportModal(false)}
@@ -1201,222 +1092,235 @@ export default function DemoDashboard() {
         company="FORNITURE CITY"
       />
 
-      {/* Template Selection Modal */}
       {showTemplateModal && !selectedTemplatePreview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[80vh] overflow-auto">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Seleccionar Template de Preguntas</CardTitle>
-                  <CardDescription>Elige una categoría para ver y personalizar las preguntas</CardDescription>
-                </div>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="text-zinc-500 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+        <Modal labelledBy="template-select-title" className="sm:max-w-2xl">
+          <ModalHeader
+            id="template-select-title"
+            title="Seleccionar template de preguntas"
+            description="Elige una categoría para ver y personalizar las preguntas"
+            onClose={() => setShowTemplateModal(false)}
+          />
+          <ModalBody>
+            {templates.length === 0 ? (
+              <p role="status" className="py-8 text-center text-sm text-muted-foreground">Cargando categorías…</p>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {templates.map((template) => (
+                  <button
+                    type="button"
+                    key={template.id}
+                    onClick={() => handlePreviewTemplate(template.id)}
+                    className="flex flex-col gap-2 rounded-xl border bg-card p-4 text-left transition-all hover:-translate-y-px hover:border-foreground/15 hover:shadow-sm active:scale-[0.99] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <span className="font-semibold">{template.nombre}</span>
+                    <span className="text-xs text-muted-foreground text-pretty">{template.descripcion}</span>
+                    <span className="mt-1 flex flex-wrap gap-3 text-xs text-muted-foreground tabular-nums">
+                      <span className="inline-flex items-center gap-1"><MessageSquare className="size-3.5" aria-hidden="true" />{template.preguntas.pre_entrevista} pre</span>
+                      <span className="inline-flex items-center gap-1"><FlaskConical className="size-3.5" aria-hidden="true" />{template.preguntas.prueba_tecnica} técnicas</span>
+                      <span className="inline-flex items-center gap-1"><Video className="size-3.5" aria-hidden="true" />{template.preguntas.preguntas_video} videos</span>
+                    </span>
+                  </button>
+                ))}
               </div>
-            </CardHeader>
-            <CardContent>
-              {templates.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-zinc-400">Cargando categorías...</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {templates.map((template) => (
-                    <div
-                      key={template.id}
-                      onClick={() => handlePreviewTemplate(template.id)}
-                      className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 hover:border-emerald-500 cursor-pointer transition-colors"
-                    >
-                      <h3 className="font-semibold text-white mb-1">{template.nombre}</h3>
-                      <p className="text-xs text-zinc-400 mb-3">{template.descripcion}</p>
-                      <div className="flex gap-3 text-xs text-zinc-500">
-                        <span>📝 {template.preguntas.pre_entrevista} pre</span>
-                        <span>🧪 {template.preguntas.prueba_tecnica} técnicas</span>
-                        <span>📹 {template.preguntas.preguntas_video} videos</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+            )}
+          </ModalBody>
+        </Modal>
       )}
 
-      {/* Template Preview & Edit Modal */}
       {selectedTemplatePreview && editandoPreguntas && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <Card className="w-full max-w-4xl my-8">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>📝 {selectedTemplatePreview.nombre}</CardTitle>
-                  <CardDescription>Personaliza las preguntas si lo deseas</CardDescription>
+        <Modal labelledBy="template-edit-title" className="sm:max-w-4xl">
+          <ModalHeader
+            id="template-edit-title"
+            title={selectedTemplatePreview.nombre}
+            description="Personaliza las preguntas si lo deseas"
+            onClose={() => {
+              setSelectedTemplatePreview(null);
+              setEditandoPreguntas(null);
+            }}
+          />
+          <ModalBody className="flex flex-col gap-8">
+            <section className="flex flex-col gap-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <MessageSquare className="size-4 text-muted-foreground" aria-hidden="true" />
+                Pre-entrevista
+              </h3>
+              {editandoPreguntas.pre_entrevista?.map((p: any, idx: number) => (
+                <div key={idx} className="flex flex-col gap-3 rounded-xl border bg-muted/40 p-4">
+                  <Field label={`Pregunta ${p.numero}`} htmlFor={`pre-${idx}`}>
+                    <textarea
+                      id={`pre-${idx}`}
+                      value={p.pregunta}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.pre_entrevista];
+                        updated[idx].pregunta = e.target.value;
+                        setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
+                      }}
+                      rows={2}
+                      className={textareaClass}
+                    />
+                  </Field>
+                  <Field label="Criterio de evaluación" htmlFor={`pre-c-${idx}`}>
+                    <Input
+                      id={`pre-c-${idx}`}
+                      type="text"
+                      value={p.criterio}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.pre_entrevista];
+                        updated[idx].criterio = e.target.value;
+                        setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
+                      }}
+                    />
+                  </Field>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedTemplatePreview(null);
-                    setEditandoPreguntas(null);
-                  }}
-                  className="text-zinc-500 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6 max-h-[70vh] overflow-y-auto">
-              {/* Pre-Entrevista */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3">💬 Pre-Entrevista</h3>
-                <div className="space-y-3">
-                  {editandoPreguntas.pre_entrevista?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
-                        <textarea
-                          value={p.pregunta}
-                          onChange={(e) => {
-                            const updated = [...editandoPreguntas.pre_entrevista];
-                            updated[idx].pregunta = e.target.value;
-                            setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
-                          }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                          rows={2}
-                        />
-                        <label className="text-xs text-zinc-400">Criterio de evaluación</label>
-                        <input
-                          type="text"
-                          value={p.criterio}
-                          onChange={(e) => {
-                            const updated = [...editandoPreguntas.pre_entrevista];
-                            updated[idx].criterio = e.target.value;
-                            setEditandoPreguntas({...editandoPreguntas, pre_entrevista: updated});
-                          }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
+            </section>
 
-              {/* Prueba Técnica */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3">🧪 Prueba Técnica</h3>
-                <div className="space-y-3">
-                  {editandoPreguntas.prueba_tecnica?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
-                        <textarea
-                          value={p.pregunta}
+            <section className="flex flex-col gap-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <FlaskConical className="size-4 text-muted-foreground" aria-hidden="true" />
+                Prueba técnica
+              </h3>
+              {editandoPreguntas.prueba_tecnica?.map((p: any, idx: number) => (
+                <div key={idx} className="flex flex-col gap-3 rounded-xl border bg-muted/40 p-4">
+                  <Field label={`Pregunta ${p.numero}`} htmlFor={`tec-${idx}`}>
+                    <textarea
+                      id={`tec-${idx}`}
+                      value={p.pregunta}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.prueba_tecnica];
+                        updated[idx].pregunta = e.target.value;
+                        setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
+                      }}
+                      rows={2}
+                      className={textareaClass}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {p.opciones?.map((opt: string, i: number) => (
+                      <Field key={i} label={`Opción ${i + 1}`} htmlFor={`tec-${idx}-opt-${i}`}>
+                        <Input
+                          id={`tec-${idx}-opt-${i}`}
+                          type="text"
+                          value={opt}
                           onChange={(e) => {
                             const updated = [...editandoPreguntas.prueba_tecnica];
-                            updated[idx].pregunta = e.target.value;
+                            updated[idx].opciones[i] = e.target.value;
                             setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
                           }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                          rows={2}
                         />
-                        <div className="grid grid-cols-2 gap-2">
-                          {p.opciones?.map((opt: string, i: number) => (
-                            <div key={i}>
-                              <label className="text-xs text-zinc-400">Opción {i + 1}</label>
-                              <input
-                                type="text"
-                                value={opt}
-                                onChange={(e) => {
-                                  const updated = [...editandoPreguntas.prueba_tecnica];
-                                  updated[idx].opciones[i] = e.target.value;
-                                  setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
-                                }}
-                                className="w-full px-2 py-1 bg-zinc-700 border border-zinc-600 rounded text-white text-xs"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <label className="text-xs text-zinc-400">Respuesta correcta (número)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          max="3"
-                          value={p.respuesta_correcta}
-                          onChange={(e) => {
-                            const updated = [...editandoPreguntas.prueba_tecnica];
-                            updated[idx].respuesta_correcta = parseInt(e.target.value);
-                            setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
-                          }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
+                      </Field>
+                    ))}
+                  </div>
+                  <Field label="Respuesta correcta (número)" htmlFor={`tec-${idx}-resp`}>
+                    <Input
+                      id={`tec-${idx}-resp`}
+                      type="number"
+                      min="0"
+                      max="3"
+                      value={p.respuesta_correcta}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.prueba_tecnica];
+                        updated[idx].respuesta_correcta = parseInt(e.target.value);
+                        setEditandoPreguntas({...editandoPreguntas, prueba_tecnica: updated});
+                      }}
+                    />
+                  </Field>
                 </div>
-              </div>
+              ))}
+            </section>
 
-              {/* Preguntas Video */}
-              <div>
-                <h3 className="text-lg font-semibold text-white mb-3">📹 Preguntas Video</h3>
-                <div className="space-y-3">
-                  {editandoPreguntas.preguntas_video?.map((p: any, idx: number) => (
-                    <div key={idx} className="p-4 bg-zinc-800 rounded-lg border border-zinc-700">
-                      <div className="space-y-2">
-                        <label className="text-xs text-zinc-400">Pregunta {p.numero}</label>
-                        <textarea
-                          value={p.pregunta}
-                          onChange={(e) => {
-                            const updated = [...editandoPreguntas.preguntas_video];
-                            updated[idx].pregunta = e.target.value;
-                            setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
-                          }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                          rows={2}
-                        />
-                        <label className="text-xs text-zinc-400">Criterio de evaluación</label>
-                        <input
-                          type="text"
-                          value={p.criterio}
-                          onChange={(e) => {
-                            const updated = [...editandoPreguntas.preguntas_video];
-                            updated[idx].criterio = e.target.value;
-                            setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
-                          }}
-                          className="w-full px-3 py-2 bg-zinc-700 border border-zinc-600 rounded text-white text-sm"
-                        />
-                      </div>
-                    </div>
-                  ))}
+            <section className="flex flex-col gap-3">
+              <h3 className="flex items-center gap-2 text-base font-semibold">
+                <Video className="size-4 text-muted-foreground" aria-hidden="true" />
+                Preguntas de video
+              </h3>
+              {editandoPreguntas.preguntas_video?.map((p: any, idx: number) => (
+                <div key={idx} className="flex flex-col gap-3 rounded-xl border bg-muted/40 p-4">
+                  <Field label={`Pregunta ${p.numero}`} htmlFor={`vid-${idx}`}>
+                    <textarea
+                      id={`vid-${idx}`}
+                      value={p.pregunta}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.preguntas_video];
+                        updated[idx].pregunta = e.target.value;
+                        setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
+                      }}
+                      rows={2}
+                      className={textareaClass}
+                    />
+                  </Field>
+                  <Field label="Criterio de evaluación" htmlFor={`vid-c-${idx}`}>
+                    <Input
+                      id={`vid-c-${idx}`}
+                      type="text"
+                      value={p.criterio}
+                      onChange={(e) => {
+                        const updated = [...editandoPreguntas.preguntas_video];
+                        updated[idx].criterio = e.target.value;
+                        setEditandoPreguntas({...editandoPreguntas, preguntas_video: updated});
+                      }}
+                    />
+                  </Field>
                 </div>
-              </div>
-            </CardContent>
-            <CardHeader>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => {
-                    setSelectedTemplatePreview(null);
-                    setEditandoPreguntas(null);
-                  }}
-                  className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 text-white rounded"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={guardarYAsignarTemplate}
-                  disabled={guardandoPreguntas}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-900 text-white rounded flex items-center gap-2"
-                >
-                  {guardandoPreguntas ? '⏳ Guardando...' : '✅ Guardar y Asignar'}
-                </button>
-              </div>
-            </CardHeader>
-          </Card>
-        </div>
+              ))}
+            </section>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setSelectedTemplatePreview(null);
+                setEditandoPreguntas(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={guardarYAsignarTemplate} isLoading={guardandoPreguntas}>
+              Guardar y asignar
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
+  );
+}
+
+function estadoVariant(estado: string): 'success' | 'warning' | 'info' | 'default' {
+  if (estado === 'precalificado') return 'success';
+  if (estado === 'evaluacion') return 'warning';
+  if (estado === 'evaluado') return 'info';
+  return 'default';
+}
+
+function Metric({ value, label }: { value: React.ReactNode; label: string }) {
+  return (
+    <div>
+      <div className="text-2xl font-semibold tabular-nums">{value}</div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+    </div>
+  );
+}
+
+function ActionTile({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-16 flex-col items-center justify-center gap-2 rounded-xl border bg-card p-3 text-center text-xs font-medium transition-all hover:-translate-y-px hover:border-foreground/15 hover:shadow-sm active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&>svg]:size-5"
+    >
+      <span className="text-muted-foreground" aria-hidden="true">{icon}</span>
+      <span>{label}</span>
+    </button>
   );
 }

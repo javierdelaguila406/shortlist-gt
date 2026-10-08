@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input } from '@/components/ui/field';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
+import { ArrowLeft, Mail, Lock } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,113 +56,92 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4 overflow-hidden">
-      {/* Botón de regreso */}
-      <Link href="/" className="absolute top-6 left-6">
-        <button className="p-2 text-zinc-400 hover:text-white transition-colors">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+    <div className="w-full max-w-sm">
+      <Link
+        href="/"
+        aria-label="Volver al inicio"
+        className="mb-6 inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" aria-hidden="true" /> Inicio
       </Link>
 
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            SHORTLIST<span className="text-emerald-500">.GT</span>
-          </h1>
-          <p className="text-zinc-400">Accede a tu cuenta</p>
+      <Reveal>
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <Logo className="text-xl" />
+          <p className="text-sm text-muted-foreground">Accede a tu cuenta</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Iniciar Sesión</CardTitle>
-            <CardDescription>
-              Ingresa con tu email y contraseña para acceder al dashboard
-            </CardDescription>
+            <CardTitle>Iniciar sesión</CardTitle>
+            <CardDescription>Ingresa con tu email y contraseña para acceder al panel</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <div className="flex gap-3 p-4 bg-rose-950/30 border border-rose-800/40 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-rose-300">{error}</p>
-                </div>
-              )}
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+              {error && <Alert variant="destructive">{error}</Alert>}
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  <Mail className="inline w-4 h-4 mr-2" />
-                  Email
-                </label>
-                <input
+              <Field label="Email" htmlFor="login-email" icon={<Mail />}>
+                <Input
+                  id="login-email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                   placeholder="tu@email.com"
                   required
                 />
-              </div>
+              </Field>
 
-              <div>
-                <label className="block text-sm font-medium text-zinc-300 mb-2">
-                  <Lock className="inline w-4 h-4 mr-2" />
-                  Contraseña
-                </label>
-                <input
+              <Field label="Contraseña" htmlFor="login-password" icon={<Lock />}>
+                <Input
+                  id="login-password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                   placeholder="••••••••"
                   required
                 />
-              </div>
+              </Field>
 
-              <Button
-                type="submit"
-                isLoading={isLoading}
-                className="w-full mt-6"
-                size="lg"
-              >
+              <Button type="submit" isLoading={isLoading} className="mt-2 w-full">
                 Acceder
               </Button>
 
-              <div className="text-center mt-3">
-                <Link href="/auth/forgot-password" className="text-xs text-zinc-400 hover:text-emerald-400">
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
+              <Link
+                href="/auth/forgot-password"
+                className="text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-zinc-800">
-              <p className="text-center text-sm text-zinc-400">
+            <div className="mt-6 border-t pt-6">
+              <p className="text-center text-sm text-muted-foreground">
                 ¿No tienes cuenta?{' '}
-                <Link href="/auth/signup" className="text-emerald-500 hover:text-emerald-400">
+                <Link href="/auth/signup" className="font-medium text-foreground underline underline-offset-4">
                   Regístrate aquí
                 </Link>
               </p>
             </div>
 
-            <div className="mt-6 pt-6 border-t border-zinc-800">
-              <p className="text-center text-xs text-zinc-500 mb-3">O accede sin crear cuenta</p>
+            <div className="mt-6 border-t pt-6">
+              <p className="mb-3 text-center text-xs text-muted-foreground">O accede sin crear cuenta</p>
               <Link href="/dashboard/demo" className="block">
                 <Button variant="secondary" className="w-full">
-                  🚀 Acceso Rápido Demo
+                  Acceso rápido demo
                 </Button>
               </Link>
             </div>
 
-            {/* Demo credentials */}
-            <div className="mt-6 p-4 bg-zinc-800/30 rounded-lg border border-zinc-700/40">
-              <p className="text-xs text-zinc-500 mb-2">Credenciales de prueba:</p>
-              <p className="text-xs text-zinc-400">Email: demo@shortlist.gt</p>
-              <p className="text-xs text-zinc-400">Contraseña: Demo123!</p>
+            <div className="mt-6 rounded-lg bg-muted p-4">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Credenciales de prueba</p>
+              <p className="text-xs text-muted-foreground tabular-nums">Email: demo@shortlist.gt</p>
+              <p className="text-xs text-muted-foreground tabular-nums">Contraseña: Demo123!</p>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </Reveal>
     </div>
   );
 }

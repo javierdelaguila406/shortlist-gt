@@ -20,10 +20,10 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin text-4xl mb-4">⚙️</div>
-          <p className="text-zinc-400">Cargando...</p>
+          <p className="text-muted-foreground">Cargando...</p>
         </div>
       </div>
     );

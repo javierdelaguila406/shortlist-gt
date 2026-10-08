@@ -186,7 +186,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         </head>
         <body>
           <div class="header">
-            <div class="logo-text">SHORTLIST.GT</div>
+            <div class="logo-text">Nuvora</div>
             <div class="subtitle">Reporte Ejecutivo de Candidatos</div>
           </div>
 
@@ -258,7 +258,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
           </table>
 
           <div class="footer">
-            <p>Documento confidencial generado por SHORTLIST.GT © ${new Date().getFullYear()}</p>
+            <p>Documento confidencial generado por Nuvora © ${new Date().getFullYear()}</p>
             <p>Este reporte contiene información confidencial de procesos de selección.</p>
           </div>
         </body>
@@ -294,7 +294,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
 
       const summary = [
         ['REPORTE EJECUTIVO DE CANDIDATOS'],
-        ['SHORTLIST.GT'],
+        ['Nuvora'],
         [],
         [`Empresa: FORNITURE CITY`],
         [`Vacante: ${vacanteTitle}`],
@@ -352,28 +352,28 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card role="dialog" aria-modal="true" aria-labelledby="professional-report-title" className="w-full max-w-md bg-zinc-900 border-zinc-800 my-auto">
+    <div className="fixed inset-0 bg-foreground/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <Card role="dialog" aria-modal="true" aria-labelledby="professional-report-title" className="w-full max-w-md bg-card border-border my-auto">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle><span id="professional-report-title">Exportar Reporte Profesional</span></CardTitle>
-          <button aria-label="Cerrar reporte profesional" onClick={onClose} className="text-zinc-400 hover:text-white min-w-11 min-h-11 flex items-center justify-center">
+          <button aria-label="Cerrar reporte profesional" onClick={onClose} className="text-muted-foreground hover:text-foreground min-w-11 min-h-11 flex items-center justify-center">
             <X className="w-5 h-5" />
           </button>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-zinc-400">Genera un reporte ejecutivo profesional para presentar a la empresa.</p>
+          <p className="text-sm text-muted-foreground">Genera un reporte ejecutivo profesional para presentar a la empresa.</p>
 
           {/* Filtro de Período */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-white">Período del Reporte</label>
+            <label className="text-sm font-medium text-foreground">Período del Reporte</label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 ref={firstControlRef}
                 onClick={() => setPeriodo('hoy')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'hoy'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 Hoy
@@ -382,8 +382,8 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('semana')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'semana'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 Últimos 7 días
@@ -392,8 +392,8 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('mes')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'mes'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 Este mes
@@ -402,8 +402,8 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('ano')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'ano'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 Este año
@@ -412,8 +412,8 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('personalizado')}
                 className={`col-span-2 px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'personalizado'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                    ? 'bg-primary text-foreground'
+                    : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
                 Personalizado
@@ -423,36 +423,36 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             {periodo === 'personalizado' && (
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label htmlFor="professional-start-date" className="text-sm text-zinc-400 block mb-1">Desde</label>
+                  <label htmlFor="professional-start-date" className="text-sm text-muted-foreground block mb-1">Desde</label>
                   <input
                     type="date"
                     value={fechaDesde}
                     onChange={(e) => setFechaDesde(e.target.value)}
                     id="professional-start-date"
-                    className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white text-base min-h-11"
+                    className="w-full px-3 py-2 rounded bg-muted border border-border text-foreground text-base min-h-11"
                   />
                 </div>
                 <div>
-                  <label htmlFor="professional-end-date" className="text-sm text-zinc-400 block mb-1">Hasta</label>
+                  <label htmlFor="professional-end-date" className="text-sm text-muted-foreground block mb-1">Hasta</label>
                   <input
                     id="professional-end-date"
                     type="date"
                     value={fechaHasta}
                     onChange={(e) => setFechaHasta(e.target.value)}
-                    className="w-full px-3 py-2 rounded bg-zinc-800 border border-zinc-700 text-white text-base min-h-11"
+                    className="w-full px-3 py-2 rounded bg-muted border border-border text-foreground text-base min-h-11"
                   />
                 </div>
               </div>
             )}
           </div>
 
-          {reportError && <p role="alert" className="text-sm text-red-400">Error: {reportError}</p>}
+          {reportError && <p role="alert" className="text-sm text-destructive">Error: {reportError}</p>}
 
           <div className="space-y-3">
             <button
               onClick={generateProfessionalPDF}
               disabled={isExporting}
-              className="w-full min-h-11 bg-emerald-600 hover:bg-emerald-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-primary hover:bg-primary/90 px-4 py-3 rounded text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando PDF...' : 'Descargar PDF Profesional'}
@@ -461,7 +461,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             <button
               onClick={generateExcel}
               disabled={isExporting}
-              className="w-full min-h-11 bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded text-white font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-info-soft hover:bg-info-soft px-4 py-3 rounded text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando Excel...' : 'Descargar Excel'}
@@ -469,7 +469,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
 
             <button
               onClick={onClose}
-              className="w-full min-h-11 bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded text-white"
+              className="w-full min-h-11 bg-muted hover:bg-muted px-4 py-2 rounded text-foreground"
             >
               Cancelar
             </button>

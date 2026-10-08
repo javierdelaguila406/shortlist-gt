@@ -23,10 +23,10 @@ export function LicenseStatusBadge() {
     return (
       <button
         onClick={() => router.push('/acceso')}
-        className="bg-amber-950/30 border border-amber-800/40 rounded-lg px-3 py-2 flex items-center gap-2 text-sm hover:bg-amber-950/50 transition-colors cursor-pointer"
+        className="bg-warning-soft border border-warning/30 rounded-lg px-3 py-2 flex items-center gap-2 text-sm hover:bg-warning-soft/70 transition-colors cursor-pointer"
       >
-        <AlertCircle className="w-4 h-4 text-amber-500" />
-        <span className="text-amber-300">Sin licencia - Click para activar</span>
+        <AlertCircle className="w-4 h-4 text-warning" />
+        <span className="text-warning">Sin licencia - Click para activar</span>
       </button>
     );
   }
@@ -34,9 +34,9 @@ export function LicenseStatusBadge() {
   const { canCreate, remaining } = canCreateVacante(license);
 
   const typeColors = {
-    DEMO: 'bg-blue-500/20 border-blue-500/40 text-blue-300 hover:bg-blue-500/30 cursor-pointer',
-    TRIAL: 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30 cursor-pointer',
-    PREMIUM: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 cursor-pointer',
+    DEMO: 'bg-info-soft border-info/30 text-info hover:bg-info-soft/70 cursor-pointer',
+    TRIAL: 'bg-warning-soft border-warning/30 text-warning hover:bg-warning-soft/70 cursor-pointer',
+    PREMIUM: 'bg-success-soft border-success/30 text-brand hover:bg-success-soft cursor-pointer',
   };
 
   return (
@@ -57,7 +57,7 @@ export function LicenseStatusBadge() {
         </div>
         <div className="text-xs opacity-75">
           {license.tipo === 'TRIAL' &&
-            `${remaining || 0} vacante${(remaining || 0) !== 1 ? 's' : ''} disponible${(remaining || 0) !== 1 ? 's' : ''}`}
+ `${remaining || 0} vacante${(remaining || 0) !== 1 ? 's' : ''} disponible${(remaining || 0) !== 1 ? 's' : ''}`}
           {license.tipo === 'PREMIUM' && `${license.empresa} - Ilimitado`}
           {license.tipo === 'DEMO' && 'Ilimitado - Sin restricciones'}
         </div>

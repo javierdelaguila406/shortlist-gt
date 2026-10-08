@@ -2,11 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input } from '@/components/ui/field';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
 import { getDemoLicense, validateLicenseCode, saveUserLicense } from '@/lib/license-manager';
-import { ArrowLeft, Zap, Lock, CheckCircle, Plus } from 'lucide-react';
+import { ArrowLeft, Check, CheckCircle2, KeyRound, Zap } from 'lucide-react';
 
 export default function AccesoPage() {
   const router = useRouter();
@@ -56,156 +59,131 @@ export default function AccesoPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 p-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen w-full bg-background px-4 py-10 sm:py-16">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
         <button
+          type="button"
           onClick={() => router.back()}
-          className="text-zinc-400 hover:text-white mb-8 inline-flex items-center gap-2"
+          className="inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" aria-hidden="true" />
           Volver
         </button>
 
         {step === 'choose' && (
-          <div className="space-y-6">
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold text-white mb-2">
-                SHORTLIST<span className="text-emerald-500">.GT</span>
-              </h1>
-              <p className="text-zinc-400">Elige cómo deseas acceder</p>
+          <Reveal className="flex flex-col gap-8">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Logo className="text-xl" />
+              <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">Elige cómo deseas acceder</h1>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-              {/* Demo Card */}
-              <Card className="bg-blue-950/20 border-blue-800/40 cursor-pointer hover:border-blue-800/60 transition-all">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-6 h-6 text-blue-400" />
-                    <CardTitle>Acceso Demo</CardTitle>
-                  </div>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <Card className="flex flex-col gap-4">
+                <CardHeader className="border-b-0 pb-0">
+                  <Zap className="mb-2 size-5 text-muted-foreground" aria-hidden="true" />
+                  <CardTitle className="text-lg">Acceso demo</CardTitle>
                   <CardDescription>Prueba gratuita limitada</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm text-zinc-300">✓ Ver plantilla de preguntas</p>
-                    <p className="text-sm text-zinc-300">✓ Crear 1 vacante máximo</p>
-                    <p className="text-sm text-zinc-300">✓ Ver 1 candidato máximo</p>
-                    <p className="text-sm text-zinc-300">• 1 evaluación máximo</p>
-                  </div>
-                  <Button onClick={handleDemoAccess} className="w-full bg-blue-600 hover:bg-blue-700">
-                    Acceso Demo Gratuito
+                <CardContent className="flex flex-1 flex-col gap-4 pt-0">
+                  <ul className="flex flex-col gap-2 text-sm">
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Ver plantilla de preguntas</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Crear 1 vacante máximo</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Ver 1 candidato máximo</li>
+                    <li className="flex items-center gap-2 text-muted-foreground"><Check className="size-4" aria-hidden="true" />1 evaluación máximo</li>
+                  </ul>
+                  <Button onClick={handleDemoAccess} variant="secondary" className="mt-auto w-full">
+                    Acceso demo gratuito
                   </Button>
                 </CardContent>
               </Card>
 
-              {/* License Card */}
-              <Card className="bg-emerald-950/20 border-emerald-800/40 cursor-pointer hover:border-emerald-800/60 transition-all">
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lock className="w-6 h-6 text-emerald-400" />
-                    <CardTitle>Código de Licencia</CardTitle>
-                  </div>
-                  <CardDescription>Acceso Premium ilimitado</CardDescription>
+              <Card className="flex flex-col gap-4">
+                <CardHeader className="border-b-0 pb-0">
+                  <KeyRound className="mb-2 size-5 text-muted-foreground" aria-hidden="true" />
+                  <CardTitle className="text-lg">Código de licencia</CardTitle>
+                  <CardDescription>Acceso premium sin límites</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm text-zinc-300">✓ Vacantes ilimitadas</p>
-                    <p className="text-sm text-zinc-300">✓ Candidatos ilimitados</p>
-                    <p className="text-sm text-zinc-300">✓ Evaluaciones ilimitadas</p>
-                    <p className="text-sm text-zinc-300">✓ Todas las features</p>
-                  </div>
-                  <Button
-                    onClick={() => setStep('license')}
-                    variant="secondary"
-                    className="w-full border-emerald-800 hover:bg-emerald-800/20"
-                  >
-                    Ingresar Código
+                <CardContent className="flex flex-1 flex-col gap-4 pt-0">
+                  <ul className="flex flex-col gap-2 text-sm">
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Vacantes ilimitadas</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Candidatos ilimitados</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Evaluaciones ilimitadas</li>
+                    <li className="flex items-center gap-2"><Check className="size-4 text-success" aria-hidden="true" />Todas las funciones</li>
+                  </ul>
+                  <Button onClick={() => setStep('license')} className="mt-auto w-full">
+                    Ingresar código
                   </Button>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="bg-zinc-900/50 border border-zinc-800/40 rounded-lg p-6 text-center">
-              <p className="text-sm text-zinc-400">
-                ¿No tienes código de licencia?{' '}
-                <a href="mailto:soporte@shortlist.gt" className="text-emerald-500 hover:text-emerald-400">
-                  Contacta a ventas
-                </a>
-              </p>
-            </div>
-          </div>
+            <p className="rounded-2xl border bg-card p-5 text-center text-sm text-muted-foreground">
+              ¿No tienes código de licencia?{' '}
+              <a href="mailto:nuvoratalentgt@outlook.com" className="font-medium text-foreground underline underline-offset-4">
+                Contacta a ventas
+              </a>
+            </p>
+          </Reveal>
         )}
 
         {step === 'license' && (
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <button
-                onClick={() => setStep('choose')}
-                className="text-zinc-400 hover:text-white mb-4"
-              >
-                ← Volver
-              </button>
-              <CardTitle>Ingresar Código de Licencia</CardTitle>
-              <CardDescription>
-                {success ? '¡Licencia validada correctamente!' : 'Ingresa tu código de licencia para acceder'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {success ? (
-                <div className="text-center py-12">
-                  <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-                  <h3 className="text-2xl font-bold text-white mb-2">¡Acceso Confirmado!</h3>
-                  <p className="text-zinc-400 mb-6">Redirigiendo al dashboard...</p>
-                </div>
-              ) : (
-                <form onSubmit={handleLicenseSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-white mb-2">
-                      Código de Licencia
-                    </label>
-                    <input
-                      type="text"
-                      value={codigoLicencia}
-                      onChange={(e) => {
-                        setCodigoLicencia(e.target.value.toUpperCase());
-                        setError('');
-                      }}
-                      placeholder="Ej: FORNITURE-CITY-2024"
-                      className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500"
-                      disabled={isValidating}
-                      required
-                    />
+          <Reveal>
+            <Card>
+              <CardHeader>
+                <button
+                  type="button"
+                  onClick={() => setStep('choose')}
+                  className="mb-2 inline-flex w-fit items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <ArrowLeft className="size-4" aria-hidden="true" />
+                  Volver
+                </button>
+                <CardTitle>Ingresar código de licencia</CardTitle>
+                <CardDescription>
+                  {success ? 'Licencia validada correctamente' : 'Ingresa tu código de licencia para acceder'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {success ? (
+                  <div className="flex flex-col items-center gap-3 py-10 text-center" role="status">
+                    <CheckCircle2 className="size-12 text-success" aria-hidden="true" />
+                    <h2 className="text-xl font-semibold">Acceso confirmado</h2>
+                    <p className="text-sm text-muted-foreground">Redirigiendo al panel…</p>
                   </div>
+                ) : (
+                  <form onSubmit={handleLicenseSubmit} className="flex flex-col gap-4">
+                    <Field label="Código de licencia" htmlFor="license-code">
+                      <Input
+                        id="license-code"
+                        type="text"
+                        value={codigoLicencia}
+                        onChange={(e) => {
+                          setCodigoLicencia(e.target.value.toUpperCase());
+                          setError('');
+                        }}
+                        placeholder="Ej: FORNITURE-CITY-2024"
+                        disabled={isValidating}
+                        required
+                      />
+                    </Field>
 
-                  {error && (
-                    <div className="bg-red-950/30 border border-red-800/40 rounded-lg p-4">
-                      <p className="text-sm text-red-300">{error}</p>
-                    </div>
-                  )}
+                    {error && <Alert variant="destructive">{error}</Alert>}
 
-                  <Button
-                    type="submit"
-                    disabled={isValidating || !codigoLicencia.trim()}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {isValidating ? 'Validando...' : 'Validar Licencia'}
-                  </Button>
-
-                  <div className="text-center pt-4 border-t border-zinc-800">
-                    <p className="text-sm text-zinc-400 mb-3">¿No tienes un código de licencia?</p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={handleDemoAccess}
-                      className="w-full"
-                    >
-                      Usar Acceso Demo
+                    <Button type="submit" isLoading={isValidating} disabled={!codigoLicencia.trim()} className="w-full">
+                      Validar licencia
                     </Button>
-                  </div>
-                </form>
-              )}
-            </CardContent>
-          </Card>
+
+                    <div className="flex flex-col items-center gap-3 border-t pt-5 text-center">
+                      <p className="text-sm text-muted-foreground">¿No tienes un código de licencia?</p>
+                      <Button type="button" variant="secondary" onClick={handleDemoAccess} className="w-full">
+                        Usar acceso demo
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
+          </Reveal>
         )}
       </div>
     </div>

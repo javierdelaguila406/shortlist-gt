@@ -1,113 +1,32 @@
 import Link from 'next/link';
+import { Logo } from '@/components/brand';
 
 export default function TestPage() {
   return (
-    <div style={{
-      width: '100%',
-      minHeight: '100vh',
-      backgroundColor: '#0a0a0a',
-      color: '#ffffff',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: '20px',
-      fontFamily: 'Arial, sans-serif',
-    }}>
-      <h1 style={{
-        fontSize: '32px',
-        fontWeight: 'bold',
-        marginBottom: '20px',
-        textAlign: 'center',
-      }}>
-        SHORTLIST<span style={{ color: '#10b981' }}>.</span>GT
-      </h1>
-
-      <p style={{
-        fontSize: '18px',
-        marginBottom: '40px',
-        textAlign: 'center',
-        color: '#888',
-      }}>
-        Reclutamiento Inteligente Impulsado por IA
-      </p>
-
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        width: '100%',
-        maxWidth: '300px',
-      }}>
-        <Link href="/" style={{
-          display: 'block',
-          padding: '15px 20px',
-          backgroundColor: '#10b981',
-          color: '#000',
-          textAlign: 'center',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          fontSize: '16px',
-        }}>
-          Home
-        </Link>
-
-        <Link href="/dashboard/demo" style={{
-          display: 'block',
-          padding: '15px 20px',
-          backgroundColor: '#374151',
-          color: '#fff',
-          textAlign: 'center',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          fontSize: '16px',
-        }}>
-          Demo Dashboard
-        </Link>
-
-        <Link href="/postular/sample" style={{
-          display: 'block',
-          padding: '15px 20px',
-          backgroundColor: '#374151',
-          color: '#fff',
-          textAlign: 'center',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          fontSize: '16px',
-        }}>
-          Postularse
-        </Link>
-
-        <a href="/auth/login" style={{
-          display: 'block',
-          padding: '15px 20px',
-          backgroundColor: '#374151',
-          color: '#fff',
-          textAlign: 'center',
-          textDecoration: 'none',
-          borderRadius: '6px',
-          fontWeight: 'bold',
-          fontSize: '16px',
-        }}>
-          Login
-        </a>
+    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-10 bg-background px-4 py-10 text-center">
+      <div className="flex flex-col items-center gap-3">
+        <Logo className="text-2xl" />
+        <p className="text-sm text-muted-foreground text-balance">Reclutamiento inteligente impulsado por IA</p>
       </div>
 
-      <div style={{
-        marginTop: '40px',
-        padding: '20px',
-        backgroundColor: '#111',
-        borderRadius: '8px',
-        fontSize: '12px',
-        color: '#888',
-        textAlign: 'center',
-        maxWidth: '100%',
-      }}>
+      <nav aria-label="Secciones de prueba" className="flex w-full max-w-xs flex-col gap-2">
+        <Link href="/" className="rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+          Inicio
+        </Link>
+        <Link href="/dashboard/demo" className="rounded-lg border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-muted">
+          Panel demo
+        </Link>
+        <Link href="/postular/sample" className="rounded-lg border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-muted">
+          Postularse
+        </Link>
+        <Link href="/auth/login" className="rounded-lg border bg-card px-5 py-3 text-sm font-medium transition-colors hover:bg-muted">
+          Iniciar sesión
+        </Link>
+      </nav>
+
+      <div className="max-w-sm rounded-2xl border bg-card p-5 text-xs text-muted-foreground">
         <p>✅ Si ves este mensaje, tu móvil está conectado correctamente.</p>
-        <p style={{ marginTop: '10px' }}>Haz clic en los botones para probar diferentes secciones.</p>
+        <p className="mt-2">Haz clic en los botones para probar diferentes secciones.</p>
       </div>
     </div>
   );

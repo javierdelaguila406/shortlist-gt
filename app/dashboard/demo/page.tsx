@@ -1,11 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { mockCandidates, mockVacantes, mockDashboardData } from '@/lib/mock-data';
-import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Plus } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { StatCard } from '@/components/ui/stat';
+import { EmptyState } from '@/components/ui/empty-state';
+import { AppHeader } from '@/components/app-header';
+import { Reveal } from '@/components/ui/reveal';
+import { mockCandidates, mockVacantes } from '@/lib/mock-data';
+import { ArrowLeft, Star, TrendingUp, Users, Briefcase, Mail, Phone, Clock3 } from 'lucide-react';
 
 interface Candidate {
   id: string;
@@ -51,241 +56,195 @@ export default function DemoDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      {/* Header */}
-      <div className="border-b border-zinc-800/40 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between mb-4">
+    <div className="min-h-screen w-full">
+      <AppHeader
+        subtitle="Panel de reclutador · Demo"
+        actions={
+          <Link href="/">
+            <Button variant="ghost" size="sm">
+              <ArrowLeft className="size-4" />
+              Volver
+            </Button>
+          </Link>
+        }
+      >
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 border-t px-4 py-3 sm:px-6">
+          <label htmlFor="demo-vacante" className="flex items-center gap-2 text-sm font-medium">
+            <Briefcase className="size-4 text-muted-foreground" aria-hidden="true" />
+            Vacante
+          </label>
+          <select
+            id="demo-vacante"
+            value={selectedVacanteId}
+            onChange={(e) => {
+              setSelectedVacanteId(e.target.value);
+              setSelectedCandidate(null);
+            }}
+            className="h-9 rounded-lg border border-input bg-card px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            {mockVacantes.map(vacante => (
+              <option key={vacante.id} value={vacante.id}>
+                {vacante.titulo}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground tabular-nums">({filteredCandidates.length} candidatos)</span>
+        </div>
+      </AppHeader>
+
+      <main className="mx-auto flex max-w-5xl flex-col gap-8 px-4 py-8 pb-16 sm:px-6">
+        <Reveal className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard
+            label="Total candidatos"
+            value={stats.total}
+            hint={`Para ${selectedVacante.titulo}`}
+            icon={<Users />}
+          />
+          <StatCard label="Precalificados" value={stats.precalificados} hint="Score 80+" icon={<Star />} />
+          <StatCard label="En evaluación" value={stats.en_evaluacion} hint="En proceso" icon={<TrendingUp />} />
+          <StatCard label="Promedio score IA" value={stats.promedio} hint="De 100" icon={<Star />} />
+        </Reveal>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <section className="flex flex-col gap-3 lg:col-span-2">
             <div>
-              <h1 className="text-2xl font-bold text-white">
-                SHORTLIST<span className="text-emerald-500">.GT</span>
-              </h1>
-              <p className="text-sm text-zinc-400 mt-1">Dashboard Reclutador</p>
+              <h2 className="text-xl font-semibold tracking-tight">Top candidatos</h2>
+              <p className="text-sm text-muted-foreground">Clasificados por score IA y fit cultural</p>
             </div>
-            <Link href="/">
-              <Button variant="ghost" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Volver
-              </Button>
-            </Link>
-          </div>
 
-          {/* Vacancy Selector */}
-          <div className="flex items-center gap-3">
-            <Briefcase className="w-4 h-4 text-zinc-400" />
-            <select
-              value={selectedVacanteId}
-              onChange={(e) => {
-                setSelectedVacanteId(e.target.value);
-                setSelectedCandidate(null);
-              }}
-              className="px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm hover:border-emerald-500 focus:outline-none focus:border-emerald-500"
-            >
-              {mockVacantes.map(vacante => (
-                <option key={vacante.id} value={vacante.id}>
-                  {vacante.titulo}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs text-zinc-500 ml-2">({filteredCandidates.length} candidatos)</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Total Candidatos</span>
-                <Users className="w-5 h-5 text-emerald-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.total}</p>
-              <p className="text-sm text-zinc-500 mt-1">Para {selectedVacante.titulo}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Precalificados</span>
-                <Star className="w-5 h-5 text-amber-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.precalificados}</p>
-              <p className="text-sm text-zinc-500 mt-1">Score 80+</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>En Evaluación</span>
-                <TrendingUp className="w-5 h-5 text-indigo-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.en_evaluacion}</p>
-              <p className="text-sm text-zinc-500 mt-1">En proceso</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Promedio Score IA</span>
-                <Star className="w-5 h-5 text-rose-500" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-bold text-white">{stats.promedio}</p>
-              <p className="text-sm text-zinc-500 mt-1">De 100</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Candidates List */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Top 3 Candidatos</CardTitle>
-                <CardDescription>Clasificados por Score IA y Fit Cultural</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {filteredCandidates.length === 0 ? (
-                  <p className="text-zinc-400 text-sm">No hay candidatos para esta plaza</p>
-                ) : (
-                  filteredCandidates.map((candidate) => (
+            {filteredCandidates.length === 0 ? (
+              <EmptyState title="No hay candidatos para esta plaza" />
+            ) : (
+              filteredCandidates.map((candidate) => {
+                const isSelected = selectedCandidate?.id === candidate.id;
+                return (
                   <div
                     key={candidate.id}
+                    role="button"
+                    tabIndex={0}
+                    aria-pressed={isSelected}
                     onClick={() => setSelectedCandidate(candidate)}
-                    className="p-4 border border-zinc-700 rounded-lg hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setSelectedCandidate(candidate);
+                      }
+                    }}
+                    className="cursor-pointer rounded-2xl outline-none transition-transform active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h3 className="font-semibold text-white text-lg">{candidate.nombre}</h3>
-                        <p className="text-sm text-zinc-400 mt-1">{candidate.email}</p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-emerald-500">{candidate.score_ia}</div>
-                        <div className="text-xs text-zinc-500">Score IA</div>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {candidate.habilidades.slice(0, 3).map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
-                          {skill}
-                        </span>
-                      ))}
-                      {candidate.habilidades.length > 3 && (
-                        <span className="px-2 py-1 bg-zinc-800 text-xs text-zinc-400">
-                          +{candidate.habilidades.length - 3}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-xs text-zinc-400">
-                      <div>📞 {candidate.telefono}</div>
-                      <div>📅 {candidate.experiencia_anos} años exp.</div>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-zinc-700 flex gap-2">
-                      <span className={`text-xs px-2 py-1 rounded font-medium ${
-                        candidate.estado === 'precalificado'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-amber-500/20 text-amber-400'
-                      }`}>
-                        {candidate.estado}
-                      </span>
-                      {candidate.estado === 'precalificado' && (
-                        <Button size="sm" variant="secondary" className="ml-auto">
-                          Enviar evaluación
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Candidate Details */}
-          {selectedCandidate && (
-            <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <CardHeader>
-                  <CardTitle className="text-lg">{selectedCandidate.nombre}</CardTitle>
-                  <CardDescription>Análisis Detallado</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Score Breakdown */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-3">Puntuaciones por Competencia</h4>
-                    <div className="space-y-2">
-                      {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
-                        <div key={key} className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-zinc-400 capitalize">{key.replace(/_/g, ' ')}</span>
-                            <span className="text-white font-medium">{value}/100</span>
-                          </div>
-                          <div className="w-full bg-zinc-800 h-1.5 rounded">
-                            <div
-                              className="h-full bg-emerald-500 rounded"
-                              style={{ width: `${value}%` }}
-                            />
-                          </div>
+                    <Card
+                      className={`flex flex-col gap-4 transition-all hover:-translate-y-px hover:border-foreground/15 hover:shadow-md ${
+                        isSelected ? 'ring-1 ring-foreground' : ''
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base font-semibold">{candidate.nombre}</h3>
+                          <p className="truncate text-sm text-muted-foreground">{candidate.email}</p>
                         </div>
-                      ))}
-                    </div>
-                  </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-2xl font-semibold tabular-nums">{candidate.score_ia}</div>
+                          <div className="text-xs text-muted-foreground">Score IA</div>
+                        </div>
+                      </div>
 
-                  {/* Feedback */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Feedback IA</h4>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      {selectedCandidate.feedback_ia}
-                    </p>
-                  </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {candidate.habilidades?.slice(0, 3).map((skill) => (
+                          <Badge key={skill}>{skill}</Badge>
+                        ))}
+                        {candidate.habilidades && candidate.habilidades.length > 3 && (
+                          <Badge>+{candidate.habilidades.length - 3}</Badge>
+                        )}
+                      </div>
 
-                  {/* Resume */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Resumen Ejecutivo</h4>
-                    <p className="text-xs text-zinc-300 leading-relaxed">
-                      {selectedCandidate.resumen_ejecutivo}
-                    </p>
-                  </div>
-
-                  {/* Skills */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-2">Habilidades Técnicas</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedCandidate.habilidades && selectedCandidate.habilidades.map((skill) => (
-                        <span key={skill} className="px-2 py-1 bg-zinc-800 text-xs text-zinc-300 rounded">
-                          {skill}
+                      <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Phone className="size-3.5" aria-hidden="true" />
+                          {candidate.telefono}
                         </span>
-                      ))}
-                    </div>
-                  </div>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Clock3 className="size-3.5" aria-hidden="true" />
+                          {candidate.experiencia_anos} años exp.
+                        </span>
+                      </div>
 
-                  {/* CTA */}
-                  <Button className="w-full mt-4">
-                    Ver Perfil Completo
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+                      <div className="flex items-center gap-2 border-t pt-3">
+                        <Badge variant={candidate.estado === 'precalificado' ? 'success' : 'warning'}>
+                          {candidate.estado}
+                        </Badge>
+                        {candidate.estado === 'precalificado' && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="ml-auto"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Enviar evaluación
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                );
+              })
+            )}
+          </section>
+
+          {selectedCandidate && (
+            <aside className="lg:col-span-1">
+              <Reveal>
+                <Card className="flex flex-col gap-6 lg:sticky lg:top-40">
+                  <CardHeader className="border-b-0 pb-0">
+                    <CardTitle className="text-lg">{selectedCandidate.nombre}</CardTitle>
+                    <CardDescription>Análisis detallado</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-6 pt-0">
+                    <section>
+                      <h4 className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Puntuaciones por competencia
+                      </h4>
+                      <div className="flex flex-col gap-3">
+                        {selectedCandidate.puntuaciones && Object.entries(selectedCandidate.puntuaciones).map(([key, value]) => (
+                          <div key={key} className="flex flex-col gap-1.5">
+                            <div className="flex justify-between text-xs">
+                              <span className="capitalize text-muted-foreground">{key.replace(/_/g, ' ')}</span>
+                              <span className="font-medium tabular-nums">{value}/100</span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-success" style={{ width: `${value}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Feedback IA</h4>
+                      <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.feedback_ia}</p>
+                    </section>
+
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Resumen ejecutivo</h4>
+                      <p className="text-sm leading-relaxed text-pretty">{selectedCandidate.resumen_ejecutivo}</p>
+                    </section>
+
+                    <section>
+                      <h4 className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Habilidades técnicas</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCandidate.habilidades?.map((skill) => (
+                          <Badge key={skill}>{skill}</Badge>
+                        ))}
+                      </div>
+                    </section>
+
+                    <Button className="w-full">Ver perfil completo</Button>
+                  </CardContent>
+                </Card>
+              </Reveal>
+            </aside>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

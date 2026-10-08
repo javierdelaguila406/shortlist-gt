@@ -4,7 +4,11 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { Alert } from '@/components/ui/alert';
+import { Field, Input } from '@/components/ui/field';
+import { Logo } from '@/components/brand';
+import { Reveal } from '@/components/ui/reveal';
+import { Mail, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -43,77 +47,63 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center p-4 overflow-hidden">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">
-            SHORTLIST<span className="text-emerald-500">.GT</span>
-          </h1>
-          <p className="text-zinc-400">Recupera tu acceso</p>
+    <div className="w-full max-w-sm">
+      <Reveal>
+        <div className="mb-8 flex flex-col items-center gap-3 text-center">
+          <Logo className="text-xl" />
+          <p className="text-sm text-muted-foreground">Recupera tu acceso</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Restablecer Contraseña</CardTitle>
-            <CardDescription>
-              Ingresa tu email para recibir un enlace de recuperación
-            </CardDescription>
+            <CardTitle>Restablecer contraseña</CardTitle>
+            <CardDescription>Ingresa tu email para recibir un enlace de recuperación</CardDescription>
           </CardHeader>
           <CardContent>
             {success ? (
-              <div className="flex flex-col items-center gap-4 py-6">
-                <CheckCircle className="w-12 h-12 text-emerald-400" />
-                <div className="text-center">
-                  <h3 className="font-semibold text-white mb-2">¡Solicitud enviada!</h3>
-                  <p className="text-sm text-zinc-400 mb-4">
+              <div className="flex flex-col items-center gap-4 py-4 text-center">
+                <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
+                <div>
+                  <h3 className="mb-2 font-semibold">Solicitud enviada</h3>
+                  <p className="text-sm text-muted-foreground text-pretty">
                     Si el email existe en nuestra base de datos, recibirás un enlace para restablecer tu contraseña.
                   </p>
                 </div>
                 <Link href="/auth/login" className="w-full">
-                  <Button className="w-full">Volver al login</Button>
+                  <Button className="w-full">Volver al inicio de sesión</Button>
                 </Link>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <div className="flex gap-3 p-4 bg-rose-950/30 border border-rose-800/40 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-rose-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-rose-300">{error}</p>
-                  </div>
-                )}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {error && <Alert variant="destructive">{error}</Alert>}
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-300 mb-2">
-                    <Mail className="inline w-4 h-4 mr-2" />
-                    Email
-                  </label>
-                  <input
+                <Field label="Email" htmlFor="forgot-email" icon={<Mail />}>
+                  <Input
+                    id="forgot-email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white placeholder-zinc-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                     placeholder="tu@email.com"
                     required
                   />
-                </div>
+                </Field>
 
-                <Button type="submit" disabled={isLoading} className="w-full">
-                  {isLoading ? 'Enviando...' : 'Enviar enlace de recuperación'}
+                <Button type="submit" isLoading={isLoading} className="w-full">
+                  {isLoading ? 'Enviando…' : 'Enviar enlace de recuperación'}
                 </Button>
 
-                <div className="text-center">
-                  <p className="text-sm text-zinc-400">
-                    ¿Recordaste tu contraseña?{' '}
-                    <Link href="/auth/login" className="text-emerald-400 hover:text-emerald-300">
-                      Inicia sesión
-                    </Link>
-                  </p>
-                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                  ¿Recordaste tu contraseña?{' '}
+                  <Link href="/auth/login" className="font-medium text-foreground underline underline-offset-4">
+                    Inicia sesión
+                  </Link>
+                </p>
               </form>
             )}
           </CardContent>
         </Card>
-      </div>
+      </Reveal>
     </div>
   );
 }
