@@ -48,7 +48,6 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
     setIsExporting(true);
     setReportError('');
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
       const sorted = [...candidates].sort((a, b) => (b.score_ia || 0) - (a.score_ia || 0));
       const avgScore = Math.round(sorted.reduce((sum, c) => sum + (c.score_ia || 0), 0) / sorted.length || 0);
 
@@ -265,29 +264,15 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         </html>
       `;
 
-      const options: any = {
-        margin: 10,
-        filename: `Reporte_${vacanteTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { orientation: 'portrait', unit: 'mm', format: 'a4' }
-      };
-
-      const frame = document.createElement('iframe');
-      frame.setAttribute('aria-hidden', 'true');
-      frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:800px;height:1200px;border:0;';
-      document.body.appendChild(frame);
-      try {
-        await new Promise<void>((resolve) => {
-          frame.onload = () => resolve();
-          frame.srcdoc = htmlContent;
-        });
-        const root = frame.contentDocument?.body;
-        if (!root) throw new Error('No se pudo preparar el reporte');
-        await (html2pdf() as any).set(options).from(root).save();
-      } finally {
-        frame.remove();
+      const reportWindow = window.open('', '_blank');
+      if (!reportWindow) {
+        throw new Error('Permite las ventanas emergentes para generar el reporte');
       }
+      reportWindow.document.open();
+      reportWindow.document.write(htmlContent);
+      reportWindow.document.close();
+      reportWindow.focus();
+      setTimeout(() => reportWindow.print(), 300);
     } catch (error) {
       console.error('Error:', error);
       setReportError('Falló al generar reporte PDF');
