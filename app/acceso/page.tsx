@@ -157,7 +157,7 @@ export default function AccesoPage() {
                           setCodigoLicencia(e.target.value.toUpperCase());
                           setError('');
                         }}
-                        placeholder="Ej: FORNITURE-CITY-2024"
+                        placeholder="Ej: NUVORA-8F3K-2QZ7"
                         disabled={isValidating}
                         required
                       />

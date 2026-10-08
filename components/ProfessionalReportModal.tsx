@@ -26,7 +26,7 @@ const escapeHtml = (text: string): string => {
   return text.replace(/[&<>"']/g, char => map[char]);
 };
 
-export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candidates, company = 'FORNITURE CITY' }: ReportModalProps) {
+export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candidates, company = 'Nuvora' }: ReportModalProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [periodo, setPeriodo] = useState('mes');
   const [fechaDesde, setFechaDesde] = useState('');
@@ -296,7 +296,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
         ['REPORTE EJECUTIVO DE CANDIDATOS'],
         ['Nuvora'],
         [],
-        [`Empresa: FORNITURE CITY`],
+        [`Empresa: Nuvora`],
         [`Vacante: ${vacanteTitle}`],
         [`Generado: ${new Date().toLocaleDateString('es-ES')}`],
         [],
@@ -372,7 +372,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('hoy')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'hoy'
-                    ? 'bg-primary text-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
@@ -382,7 +382,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('semana')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'semana'
-                    ? 'bg-primary text-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
@@ -392,7 +392,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('mes')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'mes'
-                    ? 'bg-primary text-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
@@ -402,7 +402,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('ano')}
                 className={`px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'ano'
-                    ? 'bg-primary text-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
@@ -412,7 +412,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
                 onClick={() => setPeriodo('personalizado')}
                 className={`col-span-2 px-3 py-2 rounded text-sm transition-colors min-h-11 ${
                   periodo === 'personalizado'
-                    ? 'bg-primary text-foreground'
+                    ? 'bg-primary text-primary-foreground'
                     : 'bg-muted text-foreground hover:bg-muted'
                 }`}
               >
@@ -452,7 +452,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             <button
               onClick={generateProfessionalPDF}
               disabled={isExporting}
-              className="w-full min-h-11 bg-primary hover:bg-primary/90 px-4 py-3 rounded text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-primary hover:bg-primary/90 px-4 py-3 rounded text-primary-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando PDF...' : 'Descargar PDF Profesional'}
@@ -461,7 +461,7 @@ export function ProfessionalReportModal({ isOpen, onClose, vacanteTitle, candida
             <button
               onClick={generateExcel}
               disabled={isExporting}
-              className="w-full min-h-11 bg-info-soft hover:bg-info-soft px-4 py-3 rounded text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full min-h-11 bg-info hover:bg-info/90 px-4 py-3 rounded text-brand-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Download className="w-4 h-4" />
               {isExporting ? 'Generando Excel...' : 'Descargar Excel'}

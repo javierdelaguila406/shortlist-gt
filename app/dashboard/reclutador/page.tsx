@@ -1089,7 +1089,7 @@ export default function DemoDashboard() {
         onClose={() => setShowExportModal(false)}
         vacanteTitle={selectedVacante?.titulo || 'Reporte'}
         candidates={filteredCandidates}
-        company="FORNITURE CITY"
+        company="Nuvora"
       />
 
       {showTemplateModal && !selectedTemplatePreview && (

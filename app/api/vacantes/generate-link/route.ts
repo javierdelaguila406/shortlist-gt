@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 🎯 OPORTUNIDAD LABORAL
 
 📌 ${titulo}
-🏢 Departamento: ${departamento || 'Forniture City'}
+🏢 Departamento: ${departamento || 'Nuvora'}
 
 ${descripcion || 'Únete a nuestro equipo'}
 
@@ -36,7 +36,7 @@ ${descripcion || 'Únete a nuestro equipo'}
 
 Comparte tu CV y datos de contacto. ¡Esperamos tu candidatura!
 
-#Empleo #RecruitmentTech #FornitureCity
+#Empleo #RecruitmentTech #Nuvora
     `.trim();
 
     const linkedinShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(aplicarLink)}`;
