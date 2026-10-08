@@ -8,7 +8,7 @@ import { Alert } from '@/components/ui/alert';
 import { Field, Input } from '@/components/ui/field';
 import { Logo } from '@/components/brand';
 import { Reveal } from '@/components/ui/reveal';
-import { getDemoLicense, validateLicenseCode, saveUserLicense } from '@/lib/license-manager';
+import { getDemoLicense, validateLicenseCode, redeemLicenseCode, saveUserLicense } from '@/lib/license-manager';
 import { ArrowLeft, Check, CheckCircle2, KeyRound, Zap } from 'lucide-react';
 
 export default function AccesoPage() {
@@ -39,17 +39,13 @@ export default function AccesoPage() {
     }
 
     if (license) {
-      const userLicense = {
-        codigo: codigoLicencia.trim().toUpperCase(),
-        tipo: license.tipo,
-        empresa: license.empresa,
-        maxVacantes: license.maxVacantes,
-        vacantesCreadoras: 0,
-        fechaActivacion: new Date().toISOString(),
-        activo: true,
-      };
+      const redeemed = await redeemLicenseCode(codigoLicencia);
+      if (!redeemed.success) {
+        setError(redeemed.error || 'No se pudo activar la licencia');
+        setIsValidating(false);
+        return;
+      }
 
-      saveUserLicense(userLicense);
       setSuccess(true);
 
       setTimeout(() => {

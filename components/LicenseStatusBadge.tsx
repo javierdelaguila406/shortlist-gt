@@ -1,25 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getUserLicenseFromStorage, canCreateVacante } from '@/lib/license-manager';
-import { AlertCircle, CheckCircle, Lock } from 'lucide-react';
-
-interface UserLicense {
-  codigo: string;
-  tipo: 'DEMO' | 'TRIAL' | 'PREMIUM';
-  empresa: string;
-  maxVacantes: number;
-  vacantesCreadoras: number;
-  fechaActivacion: string;
-  activo: boolean;
-}
+import { getCurrentPlan } from '@/lib/license-manager';
+import { AlertCircle, CheckCircle } from 'lucide-react';
 
 export function LicenseStatusBadge() {
   const router = useRouter();
-  const [license] = useState<UserLicense | null>(() => getUserLicenseFromStorage());
+  const [plan, setPlan] = useState<string | null>(null);
 
-  if (!license) {
+  useEffect(() => {
+    getCurrentPlan().then(setPlan);
+  }, []);
+
+  if (plan !== 'premium') {
     return (
       <button
         onClick={() => router.push('/acceso')}
@@ -31,36 +25,15 @@ export function LicenseStatusBadge() {
     );
   }
 
-  const { canCreate, remaining } = canCreateVacante(license);
-
-  const typeColors = {
-    DEMO: 'bg-info-soft border-info/30 text-info hover:bg-info-soft/70 cursor-pointer',
-    TRIAL: 'bg-warning-soft border-warning/30 text-warning hover:bg-warning-soft/70 cursor-pointer',
-    PREMIUM: 'bg-success-soft border-success/30 text-brand hover:bg-success-soft cursor-pointer',
-  };
-
   return (
     <button
       onClick={() => router.push('/acceso')}
-      className={`border rounded-lg px-3 py-2 flex items-center gap-2 text-sm transition-colors ${typeColors[license.tipo]}`}
+      className="flex items-center gap-2 rounded-lg border border-success/30 bg-success-soft px-3 py-2 text-sm text-brand transition-colors hover:bg-success-soft/70"
     >
-      {canCreate ? (
-        <CheckCircle className="w-4 h-4" />
-      ) : (
-        <Lock className="w-4 h-4" />
-      )}
+      <CheckCircle className="w-4 h-4" />
       <div className="flex flex-col gap-0.5">
-        <div className="font-medium">
-          {license.tipo === 'DEMO' && '🚀 Demo - Acceso Completo'}
-          {license.tipo === 'TRIAL' && '⏱️ Prueba'}
-          {license.tipo === 'PREMIUM' && '⭐ Premium'}
-        </div>
-        <div className="text-xs opacity-75">
-          {license.tipo === 'TRIAL' &&
- `${remaining || 0} vacante${(remaining || 0) !== 1 ? 's' : ''} disponible${(remaining || 0) !== 1 ? 's' : ''}`}
-          {license.tipo === 'PREMIUM' && `${license.empresa} - Ilimitado`}
-          {license.tipo === 'DEMO' && 'Ilimitado - Sin restricciones'}
-        </div>
+        <div className="font-medium">⭐ Premium</div>
+        <div className="text-xs opacity-75">Ilimitado</div>
       </div>
     </button>
   );

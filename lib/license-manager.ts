@@ -100,6 +100,46 @@ export function incrementVacanteCount(license: UserLicense): UserLicense {
   };
 }
 
+async function getSessionToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+export async function redeemLicenseCode(codigo: string): Promise<{ success: boolean; plan?: string; error?: string }> {
+  const token = await getSessionToken();
+  if (!token) return { success: false, error: 'Inicia sesión para activar tu licencia' };
+
+  try {
+    const response = await fetch('/api/auth/use-license-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ codigo: codigo.trim().toUpperCase() }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.success) {
+      return { success: false, error: data.error || 'No se pudo activar la licencia' };
+    }
+    return { success: true, plan: data.plan };
+  } catch {
+    return { success: false, error: 'Error de conexión al activar la licencia' };
+  }
+}
+
+export async function getCurrentPlan(): Promise<string | null> {
+  const token = await getSessionToken();
+  if (!token) return null;
+  try {
+    const response = await fetch('/api/auth/check-plan', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data.plan ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function validateLicenseCode(codigo: string): Promise<{
   valid: boolean;
   license?: any;
