@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { persistentRateLimit } from '@/lib/rate-limit';
 import { requireUser } from '@/lib/supabase-server';
+import { createAdminClient } from '@/lib/supabase-admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,9 @@ export async function POST(request: NextRequest) {
 
     const supabase = auth.supabase;
     const userId = auth.user.id;
+    await createAdminClient()
+      .from('companies')
+      .upsert({ user_id: userId, email: auth.user.email ?? null, plan: 'demo' }, { onConflict: 'user_id', ignoreDuplicates: true });
     const rateLimitResult = await persistentRateLimit(`license-code:${userId}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(
