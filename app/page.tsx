@@ -43,11 +43,6 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Logo />
           <div className="flex items-center gap-2">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="sm">
-                Dashboard
-              </Button>
-            </Link>
             <Link href="/auth/login">
               <Button size="sm">Acceder</Button>
             </Link>
