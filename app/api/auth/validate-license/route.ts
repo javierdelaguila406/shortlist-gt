@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { persistentRateLimit } from '@/lib/rate-limit';
+import { requireUser } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,28 +23,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar autenticación
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const auth = await requireUser(request);
+    if (!auth) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.slice('Bearer '.length);
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Configuración faltante', valid: false },
-        { status: 500 }
-      );
-    }
-
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     const { codigo } = await request.json();
 

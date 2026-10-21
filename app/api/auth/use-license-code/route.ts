@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { persistentRateLimit } from '@/lib/rate-limit';
+import { requireUser } from '@/lib/supabase-server';
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('Authorization');
-
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized', success: false },
-        { status: 401 }
-      );
+    const auth = await requireUser(request);
+    if (!auth) {
+      return NextResponse.json({ error: 'Unauthorized', success: false }, { status: 401 });
     }
 
-    const token = authHeader.slice('Bearer '.length);
     const { codigo } = await request.json();
 
     if (!codigo) {
@@ -23,29 +18,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { error: 'Configuración faltante', success: false },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized', success: false },
-        { status: 401 }
-      );
-    }
-
-    const userId = userData.user.id;
+    const supabase = auth.supabase;
+    const userId = auth.user.id;
     const rateLimitResult = await persistentRateLimit(`license-code:${userId}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(

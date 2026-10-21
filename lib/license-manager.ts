@@ -100,19 +100,17 @@ export function incrementVacanteCount(license: UserLicense): UserLicense {
   };
 }
 
-async function getSessionToken(): Promise<string | null> {
+async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
-  return data.session?.access_token ?? null;
+  const token = data.session?.access_token;
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export async function redeemLicenseCode(codigo: string): Promise<{ success: boolean; plan?: string; error?: string }> {
-  const token = await getSessionToken();
-  if (!token) return { success: false, error: 'Inicia sesión para activar tu licencia' };
-
   try {
     const response = await fetch('/api/auth/use-license-code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify({ codigo: codigo.trim().toUpperCase() }),
     });
     const data = await response.json().catch(() => ({}));
@@ -126,11 +124,9 @@ export async function redeemLicenseCode(codigo: string): Promise<{ success: bool
 }
 
 export async function getCurrentPlan(): Promise<string | null> {
-  const token = await getSessionToken();
-  if (!token) return null;
   try {
     const response = await fetch('/api/auth/check-plan', {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: await authHeaders(),
     });
     if (!response.ok) return null;
     const data = await response.json();
@@ -146,20 +142,11 @@ export async function validateLicenseCode(codigo: string): Promise<{
   error?: string;
 }> {
   try {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token;
-    if (!accessToken) {
-      return {
-        valid: false,
-        error: 'Inicia sesión para validar tu código de licencia',
-      };
-    }
-
     const response = await fetch('/api/auth/validate-license', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
+        ...(await authHeaders()),
       },
       body: JSON.stringify({ codigo: codigo.trim().toUpperCase() }),
     });
