@@ -27,6 +27,7 @@ interface Candidate {
   telefono: string;
   score_ia: number;
   score_test?: number | null;
+  score_total?: number | null;
   cv_evaluado?: boolean;
   estado: string;
   vacante_id?: string;
@@ -625,14 +626,14 @@ export default function DemoDashboard() {
                           <h3 className="truncate text-base font-semibold">{candidate.nombre}</h3>
                           <p className="truncate text-sm text-muted-foreground">{candidate.email}</p>
                         </div>
-                        <div className="flex shrink-0 gap-5 text-right">
-                          <Metric
-                            value={candidate.cv_evaluado === false ? '—' : candidate.score_ia}
-                            label={candidate.cv_evaluado === false ? 'CV no evaluado' : 'Score CV'}
-                          />
-                          {candidate.estado === 'evaluado' && candidate.score_test !== null && candidate.score_test !== undefined && (
-                            <Metric value={candidate.score_test} label="Prueba" />
-                          )}
+                        <div className="flex shrink-0 flex-col items-end text-right">
+                          <div className="text-2xl font-semibold tabular-nums">
+                            {candidate.cv_evaluado === false || candidate.score_total == null ? '—' : `${candidate.score_total}%`}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Ajuste a la plaza</div>
+                          <div className="mt-1 text-xs text-muted-foreground tabular-nums">
+                            CV {candidate.cv_evaluado === false ? '—' : candidate.score_ia} · Prueba {candidate.score_test ?? '—'}
+                          </div>
                         </div>
                       </div>
 
@@ -913,9 +914,15 @@ export default function DemoDashboard() {
             </Button>
             <Button
               variant="secondary"
-              onClick={() => {
+              onClick={async () => {
                 const asunto = `Evaluación para la vacante ${selectedVacante?.titulo ?? ''}`.trim();
                 const cuerpo = `Hola ${evaluacionEnviada.nombre}:\n\nGracias por postularte. Te invitamos a completar esta evaluación:\n${evaluacionEnviada.link}\n\nEl enlace es personal y solo se puede enviar una vez.`;
+                try {
+                  await navigator.clipboard.writeText(`Para: ${evaluacionEnviada.email}\nAsunto: ${asunto}\n\n${cuerpo}`);
+                  toast.success('Mensaje copiado', { description: 'Si tu correo no se abre, pégalo en Gmail u Outlook.' });
+                } catch {
+                  toast.error('No se pudo copiar el mensaje', { description: 'Copia el enlace y envíalo manualmente.' });
+                }
                 window.location.href = `mailto:${encodeURIComponent(evaluacionEnviada.email)}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
               }}
             >

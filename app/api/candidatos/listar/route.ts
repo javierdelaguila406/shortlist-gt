@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ajusteAPlaza } from '@/lib/ajuste-plaza';
 import { requireUser } from '@/lib/supabase-server';
 import { getOwnedVacante } from '@/lib/authz';
 
@@ -42,9 +43,14 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const conAjuste = (candidatos || []).map((c) => ({
+      ...c,
+      score_total: ajusteAPlaza(c.score_ia, c.score_test),
+    }));
+
     return NextResponse.json({
       success: true,
-      candidatos: candidatos || [],
+      candidatos: conAjuste,
     });
   } catch (error) {
     console.error('[API] Error:', error);
