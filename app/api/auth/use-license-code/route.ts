@@ -21,9 +21,13 @@ export async function POST(request: NextRequest) {
 
     const supabase = auth.supabase;
     const userId = auth.user.id;
-    await createAdminClient()
-      .from('companies')
-      .upsert({ user_id: userId, email: auth.user.email ?? null, plan: 'demo' }, { onConflict: 'user_id', ignoreDuplicates: true });
+    try {
+      await createAdminClient()
+        .from('companies')
+        .upsert({ user_id: userId, email: auth.user.email ?? null, plan: 'demo' }, { onConflict: 'user_id', ignoreDuplicates: true });
+    } catch (profileError) {
+      console.error('[LICENSE] No se pudo asegurar el perfil de empresa', profileError);
+    }
     const rateLimitResult = await persistentRateLimit(`license-code:${userId}`, 5, 3600000);
     if (!rateLimitResult.success) {
       return NextResponse.json(

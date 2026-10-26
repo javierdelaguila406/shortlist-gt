@@ -990,15 +990,38 @@ export default function DemoDashboard() {
 
             <section className="flex flex-col gap-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Compartir</p>
-              <a
-                href={linkedinData.linkedinShareUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex h-10 w-fit items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-              >
-                <Share2 className="size-4" aria-hidden="true" />
-                Abrir en LinkedIn
-              </a>
+              <div className="flex flex-wrap gap-2">
+                <a
+                  href={linkedinData.linkedinShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Share2 className="size-4" aria-hidden="true" />
+                  LinkedIn
+                </a>
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(linkedinData.aplicarLink)}&quote=${encodeURIComponent(linkedinData.linkedInText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-sm font-medium transition-all hover:bg-muted active:scale-[0.98] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Share2 className="size-4" aria-hidden="true" />
+                  Facebook
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(linkedinData.linkedInText + '\n\n' + linkedinData.aplicarLink);
+                    toast.success('Texto copiado', { description: 'Pégalo en tu publicación de Instagram.' });
+                    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+                  }}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border bg-card px-4 text-sm font-medium transition-all hover:bg-muted active:scale-[0.98] outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  <Share2 className="size-4" aria-hidden="true" />
+                  Instagram
+                </button>
+              </div>
             </section>
           </ModalBody>
           <ModalFooter>
