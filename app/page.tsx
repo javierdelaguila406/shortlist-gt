@@ -9,6 +9,7 @@ import { ScoreDemo } from '@/components/landing/score-demo';
 import { ProcessSteps } from '@/components/landing/process-steps';
 import { Bento } from '@/components/landing/bento';
 import { Spotlight } from '@/components/landing/spotlight';
+import { TalentScanner } from '@/components/landing/talent-scanner';
 
 const stack = [
   { name: 'Next.js 16', desc: 'Frontend moderno' },
@@ -37,7 +38,8 @@ export default function Home() {
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <section className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
-          <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
+          <TalentScanner />
+          <h1 data-scan className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             Reclutamiento inteligente para Guatemala
           </h1>
           <p className="flex flex-wrap items-baseline justify-center gap-x-2 text-lg text-muted-foreground">

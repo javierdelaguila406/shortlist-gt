@@ -39,6 +39,7 @@ export function TiltCard({ children, className }: { children: React.ReactNode; c
       onPointerLeave={reiniciar}
       style={{ rotateX, rotateY, transformPerspective: 900 }}
       className="group relative h-full"
+      data-scan
     >
       <Card className={cn('relative flex h-full flex-col gap-4 overflow-hidden transition-shadow duration-300 hover:border-foreground/15 hover:shadow-md', className)}>
         <motion.div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: brillo }} />
