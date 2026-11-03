@@ -9,6 +9,7 @@ import { ScoreDemo } from '@/components/landing/score-demo';
 import { ProcessSteps } from '@/components/landing/process-steps';
 import { Bento } from '@/components/landing/bento';
 import { Spotlight } from '@/components/landing/spotlight';
+import { RobotBackground } from '@/components/landing/robot-background';
 import { LogoScanner } from '@/components/landing/logo-scanner';
 
 const stack = [
@@ -24,7 +25,8 @@ export default function Home() {
   return (
     <div className="min-h-screen w-full">
       <Spotlight />
-      <div className="relative z-10 bg-background">
+      <RobotBackground />
+      <div className="relative z-10">
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Logo />
