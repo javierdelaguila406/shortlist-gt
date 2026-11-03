@@ -12,15 +12,6 @@ import { Spotlight } from '@/components/landing/spotlight';
 import { RobotBackground } from '@/components/landing/robot-background';
 import { LogoScanner } from '@/components/landing/logo-scanner';
 
-const stack = [
-  { name: 'Next.js 16', desc: 'Frontend moderno' },
-  { name: 'Supabase', desc: 'Base de datos' },
-  { name: 'Tailwind CSS', desc: 'Estilos' },
-  { name: 'TypeScript', desc: 'Type-safe' },
-  { name: 'Motion', desc: 'Animaciones' },
-  { name: 'Lucide', desc: 'Iconografía' },
-];
-
 export default function Home() {
   return (
     <div className="min-h-screen w-full">
@@ -84,18 +75,6 @@ export default function Home() {
           <ProcessSteps />
         </section>
 
-        <section className="border-t py-16">
-          <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">Stack tecnológico</h2>
-          <p className="mb-8 text-center text-sm text-muted-foreground">Herramientas con las que está construida la plataforma</p>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            {stack.map((tech) => (
-              <div key={tech.name} className="rounded-2xl border bg-card p-4 text-center">
-                <p className="text-sm font-semibold">{tech.name}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{tech.desc}</p>
-              </div>
-            ))}
-          </div>
-        </section>
 
         <section className="py-16">
           <Card className="flex flex-col items-center gap-4 p-8 text-center sm:p-12">

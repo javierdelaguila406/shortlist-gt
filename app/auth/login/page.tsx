@@ -133,12 +133,6 @@ export default function LoginPage() {
                 </Button>
               </Link>
             </div>
-
-            <div className="mt-6 rounded-lg bg-muted p-4">
-              <p className="mb-2 text-xs font-medium text-muted-foreground">Credenciales de prueba</p>
-              <p className="text-xs text-muted-foreground tabular-nums">Email: demo@shortlist.gt</p>
-              <p className="text-xs text-muted-foreground tabular-nums">Contraseña: Demo123!</p>
-            </div>
           </CardContent>
         </Card>
       </Reveal>
