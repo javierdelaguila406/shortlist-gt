@@ -1,34 +1,12 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Logo } from '@/components/brand';
 import { ArrowRight, Zap, Brain, Users, Gauge } from 'lucide-react';
 import Link from 'next/link';
 import { RotatingWord } from '@/components/landing/rotating-word';
 import { ScoreDemo } from '@/components/landing/score-demo';
 import { ProcessSteps } from '@/components/landing/process-steps';
-
-const features = [
-  {
-    icon: Brain,
-    title: 'Análisis de CV',
-    text: 'Comparamos cada CV con la descripción de la vacante y calculamos un puntaje de compatibilidad.',
-  },
-  {
-    icon: Zap,
-    title: 'Evaluaciones por enlace',
-    text: 'Envía a cada candidato un enlace personal con su prueba y recibe el puntaje en tu panel.',
-  },
-  {
-    icon: Gauge,
-    title: 'Scoring automático',
-    text: 'Calificación automática basada en el CV y en las respuestas de la evaluación.',
-  },
-  {
-    icon: Users,
-    title: 'Panel visual',
-    text: 'Gestiona candidatos y toma decisiones rápido, con todo el proceso en una sola vista.',
-  },
-];
 
 const stack = [
   { name: 'Next.js 16', desc: 'Frontend moderno' },
@@ -81,19 +59,57 @@ export default function Home() {
         </section>
 
         <section className="py-16">
-          <h2 className="mb-8 text-center text-2xl font-semibold tracking-tight">Características principales</h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map(({ icon: Icon, title, text }) => (
-              <Card key={title} className="transition-all hover:-translate-y-px hover:border-foreground/15 hover:shadow-md">
-                <CardHeader className="border-b-0 pb-2">
-                  <Icon className="mb-2 size-5 text-muted-foreground" aria-hidden="true" />
-                  <CardTitle className="text-base">{title}</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <p className="text-sm text-muted-foreground text-pretty">{text}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <h2 className="mb-2 text-center text-3xl font-semibold tracking-tight text-balance">Todo el reclutamiento, en una sola vista</h2>
+          <p className="mb-10 text-center text-muted-foreground">Del primer CV a la decisión final, sin hojas de cálculo ni correos sueltos.</p>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <Card className="flex flex-col gap-4 md:col-span-2">
+              <div>
+                <CardTitle className="text-lg">Contrata más rápido</CardTitle>
+                <CardDescription>Crea una vacante en minutos y comparte su enlace donde quieras.</CardDescription>
+              </div>
+              <div className="mt-auto flex items-center gap-3 rounded-xl bg-muted/50 p-4 text-sm">
+                <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand">Activa</span>
+                <span className="truncate text-muted-foreground">Ejecutivo comercial · enlace listo para compartir</span>
+              </div>
+            </Card>
+            <Card className="flex flex-col gap-4">
+              <div>
+                <CardTitle className="text-lg">Ordena lo que importa</CardTitle>
+                <CardDescription>Cada CV llega con un puntaje de ajuste a la plaza.</CardDescription>
+              </div>
+              <div className="mt-auto space-y-2">
+                <div className="flex justify-between text-xs"><span>Ana Morales</span><span className="tabular-nums">84%</span></div>
+                <div className="h-1.5 rounded-full bg-muted"><div className="h-full w-[84%] rounded-full bg-brand" /></div>
+              </div>
+            </Card>
+            <Card className="flex flex-col gap-4">
+              <div>
+                <CardTitle className="text-lg">Evalúa sin correos</CardTitle>
+                <CardDescription>Cada candidato recibe un enlace personal que vence en 7 días.</CardDescription>
+              </div>
+              <div className="mt-auto rounded-xl border border-dashed p-3 text-center text-xs text-muted-foreground">Enlace de uso único</div>
+            </Card>
+            <Card className="flex flex-col gap-4">
+              <div>
+                <CardTitle className="text-lg">Todo en un solo lugar</CardTitle>
+                <CardDescription>Expediente, CV y resultados de cada persona, siempre a la mano.</CardDescription>
+              </div>
+              <div className="mt-auto flex flex-wrap gap-1.5">
+                <Badge>CV</Badge><Badge>Puntajes</Badge><Badge>Resumen</Badge>
+              </div>
+            </Card>
+            <Card className="flex flex-col gap-4 md:col-span-3">
+              <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <CardTitle className="text-lg">Reportes listos para gerencia</CardTitle>
+                  <CardDescription>Descarga PDF o Excel en un clic.</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Badge variant="info">PDF</Badge>
+                  <Badge variant="success">Excel</Badge>
+                </div>
+              </div>
+            </Card>
           </div>
         </section>
 
@@ -124,15 +140,16 @@ export default function Home() {
 
         <section className="py-16">
           <Card className="flex flex-col items-center gap-4 p-8 text-center sm:p-12">
-            <h2 className="text-2xl font-semibold tracking-tight text-balance">
-              ¿Listo para mejorar tu reclutamiento?
-            </h2>
-            <p className="max-w-xl text-muted-foreground text-pretty">
-              Comienza hoy con un demo gratuito. No se requiere tarjeta de crédito.
-            </p>
-            <Button size="lg" className="mt-2">
-              Solicitar demo <ArrowRight className="size-4" />
-            </Button>
+            <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">Empieza hoy con Nuvora</h2>
+            <p className="max-w-xl text-muted-foreground text-pretty">Instala la app en tu computadora o agenda una demo de 20 minutos.</p>
+            <div className="mt-2 flex flex-wrap justify-center gap-3">
+              <Link href="/auth/login">
+                <Button size="lg">Instalar Nuvora <ArrowRight className="size-4" /></Button>
+              </Link>
+              <a href="mailto:nuvoratalentgt@outlook.com?subject=Demo%20de%20Nuvora">
+                <Button size="lg" variant="secondary">Agendar una demo</Button>
+              </a>
+            </div>
           </Card>
         </section>
       </main>
