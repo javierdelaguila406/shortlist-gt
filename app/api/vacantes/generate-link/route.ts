@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     }
     const { titulo, descripcion, departamento } = owned.data;
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://shortlist-gt.vercel.app';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://nuvoragt.com';
     const aplicarLink = `${baseUrl}/postular/${vacanteId}`;
 
     const linkedInText = `

@@ -71,7 +71,9 @@ export function middleware(request: NextRequest) {
         'http://localhost:3001'
       ]
     : [
-        'https://shortlist-gt.vercel.app'  // Production: only allow deployed domain
+        'https://nuvoragt.com',
+        'https://www.nuvoragt.com',
+        'https://shortlist-gt.vercel.app'  // Production: only allow deployed domains
       ];
 
   if (origin && allowedOrigins.includes(origin)) {
