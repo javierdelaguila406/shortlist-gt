@@ -53,7 +53,7 @@ export default function Home() {
       <main className="mx-auto max-w-6xl px-4 sm:px-6">
         <section className="flex flex-col items-center gap-6 py-20 text-center sm:py-28">
           <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Reclutamiento inteligente, impulsado por IA
+            Reclutamiento inteligente para Guatemala
           </h1>
           <p className="max-w-2xl text-lg text-muted-foreground text-pretty">
             Encuentra los mejores talentos más rápido. Nuvora califica cada CV contra tu vacante y envía

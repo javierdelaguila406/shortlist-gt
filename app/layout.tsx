@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Nuvora - Plataforma de reclutamiento",
-  description: "Plataforma de reclutamiento inteligente impulsada por IA",
+  description: "Plataforma de reclutamiento inteligente para Guatemala",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
