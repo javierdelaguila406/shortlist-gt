@@ -220,7 +220,7 @@ export default function PrivacidadPage() {
           {/* Footer */}
           <div className="mt-16 pt-8 border-t border-border">
             <p className="text-center text-sm text-muted-foreground">
-              © 2024 Nuvora. Todos los derechos reservados.
+              © 2026 Nuvora. Todos los derechos reservados.
             </p>
           </div>
         </div>

@@ -140,15 +140,15 @@ export default function Home() {
       <footer className="border-t py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center gap-4 px-4 text-center text-sm text-muted-foreground sm:px-6">
           <Logo className="text-base" />
-          <p>© 2024 Nuvora. Todos los derechos reservados.</p>
+          <p>© 2026 Nuvora. Todos los derechos reservados.</p>
           <div className="flex flex-wrap justify-center gap-6">
-            <a href="#" className="transition-colors hover:text-foreground">
+            <Link href="/privacidad" className="transition-colors hover:text-foreground">
               Política de privacidad
-            </a>
-            <a href="#" className="transition-colors hover:text-foreground">
+            </Link>
+            <Link href="/terminos" className="transition-colors hover:text-foreground">
               Términos de servicio
-            </a>
-            <a href="#" className="transition-colors hover:text-foreground">
+            </Link>
+            <a href="mailto:nuvoratalentgt@outlook.com" className="transition-colors hover:text-foreground">
               Contacto
             </a>
           </div>
