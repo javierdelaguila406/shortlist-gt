@@ -3,6 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Logo } from '@/components/brand';
 import { ArrowRight, Zap, Brain, Users, Gauge } from 'lucide-react';
 import Link from 'next/link';
+import { RotatingWord } from '@/components/landing/rotating-word';
+import { ScoreDemo } from '@/components/landing/score-demo';
+import { ProcessSteps } from '@/components/landing/process-steps';
 
 const features = [
   {
@@ -55,6 +58,10 @@ export default function Home() {
           <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
             Reclutamiento inteligente para Guatemala
           </h1>
+          <p className="flex flex-wrap items-baseline justify-center gap-x-2 text-lg text-muted-foreground">
+            <span>Ordena, evalúa y contrata más rápido:</span>
+            <RotatingWord words={['candidatos', 'vacantes', 'talento', 'tu equipo']} />
+          </p>
           <p className="max-w-2xl text-lg text-muted-foreground text-pretty">
             Encuentra los mejores talentos más rápido. Nuvora califica cada CV contra tu vacante y envía
             evaluaciones en línea a tus candidatos con un solo enlace.
@@ -88,6 +95,18 @@ export default function Home() {
               </Card>
             ))}
           </div>
+        </section>
+
+        <section className="py-16">
+          <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">Así se ve un ranking</h2>
+          <p className="mb-8 text-center text-sm text-muted-foreground">Los candidatos se ordenan solos según su ajuste a la plaza.</p>
+          <ScoreDemo />
+        </section>
+
+        <section className="border-t py-16">
+          <h2 className="mb-2 text-center text-2xl font-semibold tracking-tight">Cómo funciona</h2>
+          <p className="mb-10 text-center text-sm text-muted-foreground">Cinco pasos desde la vacante hasta la decisión.</p>
+          <ProcessSteps />
         </section>
 
         <section className="border-t py-16">
