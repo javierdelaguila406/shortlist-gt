@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { RotatingWord } from '@/components/landing/rotating-word';
 import { ScoreDemo } from '@/components/landing/score-demo';
 import { ProcessSteps } from '@/components/landing/process-steps';
+import { Bento } from '@/components/landing/bento';
+import { Spotlight } from '@/components/landing/spotlight';
 
 const stack = [
   { name: 'Next.js 16', desc: 'Frontend moderno' },
@@ -19,7 +21,9 @@ const stack = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen w-full bg-background">
+    <div className="min-h-screen w-full">
+      <Spotlight />
+      <div className="relative z-10 bg-background">
       <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <Logo />
@@ -61,56 +65,7 @@ export default function Home() {
         <section className="py-16">
           <h2 className="mb-2 text-center text-3xl font-semibold tracking-tight text-balance">Todo el reclutamiento, en una sola vista</h2>
           <p className="mb-10 text-center text-muted-foreground">Del primer CV a la decisión final, sin hojas de cálculo ni correos sueltos.</p>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <Card className="flex flex-col gap-4 md:col-span-2">
-              <div>
-                <CardTitle className="text-lg">Contrata más rápido</CardTitle>
-                <CardDescription>Crea una vacante en minutos y comparte su enlace donde quieras.</CardDescription>
-              </div>
-              <div className="mt-auto flex items-center gap-3 rounded-xl bg-muted/50 p-4 text-sm">
-                <span className="rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand">Activa</span>
-                <span className="truncate text-muted-foreground">Ejecutivo comercial · enlace listo para compartir</span>
-              </div>
-            </Card>
-            <Card className="flex flex-col gap-4">
-              <div>
-                <CardTitle className="text-lg">Ordena lo que importa</CardTitle>
-                <CardDescription>Cada CV llega con un puntaje de ajuste a la plaza.</CardDescription>
-              </div>
-              <div className="mt-auto space-y-2">
-                <div className="flex justify-between text-xs"><span>Ana Morales</span><span className="tabular-nums">84%</span></div>
-                <div className="h-1.5 rounded-full bg-muted"><div className="h-full w-[84%] rounded-full bg-brand" /></div>
-              </div>
-            </Card>
-            <Card className="flex flex-col gap-4">
-              <div>
-                <CardTitle className="text-lg">Evalúa sin correos</CardTitle>
-                <CardDescription>Cada candidato recibe un enlace personal que vence en 7 días.</CardDescription>
-              </div>
-              <div className="mt-auto rounded-xl border border-dashed p-3 text-center text-xs text-muted-foreground">Enlace de uso único</div>
-            </Card>
-            <Card className="flex flex-col gap-4">
-              <div>
-                <CardTitle className="text-lg">Todo en un solo lugar</CardTitle>
-                <CardDescription>Expediente, CV y resultados de cada persona, siempre a la mano.</CardDescription>
-              </div>
-              <div className="mt-auto flex flex-wrap gap-1.5">
-                <Badge>CV</Badge><Badge>Puntajes</Badge><Badge>Resumen</Badge>
-              </div>
-            </Card>
-            <Card className="flex flex-col gap-4 md:col-span-3">
-              <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <CardTitle className="text-lg">Reportes listos para gerencia</CardTitle>
-                  <CardDescription>Descarga PDF o Excel en un clic.</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Badge variant="info">PDF</Badge>
-                  <Badge variant="success">Excel</Badge>
-                </div>
-              </div>
-            </Card>
-          </div>
+          <Bento />
         </section>
 
         <section className="py-16">
@@ -171,6 +126,7 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      </div>
     </div>
   );
 }
